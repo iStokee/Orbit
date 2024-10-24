@@ -1,0 +1,63 @@
+﻿<mah:MetroWindow x:Class="Orbit.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:mahConverters="http://metro.mahapps.com/winfx/xaml/shared"
+        xmlns:controlzex="urn:controlzex"
+        xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+        xmlns:local="clr-namespace:Orbit"
+        xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
+        xmlns:views="clr-namespace:Orbit.Views"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+
+    <mah:MetroWindow.IconTemplate>
+        <DataTemplate>
+            <dragablz:DragablzIcon />
+        </DataTemplate>
+    </mah:MetroWindow.IconTemplate>
+    
+    
+
+    <DockPanel>
+        <!-- Top Panel with Add Tab and Show Sessions Buttons -->
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5 5 5 5 ">
+            <Button Content="Add New Session" Click="AddSession_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+            <Button Content="Show Sessions" Click="ShowSessions_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+            <!-- Themes Menu -->
+            <Menu DockPanel.Dock="Top" Height="30" Width="68.5" >
+                <MenuItem Header="_Themes" Name="ThemesMenu" >
+                 
+                    
+                    <!-- Populated dynamically -->
+                </MenuItem>
+            </Menu>
+        </StackPanel>
+
+        <!-- TabablzControl to host sessions -->
+        <dragablz:TabablzControl x:Name="SessionTabControl"
+                                 ItemsSource="{Binding Sessions}"
+                                 AllowDrop="True"
+                                 SelectionChanged="SessionTabControl_SelectionChanged">
+
+            <!-- InterTabController for floating tabs -->
+            <dragablz:TabablzControl.InterTabController>
+                <dragablz:InterTabController />
+            </dragablz:TabablzControl.InterTabController>
+
+            <dragablz:TabablzControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+            </dragablz:TabablzControl.ItemTemplate>
+
+            <dragablz:TabablzControl.ContentTemplate>
+                <DataTemplate>
+                    <ContentControl Content="{Binding HostControl}"/>
+                </DataTemplate>
+            </dragablz:TabablzControl.ContentTemplate>
+        </dragablz:TabablzControl>
+    </DockPanel>
+</mah:MetroWindow>
