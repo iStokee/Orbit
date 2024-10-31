@@ -1,4 +1,4 @@
-﻿<mah:MetroWindow x:Class="Orbit.MainWindow"
+﻿<Controls:MetroWindow x:Class="Orbit.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6,52 +6,67 @@
         xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
         xmlns:mahConverters="http://metro.mahapps.com/winfx/xaml/shared"
         xmlns:controlzex="urn:controlzex"
+        xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         xmlns:local="clr-namespace:Orbit"
         xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
         xmlns:views="clr-namespace:Orbit.Views"
+        xmlns:toolkit="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        d:DataContext="{d:DesignInstance local:MainWindow}"
+        TitleCharacterCasing="Normal" 
+        Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"
+        >
 
-    <mah:MetroWindow.IconTemplate>
+    <Window.Resources>
+        <ResourceDictionary>
+            <!--<DataTemplate DataType="{x:Type viewmodels:ThemeManagerViewModel}">
+                <Menu>
+                    <MenuItem Header="Theme" ItemsSource="{Binding AppThemes, Mode=OneWay}" ItemContainerStyle="{StaticResource AppThemeMenuItemStyle}" />
+                    <MenuItem Header="Accent" ItemsSource="{Binding AccentColors, Mode=OneWay}" ItemContainerStyle="{StaticResource AccentColorMenuItemStyle}" />
+                </Menu>
+            </DataTemplate>-->
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Controls:MetroWindow.IconTemplate>
         <DataTemplate>
-            <dragablz:DragablzIcon />
+            <iconPacks:PackIconGameIcons Kind="Orbital" Height="25" Width="25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </DataTemplate>
-    </mah:MetroWindow.IconTemplate>
-    
-    
+    </Controls:MetroWindow.IconTemplate>
 
     <DockPanel>
         <!-- Top Panel with Add Tab and Show Sessions Buttons -->
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5 5 5 5 ">
             <Button Content="Add New Session" Click="AddSession_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
             <Button Content="Show Sessions" Click="ShowSessions_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-            <!-- Themes Menu -->
-            <Menu DockPanel.Dock="Top" Height="30" Width="68.5" >
-                <MenuItem Header="_Themes" Name="ThemesMenu" >
-                 
-                    
-                    <!-- Populated dynamically -->
-                </MenuItem>
-            </Menu>
+            <Button Content="Theme Manager" Click="OpenThemeManager_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+
         </StackPanel>
 
         <!-- TabablzControl to host sessions -->
         <dragablz:TabablzControl x:Name="SessionTabControl"
                                  ItemsSource="{Binding Sessions}"
-                                 AllowDrop="True"
-                                 SelectionChanged="SessionTabControl_SelectionChanged">
+                                 AllowDrop="True" 
+                                 ShowDefaultCloseButton="True">
 
             <!-- InterTabController for floating tabs -->
             <dragablz:TabablzControl.InterTabController>
-                <dragablz:InterTabController />
+                <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" />
             </dragablz:TabablzControl.InterTabController>
 
-            <dragablz:TabablzControl.ItemTemplate>
+
+            <dragablz:TabablzControl.CustomHeaderItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Name}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}" 
+                           VerticalAlignment="Top" 
+                           FontWeight="SemiBold" />
+                    </StackPanel>
                 </DataTemplate>
-            </dragablz:TabablzControl.ItemTemplate>
+            </dragablz:TabablzControl.CustomHeaderItemTemplate>
 
             <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
@@ -59,5 +74,6 @@
                 </DataTemplate>
             </dragablz:TabablzControl.ContentTemplate>
         </dragablz:TabablzControl>
+
     </DockPanel>
-</mah:MetroWindow>
+</Controls:MetroWindow>

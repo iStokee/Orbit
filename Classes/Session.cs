@@ -26,7 +26,25 @@ namespace Orbit.Classes
 		public bool ClientLoaded { get; set; }
 		public string ClientStatus { get; set; }
 		public Guid BotId { get; set; } = Guid.NewGuid();
-		
+
+		public Process RSProcess { get; set; } // Add this property
+
+		public void KillProcess()
+		{
+			try
+			{
+				if (RSProcess != null && !RSProcess.HasExited)
+				{
+					RSProcess.Kill();
+					RSProcess.Dispose();
+				}
+			}
+			catch (Exception ex)
+			{
+				// Handle exception (e.g., log it)
+			}
+		}
+
 
 
 		[DllImport("user32.dll")]

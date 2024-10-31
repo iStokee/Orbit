@@ -7,31 +7,53 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
+    <StartupObject>Orbit.App</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Classes\CustomInterTabClient.cs" />
+    <Compile Remove="Classes\CustomTheme.cs" />
+    <Compile Remove="Classes\MyLibraryThemeProvider.cs" />
+    <Compile Remove="FloatingWindow.xaml.cs" />
     <Compile Remove="ThemeManagement.cs" />
+    <Compile Remove="WinformHost.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Common.dll" />
+    <None Remove="Orbital.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Remove="FloatingWindow.xaml" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
-    <Folder Include="ViewModels\" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ControlzEx" Version="3.0.2.4" />
     <PackageReference Include="Costura.Fody" Version="5.7.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Dragablz" Version="0.0.3.234" />
+    <PackageReference Include="Dragablz" Version="0.0.3.150" />
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="4.6.1" />
     <PackageReference Include="Fody" Version="6.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+    <PackageReference Include="MahApps.Metro" Version="1.6.5" />
     <PackageReference Include="MahApps.Metro.IconPacks" Version="5.1.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.19" />
+    <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Orbital.jpg" />
   </ItemGroup>
 
   <ItemGroup>

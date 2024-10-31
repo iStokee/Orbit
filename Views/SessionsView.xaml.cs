@@ -1,4 +1,5 @@
-﻿using Orbit.Classes;
+﻿using MahApps.Metro.Controls;
+using Orbit.Classes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,12 +20,12 @@ namespace Orbit.Views
 	/// <summary>
 	/// Interaction logic for SessionsWindow.xaml
 	/// </summary>
-	public partial class SessionsWindow : Window
+	public partial class SessionsView : MetroWindow
 	{
-		public SessionsWindow(ObservableCollection<Session> sessions)
+		public SessionsView(ObservableCollection<Session> sessions)
 		{
 			InitializeComponent();
-			this.DataContext = sessions;
+			DataContext = sessions;
 		}
 	}
 }

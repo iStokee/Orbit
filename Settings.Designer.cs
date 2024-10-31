@@ -46,5 +46,17 @@ namespace Orbit {
                 this["Accent"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string CustomThemes {
+            get {
+                return ((string)(this["CustomThemes"]));
+            }
+            set {
+                this["CustomThemes"] = value;
+            }
+        }
     }
 }

@@ -1,38 +1,24 @@
 ﻿using Dragablz;
 using MahApps.Metro.Controls;
-using ControlzEx.Theming;
 using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.Management;
+using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Forms.Integration;
 using Orbit.Views;
-using MessageBox = System.Windows.Forms.MessageBox;
-using Application = System.Windows.Application;
-using System.Windows.Interop;
-using System.Windows.Controls;
 using Orbit.Classes;
-using System.Windows.Forms;
-using ControlzEx.Theming;
-
-// Alias ThemeManagers to avoid conflicts
-using MahAppsThemeManager = ControlzEx.Theming.ThemeManager;
-using ControlzExThemeManager = ControlzEx.Theming.ThemeManager;
-using MahApps.Metro.Theming;
-using System.Windows.Media;
-using Color = System.Windows.Media.Color;
-using ColorConverter = System.Windows.Media.ColorConverter;
+using Orbit.ViewModels;
+using System.Windows.Controls;
+using Application = System.Windows.Application;
 
 namespace Orbit
 {
 	public partial class MainWindow : MetroWindow
 	{
-		#region Dll Imports
+		#region Dll Imports and Constants
 		[DllImport("user32.dll")]
 		private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
@@ -56,8 +42,8 @@ namespace Orbit
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string className, string windowTitle);
-		#endregion
 
+		// Consts
 		private const int HWND_TOP = 0;
 		private const uint SWP_NOSIZE = 0x0001;
 		private const uint SWP_NOMOVE = 0x0002;
@@ -68,98 +54,69 @@ namespace Orbit
 		private const int GWL_STYLE = -16;
 		private const int WS_CAPTION = 0x00C00000;
 
-		// Collection to track sessions
-		public IInterTabClient InterTabClient { get; } = new CustomInterTabClient();
+		#endregion
+
 
 		public ObservableCollection<Session> Sessions { get; set; }
+		//public ObservableCollection<CustomTheme> CustomThemes { get; set; }
+
+		bool SessionWindowActive = false;
+
+
+		// Command for closing tabs
+		public ICommand CloseTabCommand { get; }
+		public ICommand OpenTabCommand { get; }
+
 
 		public MainWindow()
 		{
 			InitializeComponent();
 			Sessions = new ObservableCollection<Session>();
-			DataContext = this;  // Set DataContext to make Sessions available for data binding
+			this.DataContext = this;  // Set DataContext to make Sessions available for data binding
 
+			// Initialize the CloseTabCommand
+			CloseTabCommand = new RelayCommand(CloseTab);
+			OpenTabCommand = new RelayCommand(_ => LoadSession());
+			SessionTabControl.ClosingItemCallback += TabControl_ClosingItemHandler;
 
-			PopulateThemesMenu(); // Populate the themes menu
-			LoadSavedTheme();
+			// Assign the NewItemFactory
+			SessionTabControl.NewItemFactory = CreateNewSession;
 		}
 
-		private void PopulateThemesMenu()
+		// Event handlers
+		#region Event Handlers
+
+		private void SessionTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
-			var themesMenuItem = ThemesMenu;
-
-			// Clear existing items if any
-			themesMenuItem.Items.Clear();
-
-			// Define theme types and accents
-			var themeTypes = new[] { "Light", "Dark" };
-			var accentColors = new[] { "Blue", "Red", "Green", "Purple", "Orange" };
-
-			foreach (var theme in themeTypes)
+			if (SessionTabControl.SelectedItem is Session session && session.HostControl != null)
 			{
-				var themeMenuItem = new MenuItem { Header = theme };
-				foreach (var accent in accentColors)
-				{
-					var accentMenuItem = new MenuItem { Header = accent };
-					accentMenuItem.Click += (s, e) =>
-					{
-						ApplyTheme(theme, accent);
-						SaveTheme(theme, accent);
-					};
-					themeMenuItem.Items.Add(accentMenuItem);
-				}
-				themesMenuItem.Items.Add(themeMenuItem);
+				EnsureWindowTopMost(session);
 			}
 		}
 
-		private void ApplyTheme(string theme, string accent)
+		private void ShowSessions_Click(object sender, RoutedEventArgs e)
 		{
-			// Construct the full theme name as "BaseLight.Blue" or "BaseDark.Red"
-			string themeName = $"{theme}.{accent}";
-
-			// Retrieve the theme to ensure it exists
-			var selectedTheme = ThemeManager.Current.GetTheme(themeName);
-
-			if (selectedTheme != null)
+			if (!SessionWindowActive)
 			{
-				// Apply the theme
-				ThemeManager.Current.ChangeTheme(Application.Current, themeName);
+				var sessionsWindow = new SessionsView(Sessions);
+				sessionsWindow.Show();
+				SessionWindowActive = true;
+				sessionsWindow.Closed += (s, e) => SessionWindowActive = false;
 			}
+			// else if there is an active session window, bring it to the front
 			else
 			{
-				// Handle the missing theme scenario
-				MessageBox.Show($"The theme '{themeName}' was not found. Please select a valid theme.", "Theme Not Found", (MessageBoxButtons)MessageBoxButton.OK, (MessageBoxIcon)MessageBoxImage.Warning);
-			}
-		}
-
-
-
-
-		private void SaveTheme(string theme, string accent)
-		{
-			// Save to user settings
-			Settings.Default.Theme = theme;
-			Settings.Default.Accent = accent;
-			Settings.Default.Save();
-		}
-
-		private void LoadSavedTheme()
-		{
-			var savedTheme = Settings.Default.Theme;
-			var savedAccent = Settings.Default.Accent;
-
-			if (!string.IsNullOrEmpty(savedTheme) && !string.IsNullOrEmpty(savedAccent))
-			{
-				ApplyTheme(savedTheme, savedAccent);
-			}
-			else
-			{
-				// Apply a default theme if none is saved
-				ApplyTheme("Light", "Blue");
+				var sessionsWindow = Application.Current.Windows.OfType<SessionsView>().FirstOrDefault();
+				sessionsWindow?.Activate();
 			}
 		}
 
 		private async void AddSession_Click(object sender, RoutedEventArgs e)
+		{
+			LoadSession();
+		}
+
+		private async void LoadSession()
 		{
 			// Create a new session
 			var session = new Session
@@ -186,23 +143,101 @@ namespace Orbit
 			Sessions.Add(session);
 
 			// Start the new session logic
-			await StartNewSession(session);
+			StartNewSession(session);
 
 			// set the tab control to the new session
 			SessionTabControl.SelectedItem = session;
+
+			// set the RSProcess property to the process of the RSForm
+			session.RSProcess = session.RSForm.pDocked;
 		}
 
-		private async Task StartNewSession(Session session)
+		// New method to create a new session synchronously
+		private object CreateNewSession()
 		{
-			if (session.RSForm == null)
+			// Create a new session
+			var session = new Session
 			{
-				Console.WriteLine("LoadNewSession");
-				await session.RSForm.BeginLoad();
-				await Task.Delay(5000);
-				Console.WriteLine("Client has finished loading");
-			}
-			await Task.Delay(500);
+				Id = Guid.NewGuid(),
+				Name = $"RuneScape Session {Sessions.Count + 1}",
+				CreatedAt = DateTime.Now
+			};
 
+			// Create the WindowsFormsHost
+			var windowsFormsHost = new WindowsFormsHost();
+			session.HostControl = windowsFormsHost;
+
+			// Create the RSForm
+			session.RSForm = new RSForm();
+			session.RSForm.TopLevel = false;
+
+			// Add the RSForm to the WindowsFormsHost
+			windowsFormsHost.Child = session.RSForm;
+
+			// Start the new session logic asynchronously
+			session.RSForm.BeginLoad();
+
+			// Any other initialization
+			session.ClientLoaded = true;
+			session.ClientStatus = "Loaded";
+
+			// set the RSProcess property to the process of the RSForm
+			session.RSProcess = session.RSForm.pDocked;
+
+			return session;
+		}
+
+		#endregion
+
+		// Command execution for closing a tab
+		private void CloseTab(object parameter)
+		{
+			if (parameter is Session session)
+			{
+				// Remove the session from the collection
+				try 
+				{
+					session.RSProcess.Kill();
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex.Message);
+				}
+
+				// if kill successful, remove session
+				if (session.RSProcess.HasExited)
+				{
+					Sessions.Remove(session);
+				}
+			}
+		}
+
+		private void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+		{
+			if (System.Windows.MessageBox.Show("Sure", "", MessageBoxButton.YesNo, MessageBoxImage.Stop) == MessageBoxResult.No)
+			{
+				
+				args.Cancel();
+
+			}
+			else
+			{
+				CloseTab(args.DragablzItem.DataContext);
+			}
+		}
+
+		private void TabControl_NewItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+		{
+			LoadSession();
+		}
+
+
+		// Adjusted StartNewSession method
+		private async void StartNewSession(Session session)
+		{
+			await session.RSForm.BeginLoad();
+
+			// Any other initialization
 			session.ClientLoaded = true;
 			session.ClientStatus = "Loaded";
 		}
@@ -213,119 +248,10 @@ namespace Orbit
 				SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 		}
 
-		private void SessionTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		private void OpenThemeManager_Click(object sender, RoutedEventArgs e)
 		{
-			if (SessionTabControl.SelectedItem is Session session && session.HostControl != null)
-			{
-				EnsureWindowTopMost(session);
-			}
-		}
-
-		private void ShowSessions_Click(object sender, RoutedEventArgs e)
-		{
-			// Open the Sessions Window
-			SessionsWindow sessionsWindow = new SessionsWindow(Sessions);
-			sessionsWindow.Show();
-		}
-	}
-
-	public class CustomInterTabClient : IInterTabClient
-	{
-		// This method returns the control container where new tabs will be placed in the new floating window.
-		public INewTabHost<Window> GetNewHost(IInterTabClient interTabClient, object partition, TabablzControl source)
-		{
-			// Create a new floating window
-			var newWindow = new FloatingWindow();
-
-			// Bind the new window's SessionTabControl to the same Sessions collection
-			var newTabablzControl = newWindow.SessionTabControl;
-			newTabablzControl.ItemsSource = ((MainWindow)Application.Current.MainWindow).Sessions;
-
-			return new NewTabHost<Window>(newWindow, newTabablzControl);
-		}
-
-		// Defines what happens when a tab is emptied
-		public TabEmptiedResponse TabEmptiedHandler(TabablzControl tabControl, Window window)
-		{
-			return TabEmptiedResponse.CloseWindowOrLayoutBranch;
-		}
-	}
-
-	// Your custom ThemeProvider class
-	public class MyLibraryThemeProvider : MahAppsLibraryThemeProvider
-	{
-		/// <inheritdoc/>
-		public static new readonly MyLibraryThemeProvider DefaultInstance = new MyLibraryThemeProvider();
-
-		public override void FillColorSchemeValues(Dictionary<string, string> values, RuntimeThemeColorValues colorValues)
-		{
-			// Check if all needed parameters are not null
-			if (values is null) throw new ArgumentNullException(nameof(values));
-			if (colorValues is null) throw new ArgumentNullException(nameof(colorValues));
-
-			bool isDarkMode = colorValues.Options.BaseColorScheme.Name == ThemeManager.BaseColorDark;
-			Color baseColor = (Color)ColorConverter.ConvertFromString(colorValues.Options.BaseColorScheme.Values["MahApps.Colors.ThemeBackground"]);
-			Color accent = colorValues.AccentBaseColor;
-			double factor = isDarkMode ? 0.1 : 0.2;
-
-			// Add the values you like to override
-			values.Add("MahApps.Colors.AccentBase", accent.ToString(CultureInfo.InvariantCulture));
-			values.Add("MahApps.Colors.Accent", AddColor(accent, baseColor, factor * 1).ToString(CultureInfo.InvariantCulture));
-			values.Add("MahApps.Colors.Accent2", AddColor(accent, baseColor, factor * 2).ToString(CultureInfo.InvariantCulture));
-			values.Add("MahApps.Colors.Accent3", AddColor(accent, baseColor, factor * 3).ToString(CultureInfo.InvariantCulture));
-			values.Add("MahApps.Colors.Accent4", AddColor(accent, baseColor, factor * 4).ToString(CultureInfo.InvariantCulture));
-
-			values.Add("MahApps.Colors.Highlight", AddColor(accent, isDarkMode ? Colors.White : Colors.Black, 0.8).ToString(CultureInfo.InvariantCulture));
-			values.Add("MahApps.Colors.IdealForeground", colorValues.IdealForegroundColor.ToString(CultureInfo.InvariantCulture));
-
-			// Gray Colors
-			for (int i = 1; i <= 10; i++)
-			{
-				values.Add($"MahApps.Colors.Gray{i}", GetShadedGray(i / 11d, isDarkMode).ToString(CultureInfo.InvariantCulture));
-			}
-		}
-
-		private static Color GetShadedGray(double percentage, bool inverse = false)
-		{
-			if (inverse)
-			{
-				percentage = 1 - percentage;
-			}
-
-			return Color.FromRgb((byte)(percentage * 255), (byte)(percentage * 255), (byte)(percentage * 255));
-		}
-
-		private static Color AddColor(Color baseColor, Color colorToAdd, double? factor)
-		{
-			byte firstColorAlpha = baseColor.A;
-			byte secondColorAlpha = factor.HasValue ? (byte)(factor * 255) : colorToAdd.A;
-
-			byte alpha = CompositeAlpha(firstColorAlpha, secondColorAlpha);
-
-			byte r = CompositeColorComponent(baseColor.R, firstColorAlpha, colorToAdd.R, secondColorAlpha, alpha);
-			byte g = CompositeColorComponent(baseColor.G, firstColorAlpha, colorToAdd.G, secondColorAlpha, alpha);
-			byte b = CompositeColorComponent(baseColor.B, firstColorAlpha, colorToAdd.B, secondColorAlpha, alpha);
-
-			return Color.FromArgb(255, r, g, b);
-		}
-
-		/// <summary>
-		/// For a single R/G/B component. a = precomputed CompositeAlpha(a1, a2)
-		/// </summary>
-		private static byte CompositeColorComponent(byte c1, byte a1, byte c2, byte a2, byte a)
-		{
-			// Handle the singular case of both layers fully transparent.
-			if (a == 0)
-			{
-				return 0;
-			}
-
-			return System.Convert.ToByte((((255 * c2 * a2) + (c1 * a1 * (255 - a2))) / a) / 255);
-		}
-
-		private static byte CompositeAlpha(byte a1, byte a2)
-		{
-			return System.Convert.ToByte(255 - ((255 - a2) * (255 - a1)) / 255);
+			//var themeManagerWindow = new ThemeManagerView();
+			//themeManagerWindow.Show();
 		}
 	}
 }
