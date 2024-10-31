@@ -250,8 +250,8 @@ namespace Orbit
 
 		private void OpenThemeManager_Click(object sender, RoutedEventArgs e)
 		{
-			//var themeManagerWindow = new ThemeManagerView();
-			//themeManagerWindow.Show();
+			var themeManagerWindow = new ThemeManagerView();
+			themeManagerWindow.Show();
 		}
 	}
 }

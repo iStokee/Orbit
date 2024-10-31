@@ -16,6 +16,7 @@ namespace Orbit
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			base.OnStartup(e);
+
 			//LoadSavedTheme();
 
 			//ThemeManager.Current.ThemeSyncMode = ThemeSyncMode.SyncWithAppMode;
