@@ -1,4 +1,5 @@
 ﻿using Orbit.Classes;
+using Orbit.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -34,15 +35,11 @@ namespace Orbit.ViewModels
 				CreatedAt = DateTime.Now
 			};
 
-			var windowsFormsHost = new WindowsFormsHost();
+			var windowsFormsHost = new ChildClientView();
 			session.HostControl = windowsFormsHost;
 
-			session.RSForm = new RSForm();
-			session.RSForm.TopLevel = false;
-			windowsFormsHost.Child = session.RSForm;
-
 			// Pass the session to RSForm to store the process
-			await session.RSForm.BeginLoad();
+			await session.HostControl.LoadNewSession();
 
 			Sessions.Add(session);
 
@@ -51,12 +48,12 @@ namespace Orbit.ViewModels
 
 		private async Task StartNewSession(Session session)
 		{
-			if (session.RSForm == null)
-			{
-				await session.RSForm.BeginLoad();
-				await Task.Delay(5000);
-			}
-			await Task.Delay(500);
+			//if (session.RSForm == null)
+			//{
+			//	await session.RSForm.BeginLoad();
+			//	await Task.Delay(5000);
+			//}
+			//await Task.Delay(500);
 
 			session.ClientLoaded = true;
 			session.ClientStatus = "Loaded";

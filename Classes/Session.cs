@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms.Integration;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using Orbit.Views;
 
 namespace Orbit.Classes
 {
@@ -16,7 +17,7 @@ namespace Orbit.Classes
 		public Guid Id { get; set; }
 		public string Name { get; set; }
 		public DateTime CreatedAt { get; set; }
-		public WindowsFormsHost HostControl { get; set; }
+		public ChildClientView HostControl { get; set; }
 		public RSForm RSForm { get; set; }
 		public Process ExternalProcess { get; set; }
 		public IntPtr ExternalHandle { get; set; }
@@ -28,6 +29,16 @@ namespace Orbit.Classes
 		public Guid BotId { get; set; } = Guid.NewGuid();
 
 		public Process RSProcess { get; set; } // Add this property
+
+		public void Resize(double width, double height)
+		{
+			if (HostControl is ChildClientView clientView)
+			{
+				// Pass new dimensions to ChildClientView to resize properly
+				clientView.ResizeWindowAsync((int)width, (int)height);
+			}
+		}
+
 
 		public void KillProcess()
 		{

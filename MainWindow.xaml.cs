@@ -13,6 +13,8 @@ using Orbit.Classes;
 using Orbit.ViewModels;
 using System.Windows.Controls;
 using Application = System.Windows.Application;
+using System.Windows.Threading;
+using System.Windows.Forms;
 
 namespace Orbit
 {
@@ -56,31 +58,42 @@ namespace Orbit
 
 		#endregion
 
-
 		public ObservableCollection<Session> Sessions { get; set; }
 		//public ObservableCollection<CustomTheme> CustomThemes { get; set; }
 
-		bool SessionWindowActive = false;
+		private ObservableCollection<RelayCommand> ResizeCommands { get; set; }
 
+		bool SessionWindowActive = false;
 
 		// Command for closing tabs
 		public ICommand CloseTabCommand { get; }
 		public ICommand OpenTabCommand { get; }
 
+		private ICommand ResizeCommand { get; }
+
+		private DispatcherTimer resizeTimer;
+		private WindowState clientWindowState = WindowState.Normal;
+		readonly Rectangle screen = new Rectangle();
 
 		public MainWindow()
 		{
 			InitializeComponent();
 			Sessions = new ObservableCollection<Session>();
+			ResizeCommands = new ObservableCollection<RelayCommand>();
 			this.DataContext = this;  // Set DataContext to make Sessions available for data binding
 
 			// Initialize the CloseTabCommand
 			CloseTabCommand = new RelayCommand(CloseTab);
-			OpenTabCommand = new RelayCommand(_ => LoadSession());
+			//OpenTabCommand = new RelayCommand(_ => LoadSession(new Session()));
 			SessionTabControl.ClosingItemCallback += TabControl_ClosingItemHandler;
+			//this.LocationChanged += MetroWindow_LocationChanged;
+
+			resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+			resizeTimer.Tick += ResizeTimer_Tick;
+
 
 			// Assign the NewItemFactory
-			SessionTabControl.NewItemFactory = CreateNewSession;
+			SessionTabControl.NewItemFactory = CreateNewSessionAsync;
 		}
 
 		// Event handlers
@@ -113,11 +126,6 @@ namespace Orbit
 
 		private async void AddSession_Click(object sender, RoutedEventArgs e)
 		{
-			LoadSession();
-		}
-
-		private async void LoadSession()
-		{
 			// Create a new session
 			var session = new Session
 			{
@@ -126,34 +134,61 @@ namespace Orbit
 				CreatedAt = DateTime.Now
 			};
 
+			await LoadSession(session);
+
+			// get the last session in the list, and fire its resize window event in rsform
+			if (Sessions.Count() > 0)
+			{
+				SessionTabControl.SelectedItem = session;
+				session.SetFocus();			
+			}
+		}
+
+		private async Task LoadSession(Session session)
+		{
 			// Create the WindowsFormsHost
-			var windowsFormsHost = new WindowsFormsHost();
+			var windowsFormsHost = new ChildClientView();
 			session.HostControl = windowsFormsHost;
+			windowsFormsHost.hasStarted = false;
 
-			// Create the RSForm
-			session.RSForm = new RSForm();
-			session.RSForm.TopLevel = false;
+			// Set initial size to match the SessionTabControl dimensions
+			await windowsFormsHost.ResizeWindowAsync((int)SessionTabControl.ActualWidth, (int)SessionTabControl.ActualHeight);
 
-			// Add the RSForm to the WindowsFormsHost
-			windowsFormsHost.Child = session.RSForm;
-
-			await session.RSForm.BeginLoad();
-
-			// Add the session to the collection
-			Sessions.Add(session);
 
 			// Start the new session logic
 			StartNewSession(session);
 
-			// set the tab control to the new session
+			// Set the tab control to the new session
 			SessionTabControl.SelectedItem = session;
 
-			// set the RSProcess property to the process of the RSForm
-			session.RSProcess = session.RSForm.pDocked;
+			while (windowsFormsHost.hasStarted == false)
+			{
+				Console.WriteLine("Waiting for hasStarted");
+				await Task.Delay(1000);
+			}
+
+			// Assign the RSProcess property to the process of the RSForm
+			session.RSProcess = windowsFormsHost.client.rs2Process;
+
+			// Mark host start completion
+			windowsFormsHost.hasStarted = true;
+
+			// Subscribe to the main window's SizeChanged event for this session
+			this.SizeChanged += async (sender, args) =>
+			{
+				await windowsFormsHost.ResizeWindowAsync((int)SessionTabControl.ActualWidth, (int)SessionTabControl.ActualHeight);
+
+			};
+
+
+			// Add the session to the collection
+			Sessions.Add(session);
 		}
 
+
+		// new item factory start method
 		// New method to create a new session synchronously
-		private object CreateNewSession()
+		private async Task<Session> CreateNewSessionAsync()
 		{
 			// Create a new session
 			var session = new Session
@@ -164,25 +199,32 @@ namespace Orbit
 			};
 
 			// Create the WindowsFormsHost
-			var windowsFormsHost = new WindowsFormsHost();
+			var windowsFormsHost = new ChildClientView();
 			session.HostControl = windowsFormsHost;
 
-			// Create the RSForm
-			session.RSForm = new RSForm();
-			session.RSForm.TopLevel = false;
-
-			// Add the RSForm to the WindowsFormsHost
-			windowsFormsHost.Child = session.RSForm;
-
 			// Start the new session logic asynchronously
-			session.RSForm.BeginLoad();
+			await session.HostControl.LoadNewSession();
+			await Task.Delay(5000);
 
 			// Any other initialization
 			session.ClientLoaded = true;
 			session.ClientStatus = "Loaded";
 
-			// set the RSProcess property to the process of the RSForm
-			session.RSProcess = session.RSForm.pDocked;
+			while (session.RSProcess == null)
+			{
+				Console.WriteLine("Waiting for RSProcess to be set...");
+				await Task.Delay(1000);
+			}
+
+			if (session.RSProcess != null && !session.RSProcess.HasExited)
+			{
+				session.ExternalHandle = session.RSProcess.MainWindowHandle;
+
+				// set the RSProcess property to the process of the RSForm
+				session.RSProcess = session.RSForm.pDocked;
+			}
+
+			await session.RSForm.ResizeWindow();
 
 			return session;
 		}
@@ -194,24 +236,30 @@ namespace Orbit
 		{
 			if (parameter is Session session)
 			{
-				// Remove the session from the collection
-				try 
+				if (session.RSProcess != null)
 				{
-					session.RSProcess.Kill();
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine(ex.Message);
-				}
+					// Remove the session from the collection
+					try
+					{
+						session.RSProcess.Kill();
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine(ex.Message);
+					}
 
-				// if kill successful, remove session
-				if (session.RSProcess.HasExited)
-				{
-					Sessions.Remove(session);
+					// if kill successful, remove session
+					if (session.RSProcess.HasExited)
+					{
+						Sessions.Remove(session);
+					}
 				}
 			}
+
 		}
 
+
+		// Specific commands for the New and Close buttons in the Tabablz
 		private void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
 		{
 			if (System.Windows.MessageBox.Show("Sure", "", MessageBoxButton.YesNo, MessageBoxImage.Stop) == MessageBoxResult.No)
@@ -226,16 +274,16 @@ namespace Orbit
 			}
 		}
 
-		private void TabControl_NewItemHandler(ItemActionCallbackArgs<TabablzControl> args)
-		{
-			LoadSession();
-		}
+		//private void TabControl_NewItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+		//{
+		//	LoadSession();
+		//}
 
 
 		// Adjusted StartNewSession method
 		private async void StartNewSession(Session session)
 		{
-			await session.RSForm.BeginLoad();
+			//await session.RSForm.BeginLoad();
 
 			// Any other initialization
 			session.ClientLoaded = true;
@@ -252,6 +300,38 @@ namespace Orbit
 		{
 			var themeManagerWindow = new ThemeManagerView();
 			themeManagerWindow.Show();
+		}
+
+		private void MetroWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+		{
+			if (Sessions.Count == 0) return;
+
+			resizeTimer.Stop();
+			resizeTimer.Start();
+		}
+
+		private void ResizeTimer_Tick(object sender, EventArgs e)
+		{
+			resizeTimer.Stop();
+
+			foreach (var session in Sessions)
+			{
+				session.Resize(SessionTabControl.ActualWidth, SessionTabControl.ActualHeight);
+			}
+		}
+
+
+
+		private void MetroWindow_LocationChanged(object sender, EventArgs e)
+		{
+			const int snapThreshold = 20; // Adjust as needed
+
+			if (Math.Abs(this.Left) < snapThreshold)
+				this.Left = 0; // Snap to left edge
+			else if (Math.Abs(SystemParameters.WorkArea.Width - this.Left - this.Width) < snapThreshold)
+				this.Left = SystemParameters.WorkArea.Width - this.Width; // Snap to right edge
+
+			// Similar checks for Top and Bottom edges if desired
 		}
 	}
 }

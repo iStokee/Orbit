@@ -343,6 +343,23 @@ namespace Orbit
 
 		#endregion
 
+		internal async Task ResizeWindowOvl(int width, int height)
+		{
+			try
+			{
+				IntPtr handle = hWndDocked;
+
+				await Task.Run(() =>
+				{
+					MoveWindow(handle, -8, -32, width + 16, height + 40, true);
+					Console.WriteLine("Resized RSForm window");
+				});
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"An error occurred while resizing the window: {ex}");
+			}
+		}
 
 		internal async Task ResizeWindow()
 		{
@@ -363,5 +380,6 @@ namespace Orbit
 				Console.WriteLine($"An error occurred while resizing the window: {ex}");
 			}
 		}
+
 	}
 }

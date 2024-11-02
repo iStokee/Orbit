@@ -15,20 +15,19 @@
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
         mc:Ignorable="d"
+        SizeChanged="MetroWindow_SizeChanged"
         d:DataContext="{d:DesignInstance local:MainWindow}"
-        TitleCharacterCasing="Normal" 
+        TitleCaps="False" 
         Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"
         >
 
     <Window.Resources>
-        <ResourceDictionary>
-            <!--<DataTemplate DataType="{x:Type viewmodels:ThemeManagerViewModel}">
+        <!--<DataTemplate DataType="{x:Type viewmodels:ThemeManagerViewModel}">
                 <Menu>
                     <MenuItem Header="Theme" ItemsSource="{Binding AppThemes, Mode=OneWay}" ItemContainerStyle="{StaticResource AppThemeMenuItemStyle}" />
                     <MenuItem Header="Accent" ItemsSource="{Binding AccentColors, Mode=OneWay}" ItemContainerStyle="{StaticResource AccentColorMenuItemStyle}" />
                 </Menu>
             </DataTemplate>-->
-        </ResourceDictionary>
     </Window.Resources>
 
     <Controls:MetroWindow.IconTemplate>
@@ -36,44 +35,48 @@
             <iconPacks:PackIconGameIcons Kind="Orbital" Height="25" Width="25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </DataTemplate>
     </Controls:MetroWindow.IconTemplate>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel>
+            <!-- Top Panel with Add Tab and Show Sessions Buttons -->
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5 5 5 5 ">
+                <Button Content="Add New Session" Click="AddSession_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+                <Button Content="Show Sessions" Click="ShowSessions_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+                <Button Content="Theme Manager" Click="OpenThemeManager_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
 
-    <DockPanel>
-        <!-- Top Panel with Add Tab and Show Sessions Buttons -->
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5 5 5 5 ">
-            <Button Content="Add New Session" Click="AddSession_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-            <Button Content="Show Sessions" Click="ShowSessions_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-            <Button Content="Theme Manager" Click="OpenThemeManager_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
+            </StackPanel>
 
-        </StackPanel>
-
-        <!-- TabablzControl to host sessions -->
-        <dragablz:TabablzControl x:Name="SessionTabControl"
+            <!-- TabablzControl to host sessions -->
+            <dragablz:TabablzControl x:Name="SessionTabControl"
                                  ItemsSource="{Binding Sessions}"
                                  AllowDrop="True" 
                                  ShowDefaultCloseButton="True">
 
-            <!-- InterTabController for floating tabs -->
-            <dragablz:TabablzControl.InterTabController>
-                <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" />
-            </dragablz:TabablzControl.InterTabController>
+                <!-- InterTabController for floating tabs -->
+                <dragablz:TabablzControl.InterTabController>
+                    <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" />
+                </dragablz:TabablzControl.InterTabController>
 
 
-            <dragablz:TabablzControl.CustomHeaderItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Name}" 
+                <dragablz:TabablzControl.CustomHeaderItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" 
                            VerticalAlignment="Top" 
                            FontWeight="SemiBold" />
-                    </StackPanel>
-                </DataTemplate>
-            </dragablz:TabablzControl.CustomHeaderItemTemplate>
+                        </StackPanel>
+                    </DataTemplate>
+                </dragablz:TabablzControl.CustomHeaderItemTemplate>
 
-            <dragablz:TabablzControl.ContentTemplate>
-                <DataTemplate>
-                    <ContentControl Content="{Binding HostControl}"/>
-                </DataTemplate>
-            </dragablz:TabablzControl.ContentTemplate>
-        </dragablz:TabablzControl>
+                <dragablz:TabablzControl.ContentTemplate>
+                    <DataTemplate>
+                        <ContentControl Content="{Binding HostControl}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    </DataTemplate>
+                </dragablz:TabablzControl.ContentTemplate>
+            </dragablz:TabablzControl>
 
-    </DockPanel>
+        </DockPanel>
+    </Grid>
 </Controls:MetroWindow>
