@@ -34,7 +34,9 @@ namespace Orbit
 		internal static IntPtr JagWindow;
 		internal static IntPtr wxWindowNR;
 
-		[DllImport("user32.dll")]
+        public int DockedRSHwnd { get; set; }
+
+        [DllImport("user32.dll")]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 		[DllImport("user32.dll")]
 		internal static extern int SetWindowText(IntPtr hWnd, string text);
@@ -328,6 +330,7 @@ namespace Orbit
 			{
 				hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
 				// ClientSettings.cameraHandle = panel1.Handle;
+				DockedRSHwnd = (int)hWndDocked;
 			});
 		}
 

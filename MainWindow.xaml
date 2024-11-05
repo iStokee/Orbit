@@ -15,8 +15,8 @@
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
         mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel}"
         SizeChanged="MetroWindow_SizeChanged"
-        d:DataContext="{d:DesignInstance local:MainWindow}"
         TitleCaps="False" 
         Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"
         >
@@ -40,25 +40,25 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <DockPanel>
-            <!-- Top Panel with Add Tab and Show Sessions Buttons -->
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5 5 5 5 ">
-                <Button Content="Add New Session" Click="AddSession_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-                <Button Content="Show Sessions" Click="ShowSessions_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-                <Button Content="Theme Manager" Click="OpenThemeManager_Click" Width="150" Height="30" Margin="5 5 5 5 "/>
-
+            <!-- Top Panel with Buttons bound to ViewModel Commands -->
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5">
+                <Button Content="Add New Session" Command="{Binding AddSessionCommand}" Width="150" Height="30" Margin="5"/>
+                <Button Content="Show Sessions" Command="{Binding ShowSessionsCommand}" Width="150" Height="30" Margin="5"/>
+                <Button Content="Theme Manager" Command="{Binding OpenThemeManagerCommand}" Width="150" Height="30" Margin="5"/>
+                <Button Content="HWND Test" Command="{Binding HWNDTestCommand}" Width="150" Height="30" Margin="5"/>
             </StackPanel>
 
-            <!-- TabablzControl to host sessions -->
+            <!-- TabablzControl bound to Sessions and InterTabClient -->
             <dragablz:TabablzControl x:Name="SessionTabControl"
-                                 ItemsSource="{Binding Sessions}"
-                                 AllowDrop="True" 
-                                 ShowDefaultCloseButton="True">
+                                     ItemsSource="{Binding Sessions}"
+                                     AllowDrop="True" 
+                                     ShowDefaultCloseButton="True"
+                                     SelectedItem="{Binding SelectedSession, Mode=TwoWay}">
 
-                <!-- InterTabController for floating tabs -->
+                <!-- InterTabController with binding to InterTabClient -->
                 <dragablz:TabablzControl.InterTabController>
                     <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" />
                 </dragablz:TabablzControl.InterTabController>
-
 
                 <dragablz:TabablzControl.CustomHeaderItemTemplate>
                     <DataTemplate>

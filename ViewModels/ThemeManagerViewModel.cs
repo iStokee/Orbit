@@ -1,42 +1,69 @@
-﻿using MahApps.Metro.Controls.Dialogs;
-using MahApps.Metro.Controls;
-using MahApps.Metro;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Data;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Input;
+using MahApps.Metro;
 using Orbit.Classes;
-using Newtonsoft.Json.Linq;
+
+using Color = System.Windows.Media.Color;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Application = System.Windows.Application;
+
 
 namespace Orbit.ViewModels
 {
-
-	internal class ThemeManagerViewModel
+	internal class ThemeManagerViewModel : DependencyObject
 	{
 		public List<AccentColorMenuData> AccentColors { get; set; }
 
 		public List<AppThemeMenuData> AppThemes { get; set; }
 
+		//public static readonly DependencyProperty ColorsProperty =
+		//	DependencyProperty.Register(
+		//		nameof(Colors),
+		//		typeof(List<KeyValuePair<string, Color>>),
+		//		typeof(ThemeManagerViewModel),
+		//		new PropertyMetadata(default(List<KeyValuePair<string, Color>>)));
+
+		public List<AccentColorMenuData> Colors
+		{
+			get => (List<AccentColorMenuData>)GetValue(ColorsProperty);
+			set => SetValue(ColorsProperty, value);
+		}
+
+		public static readonly DependencyProperty ColorsProperty =
+			DependencyProperty.Register(
+				nameof(Colors),
+				typeof(List<AccentColorMenuData>),
+				typeof(ThemeManagerViewModel),
+				new PropertyMetadata(default(List<AccentColorMenuData>)));
+
+
 		internal ThemeManagerViewModel()
 		{
-			// Create accent color menu items
-			this.AccentColors = ThemeManager.Accents
+			AccentColors = ThemeManager.Accents
 				.OrderBy(a => a.Name)
 				.Select(a => new AccentColorMenuData(
 					a.Name,
 					a.Resources["AccentColorBrush"] as Brush ?? Brushes.Transparent,
-					Brushes.Gray // Set a default border color, or adjust as needed
+					Brushes.Gray
 				))
 				.ToList();
 
-			// Create metro theme color menu items
-			this.AppThemes = ThemeManager.AppThemes
+			Colors = typeof(Colors)
+				.GetProperties()
+				.Where(prop => typeof(Color).IsAssignableFrom(prop.PropertyType))
+				.Select(prop => new AccentColorMenuData(
+					prop.Name,
+					new SolidColorBrush((Color)prop.GetValue(null)),
+					Brushes.Gray
+				))
+				.ToList();
+
+			AppThemes = ThemeManager.AppThemes
 				.OrderBy(a => a.Name)
 				.Select(a => new AppThemeMenuData(
 					a.Name,
@@ -47,14 +74,12 @@ namespace Orbit.ViewModels
 		}
 	}
 
-
 	public class AccentColorMenuData
 	{
 		public string? Name { get; set; }
-
-		public Brush? BorderColorBrush { get; set; } = Brushes.Gray; // Default color for border
-
-		public Brush? ColorBrush { get; set; } // Main fill color for the accent
+		public Brush? BorderColorBrush { get; set; }
+		public Brush? ColorBrush { get; set; }
+		public ICommand ChangeAccentCommand { get; }
 
 		public AccentColorMenuData(string name, Brush colorBrush, Brush borderColorBrush)
 		{
@@ -64,14 +89,12 @@ namespace Orbit.ViewModels
 			ChangeAccentCommand = new SimpleCommand<string?>(o => true, DoChangeTheme);
 		}
 
-		public ICommand ChangeAccentCommand { get; }
-
 		protected virtual void DoChangeTheme(string? name)
 		{
-			if (name is not null)
+			if (!string.IsNullOrEmpty(name))
 			{
-				var app = System.Windows.Application.Current;
-				var accent = ThemeManager.GetAccent(name);
+				var app = Application.Current;
+				var accent = ThemeManager.GetAccent(name) ?? new Accent(name, null);
 
 				if (accent != null)
 				{
@@ -85,6 +108,7 @@ namespace Orbit.ViewModels
 		}
 	}
 
+
 	public class AppThemeMenuData : AccentColorMenuData
 	{
 		public AppThemeMenuData(string name, Brush colorBrush, Brush borderColorBrush)
@@ -92,25 +116,23 @@ namespace Orbit.ViewModels
 		{
 		}
 
-		protected override void DoChangeTheme(string? name)
+		protected virtual void DoChangeTheme(string? name)
 		{
-			if (name is not null)
+			if (!string.IsNullOrEmpty(name))
 			{
-				var app = System.Windows.Application.Current;
-				var appTheme = ThemeManager.AppThemes.FirstOrDefault(x => x.Name == name);
+				var app = Application.Current;
+				var accent = ThemeManager.GetAccent(name); // Retrieve accent from ThemeManager
 
-				if (appTheme != null)
+				if (accent != null)
 				{
-					var currentStyle = ThemeManager.DetectAppStyle(app);
-					var accent = currentStyle?.Item2; // Existing accent color
-
-					if (accent != null)
+					var currentTheme = ThemeManager.DetectAppStyle(app); // Get current theme
+					if (currentTheme != null)
 					{
-						ThemeManager.ChangeAppStyle(app, accent, appTheme);
+						// Apply the selected accent while retaining the existing theme
+						ThemeManager.ChangeAppStyle(app, accent, currentTheme.Item1);
 					}
 				}
 			}
 		}
 	}
-
 }

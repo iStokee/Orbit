@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,25 @@ namespace Orbit.Views
 		{
 			InitializeComponent();
 			DataContext = sessions;
+			//GenerateColumns();
+		}
+
+		private void GenerateColumns()
+		{
+			var grid = SessionsGrid;
+			grid.Columns.Clear();
+
+			// Use reflection to get properties of the Session class
+			foreach (PropertyInfo property in typeof(Session).GetProperties())
+			{
+				DataGridTextColumn column = new DataGridTextColumn
+				{
+					Header = property.Name,
+					Binding = new System.Windows.Data.Binding(property.Name)
+				};
+
+				grid.Columns.Add(column);
+			}
 		}
 	}
 }
