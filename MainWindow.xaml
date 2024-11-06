@@ -12,22 +12,20 @@
         xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
         xmlns:views="clr-namespace:Orbit.Views"
         xmlns:toolkit="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:dockablz="clr-namespace:Dragablz.Dockablz;assembly=Dragablz"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel}"
         SizeChanged="MetroWindow_SizeChanged"
         TitleCaps="False" 
-        Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"
+        Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"        
         >
 
     <Window.Resources>
-        <!--<DataTemplate DataType="{x:Type viewmodels:ThemeManagerViewModel}">
-                <Menu>
-                    <MenuItem Header="Theme" ItemsSource="{Binding AppThemes, Mode=OneWay}" ItemContainerStyle="{StaticResource AppThemeMenuItemStyle}" />
-                    <MenuItem Header="Accent" ItemsSource="{Binding AccentColors, Mode=OneWay}" ItemContainerStyle="{StaticResource AccentColorMenuItemStyle}" />
-                </Menu>
-            </DataTemplate>-->
+        <Style TargetType="Controls:MetroWindow">
+            <Setter Property="Controls:MetroWindow.NonActiveWindowTitleBrush" Value="{StaticResource AccentColorBrush}"/>
+        </Style>
     </Window.Resources>
 
     <Controls:MetroWindow.IconTemplate>
@@ -47,13 +45,12 @@
                 <Button Content="Theme Manager" Command="{Binding OpenThemeManagerCommand}" Width="150" Height="30" Margin="5"/>
                 <Button Content="HWND Test" Command="{Binding HWNDTestCommand}" Width="150" Height="30" Margin="5"/>
             </StackPanel>
-
+            
             <!-- TabablzControl bound to Sessions and InterTabClient -->
-            <dragablz:TabablzControl x:Name="SessionTabControl"
-                                     ItemsSource="{Binding Sessions}"
-                                     AllowDrop="True" 
-                                     ShowDefaultCloseButton="True"
-                                     SelectedItem="{Binding SelectedSession, Mode=TwoWay}">
+                <dragablz:TabablzControl x:Name="SessionTabControl"
+                                         ItemsSource="{Binding Sessions}"
+                                         ShowDefaultCloseButton="True"
+                                         SelectedItem="{Binding SelectedSession, Mode=TwoWay}">
 
                 <!-- InterTabController with binding to InterTabClient -->
                 <dragablz:TabablzControl.InterTabController>
@@ -64,18 +61,20 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Name}" 
-                           VerticalAlignment="Top" 
-                           FontWeight="SemiBold" />
+                               VerticalAlignment="Top" 
+                               FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
                 </dragablz:TabablzControl.CustomHeaderItemTemplate>
 
                 <dragablz:TabablzControl.ContentTemplate>
                     <DataTemplate>
-                        <ContentControl Content="{Binding HostControl}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                        <ContentControl 
+                            Content="{Binding HostControl}" 
+                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                     </DataTemplate>
                 </dragablz:TabablzControl.ContentTemplate>
-            </dragablz:TabablzControl>
+                </dragablz:TabablzControl>
 
         </DockPanel>
     </Grid>
