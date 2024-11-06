@@ -58,6 +58,9 @@ namespace Orbit.Views
 
 		private void HeightSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
+			// If the left mouse button is pressed, don't proceed with resize
+			if (System.Windows.Input.Mouse.LeftButton == MouseButtonState.Pressed) return;
+
 			if (RSForm.rs2client != null)
 			{
 				if (sliderHeight != null && sliderWidth != null)
@@ -68,7 +71,9 @@ namespace Orbit.Views
 		}
 
 		private void WidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
+		{           // If the left mouse button is pressed, don't proceed with resize
+			if (System.Windows.Input.Mouse.LeftButton == MouseButtonState.Pressed) return;
+
 			if (RSForm.rs2client != null)
 			{
 				if (sliderHeight != null && sliderWidth != null)

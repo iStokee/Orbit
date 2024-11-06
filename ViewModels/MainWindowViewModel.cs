@@ -15,15 +15,10 @@ namespace Orbit.ViewModels
 {
 	public class MainWindowViewModel : INotifyPropertyChanged
 	{
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
 		public ObservableCollection<Session> Sessions { get; }
 		public Session SelectedSession { get; set; }
 		public IInterTabClient InterTabClient { get; }
-
 		public ICommand AddSessionCommand { get; }
-		public ICommand CloseTabCommand { get; }
 		public ICommand ShowSessionsCommand { get; }
 		public ICommand OpenThemeManagerCommand { get; }
 		public ICommand HWNDTestCommand { get; }
@@ -35,14 +30,10 @@ namespace Orbit.ViewModels
 		{
 			Sessions = new ObservableCollection<Session>();
 			AddSessionCommand = new RelayCommand(_ => AddSession());
-			CloseTabCommand = new RelayCommand(CloseTab);
 			ShowSessionsCommand = new RelayCommand(_ => ShowSessions());
 			OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 			HWNDTestCommand = new RelayCommand(_ => HWNDTest());
-			InterTabClient = new InterTabClient();
-
-			//resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
-			//resizeTimer.Tick += ResizeTimer_Tick;
+			InterTabClient = new InterTabClient();			
 		}
 
 		// Add Session
@@ -57,10 +48,6 @@ namespace Orbit.ViewModels
 
 			var windowsFormsHost = new ChildClientView();
 			session.HostControl = windowsFormsHost;
-
-			// Start the new session logic
-			//windowsFormsHost.LoadNewSession();
-			//windowsFormsHost.LoadNewSession();
 
 			await Task.Delay(2000);
 
@@ -91,6 +78,18 @@ namespace Orbit.ViewModels
 			}
 		}
 
+		public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+		{
+			if (System.Windows.MessageBox.Show("Are you sure?", "", MessageBoxButton.YesNo, MessageBoxImage.Stop) != MessageBoxResult.Yes)
+			{
+				args.Cancel();
+			}
+			else
+			{
+				CloseTab(args.DragablzItem.DataContext as Session);
+			}
+		}
+
 		// Show Sessions
 		private void ShowSessions()
 		{
@@ -114,47 +113,6 @@ namespace Orbit.ViewModels
 			};
 			manipulatorView.Show();
 		}
-
-
-
-		//public void UpdateSessionTabDimensions(double width, double height)
-		//{
-		//	if (Sessions.Count == 0) return;
-
-		//	int adjustedWidth = (int)width + 16;
-		//	int adjustedHeight = (int)height + 40;
-
-		//	foreach (var session in Sessions)
-		//	{
-		//		MoveWindow(session.ExternalHandle, -8, -32, adjustedWidth, adjustedHeight, true);
-		//	}
-		//}
-
-		//// Method to handle window size changes
-		//public void MetroWindow_SizeChanged(object sender, SizeChangedEventArgs e)
-		//{
-		//	if (Sessions.Count == 0) return;
-		//	resizeTimer.Stop();
-		//	resizeTimer.Start();
-		//}
-
-
-		// Timer tick method to handle resize logic
-		//private void ResizeTimer_Tick(object sender, EventArgs e)
-		//{
-		//	// If the left mouse button is pressed, don't proceed with resize
-		//	if (System.Windows.Input.Mouse.LeftButton == MouseButtonState.Pressed) return;
-
-		//	resizeTimer.Stop();
-
-		//	foreach (var session in Sessions)
-		//	{
-		//		int width = (int)SessionTabControl.ActualWidth + 16;
-		//		int height = (int)SessionTabControl.ActualHeight + 40;
-
-		//		MoveWindow(session.ExternalHandle, -8, -32, width, height, true);
-		//	}
-		//}
 
 		public event PropertyChangedEventHandler PropertyChanged;
 		protected virtual void OnPropertyChanged(string propertyName)

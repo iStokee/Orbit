@@ -38,8 +38,6 @@ namespace Orbit
 
         [DllImport("user32.dll")]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-		[DllImport("user32.dll")]
-		internal static extern int SetWindowText(IntPtr hWnd, string text);
 		[DllImport("user32.dll", SetLastError = true)]
 		internal static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
@@ -123,89 +121,6 @@ namespace Orbit
 
 		}
 
-		private async Task ExecuteRSLoadAsync_1()
-		{
-			if (hWndDocked != IntPtr.Zero) //don't do anything if there's already a window docked.
-			{
-				return;
-			};
-			hWndParent = IntPtr.Zero;
-			pDocked = Process.Start("rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws");
-			await Task.Delay(3000);
-			Process runescapeProcess = pDocked;
-			bool found = false;
-			int counter = 0;
-
-			while (!found && !pDocked.HasExited)
-			{
-				pDocked.Refresh();
-				counter++;
-
-				Process[] processes = Process.GetProcessesByName("rs2client");
-				foreach (Process p in processes)
-				{
-					if (GetParentProcess(p.Id) == pDocked.Id)
-					{
-						rs2client = p;
-						ClientSettings.rs2client = p;
-						runescape = runescapeProcess;
-						JagWindow = FindWindowEx(p.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
-						wxWindowNR = FindWindowEx(runescapeProcess.MainWindowHandle, IntPtr.Zero, "wxWindowNR", null);
-
-						rs2ClientID = p.Id;
-						ClientSettings.rs2cPID = p.Id;
-						runescapeProcessID = pDocked.Id;
-						ClientSettings.runescapePID = pDocked.Id;
-						//process = p;
-						pDocked = p;
-						found = true;
-
-						break;
-					}
-				}
-			}
-
-			while (hWndDocked == IntPtr.Zero)
-			{
-				//wait for the window to be ready for input;
-
-				try
-				{
-					pDocked.WaitForInputIdle(1000);
-				}
-				catch (InvalidOperationException ex)
-				{
-					//  ConsoleRespond($"Input idle: {ex}");
-				}
-
-				pDocked.Refresh(); //update process info
-				if (pDocked.HasExited)
-				{
-
-					break; //abort if the process finished before we got a handle.
-				}
-
-				hWndDocked = pDocked.MainWindowHandle;  //cache the window handle
-				ClientSettings.gameHandle = hWndDocked;
-				Process q = Process.GetProcessById(rs2ClientID);
-				rsWindow = FindWindowEx(q.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
-				ClientSettings.jagOpenGL = rsWindow;
-			}
-
-			// dock the client to the panel
-			panel_DockPanel.Invoke((MethodInvoker)delegate
-			{
-				hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
-				// ClientSettings.cameraHandle = panel1.Handle;
-			});
-
-			if (ClientSettings.rs2cPID > 0)
-			{
-				await ResizeWindow();
-				Console.WriteLine("Game client docked succesfully");
-			}
-		}
-
 		private async Task ExecuteRSLoadAsync()
 		{
 			if (hWndDocked != IntPtr.Zero)
@@ -217,10 +132,13 @@ namespace Orbit
 			{
 				Console.WriteLine("Starting RS process");
 				await StartAndRefreshRSProcessAsync();
+
 				Console.WriteLine("Finding RS client");
 				await FindAndSetRsClientAsync();
+
 				Console.WriteLine("Waiting for RS client to be ready");
 				await WaitForAndSetDockingWindowAsync();
+
 				Console.WriteLine("Docking RS client");
 				await DockWindowToPanelAsync();
 			}
@@ -256,7 +174,6 @@ namespace Orbit
 			}
 		}
 
-
 		private async Task FindAndSetRsClientAsync()
 		{
 			//Your logic to find the RS client and set associated properties
@@ -284,9 +201,7 @@ namespace Orbit
 						ClientSettings.rs2cPID = p.Id;
 						runescapeProcessID = pDocked.Id;
 						ClientSettings.runescapePID = pDocked.Id;
-						//process = p;
 						pDocked = p;
-						//Console.WriteLine($"pDocked: {pDocked}");
 						found = true;
 
 						break;
@@ -383,6 +298,5 @@ namespace Orbit
 				Console.WriteLine($"An error occurred while resizing the window: {ex}");
 			}
 		}
-
 	}
 }

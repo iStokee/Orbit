@@ -25,9 +25,11 @@ namespace Orbit
 			viewModel = new MainWindowViewModel();
 			this.DataContext = viewModel;
 			this.SessionTabControl.InterTabController = new InterTabController();
+			this.SessionTabControl.ClosingItemCallback += viewModel.TabControl_ClosingItemHandler;
 
 			//// Forward SizeChanged event to the ViewModel
 			this.SizeChanged += MetroWindow_SizeChanged;
+			this.viewModel.Sessions.CollectionChanged += (s,e) => ResizeWindows();
 
 			resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
 			resizeTimer.Tick += ResizeTimer_Tick;
@@ -50,24 +52,18 @@ namespace Orbit
 
 			resizeTimer.Stop();
 
+			ResizeWindows();
+		}
+
+		private void ResizeWindows()
+		{
+			int width = (int)SessionTabControl.ActualWidth + 16;
+			int height = (int)SessionTabControl.ActualHeight + 40;
+
 			foreach (var session in viewModel.Sessions)
 			{
-				int width = (int)SessionTabControl.ActualWidth + 16;
-				int height = (int)SessionTabControl.ActualHeight + 40;
-
 				MoveWindow(session.ExternalHandle, -8, -32, width, height, true);
 			}
 		}
-
-		//private void MetroWindow_SizeChanged(object sender, SizeChangedEventArgs e)
-		//{
-		//	if (DataContext is MainWindowViewModel viewModel)
-		//	{
-		//		viewModel.UpdateSessionTabDimensions(SessionTabControl.ActualWidth, SessionTabControl.ActualHeight);
-		//	}
-		//}
-
-
-
 	}
 }
