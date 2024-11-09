@@ -18,8 +18,8 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel}"
         SizeChanged="MetroWindow_SizeChanged"
-        TitleCaps="False" 
-        Title="Orbit" Height="1000" Width="1200" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"        
+        TitleCharacterCasing="Normal" 
+        Title="Orbit" Height="1000" Width="1100" Icon="/Orbital.jpg" WindowStartupLocation="CenterScreen"        
         >
 
     <Window.Resources>

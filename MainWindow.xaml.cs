@@ -57,8 +57,8 @@ namespace Orbit
 
 		private void ResizeWindows()
 		{
-			int width = (int)SessionTabControl.ActualWidth + 16;
-			int height = (int)SessionTabControl.ActualHeight + 40;
+			int width = (int)SessionTabControl.ActualWidth + 15;
+			int height = (int)SessionTabControl.ActualHeight + 15;
 
 			foreach (var session in viewModel.Sessions)
 			{

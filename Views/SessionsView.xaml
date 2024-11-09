@@ -13,8 +13,7 @@
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         mc:Ignorable="d"
         Title="Sessions" Height="450" Width="800"
-        TitleCaps="False" 
-                      >
+        TitleCharacterCasing="Normal" >
 
     <Controls:MetroWindow.IconTemplate>
         <DataTemplate>

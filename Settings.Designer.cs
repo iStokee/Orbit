@@ -58,5 +58,17 @@ namespace Orbit {
                 this["CustomThemes"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string CustomAccentColors {
+            get {
+                return ((string)(this["CustomAccentColors"]));
+            }
+            set {
+                this["CustomAccentColors"] = value;
+            }
+        }
     }
 }

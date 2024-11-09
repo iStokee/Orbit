@@ -1,4 +1,5 @@
 ﻿using Dragablz;
+using MahApps.Metro;
 using MahApps.Metro.Controls;
 using Orbit.Classes;
 using Orbit.Views;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
 
 namespace Orbit.ViewModels
 {
@@ -33,7 +35,12 @@ namespace Orbit.ViewModels
 			ShowSessionsCommand = new RelayCommand(_ => ShowSessions());
 			OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 			HWNDTestCommand = new RelayCommand(_ => HWNDTest());
-			InterTabClient = new InterTabClient();			
+			InterTabClient = new InterTabClient();
+
+			// set the theme from the saved settings
+			var accent = ThemeManager.GetAccent(Settings.Default.Accent);
+			var theme = ThemeManager.GetAppTheme(Settings.Default.Theme);
+			ThemeManager.ChangeAppStyle(Application.Current, accent, theme);
 		}
 
 		// Add Session
@@ -66,6 +73,7 @@ namespace Orbit.ViewModels
 			SelectedSession = session;
 
 			OnPropertyChanged(nameof(SelectedSession));
+
 		}
 
 		// Close Tab

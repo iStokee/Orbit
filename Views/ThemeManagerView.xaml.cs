@@ -46,5 +46,14 @@ namespace Orbit.Views
 				}
 			}
 		}
+
+		private void ListBox_CustomAccentSelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+
+		}
+		private void ListBox_CustomThemeSelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+
+		}
 	}
 }

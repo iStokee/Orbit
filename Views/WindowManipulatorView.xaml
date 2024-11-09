@@ -10,7 +10,7 @@
                       Title="Window HWID Tester" Height="550" Width="500"
                       MinHeight="475" MinWidth="500"
                       GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
-                      TitleCaps="False">
+                      TitleCharacterCasing="Normal" >
 
     <Controls:MetroWindow.Resources>
         <classes:IntPtrToStringConverter x:Key="IntPtrToStringConverter"/>
