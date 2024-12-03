@@ -2,6 +2,7 @@
 using MahApps.Metro;
 using MahApps.Metro.Controls;
 using Orbit.Classes;
+using Orbit.Models;
 using Orbit.Views;
 using System;
 using System.Collections.ObjectModel;
@@ -17,36 +18,42 @@ namespace Orbit.ViewModels
 {
 	public class MainWindowViewModel : INotifyPropertyChanged
 	{
-		public ObservableCollection<Session> Sessions { get; }
-		public Session SelectedSession { get; set; }
+		public ObservableCollection<SessionModel> Sessions { get; }
+		public SessionModel SelectedSession { get; set; }
 		public IInterTabClient InterTabClient { get; }
 		public ICommand AddSessionCommand { get; }
 		public ICommand ShowSessionsCommand { get; }
 		public ICommand OpenThemeManagerCommand { get; }
 		public ICommand HWNDTestCommand { get; }
 
+		public ICommand METestCommand { get; }
+
 		//private DispatcherTimer resizeTimer;
 
 		// Constructor
 		public MainWindowViewModel()
 		{
-			Sessions = new ObservableCollection<Session>();
+			Sessions = new ObservableCollection<SessionModel>();
 			AddSessionCommand = new RelayCommand(_ => AddSession());
 			ShowSessionsCommand = new RelayCommand(_ => ShowSessions());
 			OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 			HWNDTestCommand = new RelayCommand(_ => HWNDTest());
 			InterTabClient = new InterTabClient();
+			METestCommand = new RelayCommand(_ => METest());
 
 			// set the theme from the saved settings
 			var accent = ThemeManager.GetAccent(Settings.Default.Accent);
 			var theme = ThemeManager.GetAppTheme(Settings.Default.Theme);
 			ThemeManager.ChangeAppStyle(Application.Current, accent, theme);
+
+
 		}
+
 
 		// Add Session
 		private async void AddSession()
 		{
-			var session = new Session
+			var session = new SessionModel
 			{
 				Id = Guid.NewGuid(),
 				Name = $"RuneScape Session {Sessions.Count + 1}",
@@ -79,7 +86,7 @@ namespace Orbit.ViewModels
 		// Close Tab
 		private void CloseTab(object parameter)
 		{
-			if (parameter is Session session)
+			if (parameter is SessionModel session)
 			{
 				session.KillProcess();
 				Sessions.Remove(session);
@@ -94,7 +101,7 @@ namespace Orbit.ViewModels
 			}
 			else
 			{
-				CloseTab(args.DragablzItem.DataContext as Session);
+				CloseTab(args.DragablzItem.DataContext as SessionModel);
 			}
 		}
 
@@ -122,8 +129,15 @@ namespace Orbit.ViewModels
 			manipulatorView.Show();
 		}
 
+		private void METest()
+		{
+
+		}
+
+		#region INotifyPropertyChanged
 		public event PropertyChangedEventHandler PropertyChanged;
 		protected virtual void OnPropertyChanged(string propertyName)
 			 => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		#endregion
 	}
 }

@@ -88,7 +88,6 @@
             <TextBlock Text="Select Theme" FontWeight="Bold" Foreground="White" Margin="0,10,0,5" HorizontalAlignment="Center"/>
             <ListBox ItemsSource="{Binding AppThemes, Mode=OneWay}"
                      ItemTemplate="{StaticResource AppThemeTemplate}"
-                     SelectedItem="{Binding SelectedAppTheme, Mode=TwoWay}"
                      HorizontalAlignment="Center"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -102,7 +101,6 @@
             <TextBlock Text="Select Accent" FontWeight="Bold" Foreground="White" Margin="0,10,0,5" HorizontalAlignment="Center"/>
             <ListBox ItemsSource="{Binding AccentColors, Mode=OneWay}"
                      ItemTemplate="{StaticResource AccentColorTemplate}"
-                     SelectedItem="{Binding SelectedAccentColor, Mode=TwoWay}"
                      SelectionChanged="ListBox_AccentSelectionChanged"
                      HorizontalAlignment="Center"
                      BorderThickness="0"

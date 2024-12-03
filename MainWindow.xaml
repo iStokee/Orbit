@@ -24,7 +24,7 @@
 
     <Window.Resources>
         <Style TargetType="Controls:MetroWindow">
-            <Setter Property="Controls:MetroWindow.NonActiveWindowTitleBrush" Value="{StaticResource AccentColorBrush}"/>
+            <Setter Property="Controls:MetroWindow.NonActiveWindowTitleBrush" Value="{DynamicResource AccentColorBrush}"/>
         </Style>
     </Window.Resources>
 
@@ -37,13 +37,15 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        
         <DockPanel>
             <!-- Top Panel with Buttons bound to ViewModel Commands -->
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5" Background="{DynamicResource AccentColorBrush}">
                 <Button Content="Add New Session" Command="{Binding AddSessionCommand}" Width="150" Height="30" Margin="5"/>
                 <Button Content="Show Sessions" Command="{Binding ShowSessionsCommand}" Width="150" Height="30" Margin="5"/>
                 <Button Content="Theme Manager" Command="{Binding OpenThemeManagerCommand}" Width="150" Height="30" Margin="5"/>
                 <Button Content="HWND Test" Command="{Binding HWNDTestCommand}" Width="150" Height="30" Margin="5"/>
+                <Button Content="ME Test" Command="{Binding METestCommand}" Width="150" Height="30" Margin="5"/>
             </StackPanel>
             
             <!-- TabablzControl bound to Sessions and InterTabClient -->

@@ -1,5 +1,5 @@
 ﻿using MahApps.Metro.Controls;
-using Orbit.Classes;
+using Orbit.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,7 +23,7 @@ namespace Orbit.Views
 	/// </summary>
 	public partial class SessionsView : MetroWindow
 	{
-		public SessionsView(ObservableCollection<Session> sessions)
+		public SessionsView(ObservableCollection<SessionModel> sessions)
 		{
 			InitializeComponent();
 			DataContext = sessions;
@@ -36,7 +36,7 @@ namespace Orbit.Views
 			grid.Columns.Clear();
 
 			// Use reflection to get properties of the Session class
-			foreach (PropertyInfo property in typeof(Session).GetProperties())
+			foreach (PropertyInfo property in typeof(SessionModel).GetProperties())
 			{
 				DataGridTextColumn column = new DataGridTextColumn
 				{

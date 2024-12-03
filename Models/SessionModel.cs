@@ -9,9 +9,9 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using Orbit.Views;
 
-namespace Orbit.Classes
+namespace Orbit.Models
 {
-	public class Session
+	public class SessionModel
 	{
 
 		public Guid Id { get; set; }
@@ -20,7 +20,7 @@ namespace Orbit.Classes
 		public ChildClientView HostControl { get; set; }
 		public RSForm RSForm { get; set; }
 		public Process ExternalProcess { get; set; }
-		public IntPtr ExternalHandle { get; set; }
+		public nint ExternalHandle { get; set; }
 
 		// New properties
 		public bool IsClientLoaded { get; set; }
@@ -59,11 +59,11 @@ namespace Orbit.Classes
 
 
 		[DllImport("user32.dll")]
-		private static extern bool SetForegroundWindow(IntPtr hWnd);
+		private static extern bool SetForegroundWindow(nint hWnd);
 
 		public void SetFocus()
 		{
-			if (ExternalHandle != IntPtr.Zero)
+			if (ExternalHandle != nint.Zero)
 			{
 				SetForegroundWindow(ExternalHandle);
 			}

@@ -1,6 +1,5 @@
 ﻿using Dragablz;
 using MahApps.Metro.Controls;
-
 using Orbit.ViewModels;
 using System.Runtime.InteropServices;
 using System.Windows;
