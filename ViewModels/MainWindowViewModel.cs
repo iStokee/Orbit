@@ -26,10 +26,9 @@ namespace Orbit.ViewModels
 	public class MainWindowViewModel : INotifyPropertyChanged
 	{
 		private readonly SessionManagerService sessionManager;
-	private readonly ThemeService themeService;
-	private ThemeManagerView themeManagerView;
-	private SessionsView sessionsView;
-	private SessionModel selectedSession;
+		private readonly ThemeService themeService;
+		private readonly ScriptIntegrationService scriptIntegrationService;
+		private SessionModel selectedSession;
 	private string hotReloadScriptPath;
 	private ScriptProfile selectedScript;
 	private double floatingMenuLeft;
@@ -52,6 +51,7 @@ namespace Orbit.ViewModels
 	{
 		sessionManager = new SessionManagerService();
 		themeService = new ThemeService();
+		scriptIntegrationService = new ScriptIntegrationService(SessionCollectionService.Instance);
 		ScriptManager = new ScriptManagerService();
 		AccountService = new AccountService();
 
@@ -105,6 +105,7 @@ namespace Orbit.ViewModels
 		public ObservableCollection<object> Tabs { get; }
 		public IInterTabClient InterTabClient { get; }
 		public ScriptManagerService ScriptManager { get; }
+		public ScriptIntegrationService ScriptIntegration => scriptIntegrationService;
 		public ICommand AddSessionCommand { get; }
 		public ICommand InjectCommand { get; }
 		public ICommand ShowSessionsCommand { get; }
@@ -188,6 +189,54 @@ namespace Orbit.ViewModels
 				CommandManager.InvalidateRequerySuggested();
 			}
 		}
+
+		// Theme Logging Properties
+		public bool IsThemeLoggingEnabled
+		{
+			get => ThemeLogger.IsEnabled;
+			set
+			{
+				if (ThemeLogger.IsEnabled != value)
+				{
+					ThemeLogger.IsEnabled = value;
+					OnPropertyChanged(nameof(IsThemeLoggingEnabled));
+				}
+			}
+		}
+
+		public string ThemeLogFilePath => ThemeLogger.LogFilePath;
+
+		public ICommand OpenThemeLogCommand => new RelayCommand(_ =>
+		{
+			try
+			{
+				if (File.Exists(ThemeLogger.LogFilePath))
+				{
+					System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+					{
+						FileName = ThemeLogger.LogFilePath,
+						UseShellExecute = true
+					});
+				}
+				else
+				{
+					MessageBox.Show("Log file does not exist yet. Enable logging and apply a theme first.",
+						"Log File Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Failed to open log file: {ex.Message}",
+					"Error", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
+		});
+
+		public ICommand ClearThemeLogCommand => new RelayCommand(_ =>
+		{
+			ThemeLogger.ClearLog();
+			MessageBox.Show("Theme log cleared successfully.",
+				"Log Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+		});
 
 	public event PropertyChangedEventHandler PropertyChanged;
 
@@ -508,7 +557,7 @@ namespace Orbit.ViewModels
 		{
 			if (isFloatingMenuDockOverlayVisible == value)
 				return;
-			isFloatingMenuDockOverlayVisible = value;
+		 isFloatingMenuDockOverlayVisible = value;
 			OnPropertyChanged(nameof(IsFloatingMenuDockOverlayVisible));
 			if (!value)
 			{
@@ -1039,5 +1088,12 @@ namespace Orbit.ViewModels
 
 		protected virtual void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		//private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
+		//{
+		//	// Forward to the existing protected overload which raises PropertyChanged.
+		//	// Using CallerMemberName lets callers call OnPropertyChanged() with no args.
+		//	OnPropertyChanged(propertyName ?? string.Empty);
+		//}
 	}
 }

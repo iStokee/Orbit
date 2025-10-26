@@ -97,15 +97,16 @@
 
                     <Button
                         Height="36"
+                        Margin="0,12,0,0"
                         DockPanel.Dock="Bottom"
                         Command="{Binding ApplyThemeCommand}"
                         Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
-                                Width="14"
-                                Height="14"
-                                Margin="0,0,6,0"
-                                Kind="Palette" />
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                Kind="Check" />
                             <TextBlock
                                 VerticalAlignment="Center"
                                 Text="Apply Theme" />
@@ -124,10 +125,9 @@
                                     Padding="8,6">
                                     <StackPanel Orientation="Horizontal">
                                         <iconPacks:PackIconMaterial
-                                            Width="20"
-                                            Height="20"
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.Accent}">
+                                            Width="16"
+                                            Height="16"
+                                            VerticalAlignment="Center">
                                             <iconPacks:PackIconMaterial.Style>
                                                 <Style TargetType="iconPacks:PackIconMaterial">
                                                     <Setter Property="Kind" Value="WeatherNight" />
@@ -251,6 +251,7 @@
                                 Text="Live Preview" />
                         </StackPanel>
 
+                        <!-- Preview Elements -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Button
                                 Width="90"
@@ -328,6 +329,41 @@
                             <TextBlock
                                 Margin="0,0,0,4"
                                 FontSize="12"
+                                Text="Base Theme" />
+                            <ComboBox
+                                Height="32"
+                                Margin="0,0,0,10"
+                                FontSize="13"
+                                ItemsSource="{Binding BaseThemes}"
+                                SelectedItem="{Binding SelectedBaseTheme}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <iconPacks:PackIconMaterial
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,6,0"
+                                                VerticalAlignment="Center">
+                                                <iconPacks:PackIconMaterial.Style>
+                                                    <Style TargetType="iconPacks:PackIconMaterial">
+                                                        <Setter Property="Kind" Value="WeatherNight" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="Light">
+                                                                <Setter Property="Kind" Value="WeatherSunny" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </iconPacks:PackIconMaterial.Style>
+                                            </iconPacks:PackIconMaterial>
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock
+                                Margin="0,0,0,4"
+                                FontSize="12"
                                 Text="Accent Color" />
                             <xctk:ColorCanvas
                                 Width="280"
@@ -389,6 +425,7 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- Saved Custom Themes List -->
                         <GroupBox
                             Grid.Row="1"
                             Margin="0,15,0,0"
@@ -437,4 +474,3 @@
         </Grid>
     </Grid>
 </UserControl>
-

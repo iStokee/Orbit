@@ -115,6 +115,29 @@
 
             <Controls:ToggleSwitch Header="Auto-inject when session is ready"
                                    IsOn="{Binding AutoInjectOnReady, Mode=TwoWay}" />
+
+            <!-- Theme Logging Section -->
+            <TextBlock Text="Theme Debugging" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,8"
+                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"/>
+
+            <Controls:ToggleSwitch Header="Enable theme debug logging"
+                                   IsOn="{Binding IsThemeLoggingEnabled, Mode=TwoWay}"
+                                   Margin="0,4" />
+
+            <StackPanel Orientation="Vertical" Margin="0,8,0,0"
+                        Visibility="{Binding IsThemeLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{DynamicResource MahApps.Brushes.Gray2}">
+                    <Run Text="Theme changes and resource assignments are logged to:"/>
+                    <LineBreak/>
+                    <Run Text="{Binding ThemeLogFilePath, Mode=OneWay}" FontFamily="Consolas" FontWeight="SemiBold"/>
+                </TextBlock>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Open Log File" Command="{Binding OpenThemeLogCommand}" Margin="0,0,8,0" />
+                    <Button Content="Clear Log" Command="{Binding ClearThemeLogCommand}" />
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

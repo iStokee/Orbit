@@ -46,6 +46,10 @@ namespace Orbit
 
 			viewModel = new MainWindowViewModel();
 			this.DataContext = viewModel;
+
+			// Initialize Orbit API for external script integration
+			OrbitAPI.Initialize(viewModel.ScriptIntegration);
+
 			viewModel.PropertyChanged += ViewModel_PropertyChanged;
 			this.SessionTabControl.InterTabController = new InterTabController();
 			this.SessionTabControl.ClosingItemCallback += viewModel.TabControl_ClosingItemHandler;

@@ -14,14 +14,43 @@ namespace Orbit.Models
 		private string _lastError;
 		private Process _rsProcess;
 		private nint _externalHandle;
+		private SessionType _sessionType;
 
 		public SessionModel()
 		{
 			State = SessionState.Initializing;
 			InjectionState = InjectionState.NotReady;
+			SessionType = SessionType.RuneScape; // Default to RS3
 		}
 
 		public Guid Id { get; init; }
+
+		/// <summary>
+		/// Gets or sets the type of session (RuneScape client or external script)
+		/// </summary>
+		public SessionType SessionType
+		{
+			get => _sessionType;
+			set
+			{
+				if (_sessionType == value)
+					return;
+				_sessionType = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(IsExternalScript));
+				OnPropertyChanged(nameof(IsRuneScapeClient));
+			}
+		}
+
+		/// <summary>
+		/// Gets whether this session is an external script window
+		/// </summary>
+		public bool IsExternalScript => SessionType == SessionType.ExternalScript;
+
+		/// <summary>
+		/// Gets whether this session is a RuneScape client
+		/// </summary>
+		public bool IsRuneScapeClient => SessionType == SessionType.RuneScape;
 
 		private string name;
 		public string Name

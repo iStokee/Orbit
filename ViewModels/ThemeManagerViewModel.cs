@@ -109,6 +109,14 @@ namespace Orbit.ViewModels
 				if (selectedCustomTheme != null)
 				{
 					CustomThemeName = selectedCustomTheme.Name;
+
+					// Update base theme selection
+					if (!string.IsNullOrEmpty(selectedCustomTheme.BaseTheme))
+					{
+						selectedBaseTheme = selectedCustomTheme.BaseTheme;
+						OnPropertyChanged(nameof(SelectedBaseTheme));
+					}
+
 					try
 					{
 						var converted = MediaColorConverter.ConvertFromString(selectedCustomTheme.AccentHex);
@@ -166,6 +174,11 @@ namespace Orbit.ViewModels
 			if (string.IsNullOrEmpty(SelectedBaseTheme) || string.IsNullOrEmpty(SelectedColorScheme))
 				return;
 
+			// Clear the selected custom theme to avoid visual confusion in the UI
+			// (built-in themes don't use custom themes)
+			selectedCustomTheme = null;
+			OnPropertyChanged(nameof(SelectedCustomTheme));
+
 			themeService.ApplyBuiltInTheme(SelectedBaseTheme, SelectedColorScheme);
 		}
 
@@ -204,6 +217,11 @@ namespace Orbit.ViewModels
 		{
 			if (SelectedCustomTheme == null)
 				return;
+
+			// Clear the selected color scheme to avoid visual confusion in the UI
+			// (custom themes don't use the built-in color schemes)
+			selectedColorScheme = null;
+			OnPropertyChanged(nameof(SelectedColorScheme));
 
 			themeService.ApplyCustomTheme(SelectedCustomTheme);
 		}

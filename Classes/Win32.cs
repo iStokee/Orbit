@@ -464,5 +464,18 @@ namespace Orbit.Classes
 
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        /// <summary>
+        /// Determines whether the specified window handle identifies an existing window
+        /// </summary>
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool IsWindow(IntPtr hWnd);
+
+        /// <summary>
+        /// Retrieves the identifier of the thread and process that created the specified window
+        /// </summary>
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
     }
 }

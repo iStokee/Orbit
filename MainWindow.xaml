@@ -242,6 +242,29 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
+
+                                    <!--  Icon indicator for external scripts  -->
+                                    <iconPacks:PackIconMaterial
+                                        Kind="CodeBraces"
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="External Script Window">
+                                        <iconPacks:PackIconMaterial.Style>
+                                            <Style TargetType="iconPacks:PackIconMaterial">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </iconPacks:PackIconMaterial.Style>
+                                    </iconPacks:PackIconMaterial>
+
+                                    <!--  Status indicator for RS3 sessions (hidden for scripts)  -->
                                     <Ellipse
                                         Width="10"
                                         Height="10"
@@ -253,7 +276,12 @@
                                         ToolTip="{Binding StatusSummary}">
                                         <Ellipse.Style>
                                             <Style TargetType="Ellipse">
+                                                <Setter Property="Visibility" Value="Visible" />
                                                 <Style.Triggers>
+                                                    <!--  Hide for external scripts  -->
+                                                    <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
                                                     <!--  Pulse animation on injecting state  -->
                                                     <DataTrigger Binding="{Binding State}" Value="{x:Static models:SessionState.Injecting}">
                                                         <DataTrigger.EnterActions>
