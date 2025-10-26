@@ -12,13 +12,14 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="{DynamicResource DarkSlate}" BorderThickness="0">
-            <WindowsFormsHost 
-                x:Name="RSPanel" 
-                Visibility="Visible" 
-                HorizontalAlignment="Stretch" 
+            <WindowsFormsHost
+                x:Name="RSPanel"
+                Visibility="Visible"
+                HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                />
+                Loaded="RSPanel_Loaded"
+                SizeChanged="RSPanel_SizeChanged"
+                PreviewMouseDown="RSPanel_PreviewMouseDown" />
         </Border>
     </Grid>
 </UserControl>
-

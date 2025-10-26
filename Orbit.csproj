@@ -1,13 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
     <StartupObject>Orbit.App</StartupObject>
+    <Platforms>AnyCPU;x64</Platforms>
+    <TargetFramework>net8.0-windows8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,18 +30,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ControlzEx" Version="3.0.2.4" />
+    <!-- ControlzEx removed - now included as dependency of MahApps.Metro v2 -->
     <PackageReference Include="Costura.Fody" Version="5.7.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Dragablz" Version="0.0.3.150" />
+    <PackageReference Include="Dragablz" Version="0.0.3.223" />
     <PackageReference Include="Extended.Wpf.Toolkit" Version="4.6.1" />
     <PackageReference Include="Fody" Version="6.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="MahApps.Metro" Version="1.6.0" />
+    <PackageReference Include="MahApps.Metro" Version="2.4.10" />
     <PackageReference Include="MahApps.Metro.IconPacks" Version="5.1.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.19" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
@@ -69,7 +70,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="ME\" />
+    <Folder Include="API\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="csharp_interop">
+      <HintPath>C:\Development\ME\x64\Build_DLL\csharp_interop.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

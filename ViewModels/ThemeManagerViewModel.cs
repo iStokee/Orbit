@@ -1,199 +1,225 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Input;
-using MahApps.Metro;
-using Orbit.Classes;
-using Newtonsoft.Json; // If using Newtonsoft.Json
-// using System.Text.Json; // If using System.Text.Json
-
-using Color = System.Windows.Media.Color;
-using Brush = System.Windows.Media.Brush;
-using Brushes = System.Windows.Media.Brushes;
-using Application = System.Windows.Application;
+using Orbit.Services;
+using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using ColorConverter = System.Windows.Media.ColorConverter;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows;
+using MediaColor = System.Windows.Media.Color;
+using MediaColors = System.Windows.Media.Colors;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using Application = System.Windows.Application;
+
 
 namespace Orbit.ViewModels
 {
-    internal class ThemeManagerViewModel : DependencyObject
-    {
+	public class ThemeManagerViewModel : INotifyPropertyChanged
+	{
+		private readonly ThemeService themeService;
+		private string customThemeName = string.Empty;
+		private MediaColor selectedCustomColor = MediaColors.SteelBlue;
+		private CustomThemeDefinition? selectedCustomTheme;
+		private string? selectedBaseTheme;
+		private string? selectedColorScheme;
 
-        public List<AccentColorMenuData> AccentColors { get; set; }
+		public ThemeManagerViewModel()
+		{
+			themeService = new ThemeService();
 
-        public List<AppThemeMenuData> AppThemes { get; set; }
+			BaseThemes = themeService.GetAvailableBaseThemes();
+			ColorSchemes = themeService.GetAvailableColorSchemes();
+			CustomThemes = themeService.LoadCustomThemes();
 
-        // Renamed from 'Colors' to 'AvailableColors'
-        public List<AccentColorMenuData> AvailableColors
-        {
-            get => (List<AccentColorMenuData>)GetValue(AvailableColorsProperty);
-            set => SetValue(AvailableColorsProperty, value);
-        }
+			// Detect current theme
+			DetectCurrentTheme();
 
-        public static readonly DependencyProperty AvailableColorsProperty =
-            DependencyProperty.Register(
-                nameof(AvailableColors),
-                typeof(List<AccentColorMenuData>),
-                typeof(ThemeManagerViewModel),
-                new PropertyMetadata(default(List<AccentColorMenuData>)));
+			ApplyThemeCommand = new RelayCommand(_ => ApplySelectedTheme(), _ => CanApplyTheme());
+			SaveCustomThemeCommand = new RelayCommand(_ => SaveCustomTheme(), _ => CanSaveCustomTheme());
+			ApplyCustomThemeCommand = new RelayCommand(_ => ApplyCustomTheme(), _ => SelectedCustomTheme != null);
+			DeleteCustomThemeCommand = new RelayCommand(_ => DeleteCustomTheme(), _ => SelectedCustomTheme != null);
+		}
 
-        internal ThemeManagerViewModel()
-        {
+		public ObservableCollection<string> BaseThemes { get; }
+		public ObservableCollection<string> ColorSchemes { get; }
+		public ObservableCollection<CustomThemeDefinition> CustomThemes { get; }
 
-            AccentColors = ThemeManager.Accents
-                .OrderBy(a => a.Name)
-                .Select(a => new AccentColorMenuData(
-                    a.Name,
-                    new SolidColorBrush(((SolidColorBrush)(a.Resources["AccentColorBrush"] ?? Brushes.Transparent)).Color),
-                    Brushes.Gray
-                ))
-                .ToList();
+		public string? SelectedBaseTheme
+		{
+			get => selectedBaseTheme;
+			set
+			{
+				if (selectedBaseTheme == value)
+					return;
+				selectedBaseTheme = value;
+				OnPropertyChanged();
+				CommandManager.InvalidateRequerySuggested();
+			}
+		}
 
-            AvailableColors = typeof(Colors)
-                .GetProperties()
-                .Where(prop => typeof(Color).IsAssignableFrom(prop.PropertyType))
-                .Select(prop => new AccentColorMenuData(
-                    prop.Name,
-                    new SolidColorBrush((Color)prop.GetValue(null)),
-                    Brushes.Gray
-                ))
-                .ToList();
+		public string? SelectedColorScheme
+		{
+			get => selectedColorScheme;
+			set
+			{
+				if (selectedColorScheme == value)
+					return;
+				selectedColorScheme = value;
+				OnPropertyChanged();
+				CommandManager.InvalidateRequerySuggested();
+			}
+		}
 
-            AppThemes = ThemeManager.AppThemes
-                .OrderBy(a => a.Name)
-                .Select(a => new AppThemeMenuData(
-                    a.Name,
-                    a.Resources["WindowBackgroundBrush"] as Brush ?? Brushes.White,
-                    a.Resources["HighlightColorBrush"] as Brush ?? Brushes.Gray
-                ))
-                .ToList();
-        }
-    }
+		public string CustomThemeName
+		{
+			get => customThemeName;
+			set
+			{
+				if (customThemeName == value)
+					return;
+				customThemeName = value;
+				OnPropertyChanged();
+				CommandManager.InvalidateRequerySuggested();
+			}
+		}
 
-    public class AccentColorMenuData : INotifyPropertyChanged
-    {
-        private string? _name;
-        private Brush? _colorBrush;
-        private Brush? _borderColorBrush;
+		public MediaColor SelectedCustomColor
+		{
+			get => selectedCustomColor;
+			set
+			{
+				if (selectedCustomColor == value)
+					return;
+				selectedCustomColor = value;
+				OnPropertyChanged();
+			}
+		}
 
-        public string? Name
-        {
-            get => _name;
-            set
-            {
-                _name = value;
-                OnPropertyChanged();
-            }
-        }
+		public CustomThemeDefinition? SelectedCustomTheme
+		{
+			get => selectedCustomTheme;
+			set
+			{
+				if (selectedCustomTheme == value)
+					return;
+				selectedCustomTheme = value;
+				OnPropertyChanged();
+				CommandManager.InvalidateRequerySuggested();
+				if (selectedCustomTheme != null)
+				{
+					CustomThemeName = selectedCustomTheme.Name;
+					try
+					{
+						var converted = MediaColorConverter.ConvertFromString(selectedCustomTheme.AccentHex);
+						if (converted is MediaColor color)
+						{
+							SelectedCustomColor = color;
+						}
+					}
+					catch
+					{
+						// Ignore malformed colors and keep current picker selection.
+					}
+				}
+			}
+		}
 
-        public Brush? ColorBrush
-        {
-            get => _colorBrush;
-            set
-            {
-                _colorBrush = value;
-                OnPropertyChanged();
-            }
-        }
+		public ICommand ApplyThemeCommand { get; }
+		public ICommand SaveCustomThemeCommand { get; }
+		public ICommand ApplyCustomThemeCommand { get; }
+		public ICommand DeleteCustomThemeCommand { get; }
 
-        public Brush? BorderColorBrush
-        {
-            get => _borderColorBrush;
-            set
-            {
-                _borderColorBrush = value;
-                OnPropertyChanged();
-            }
-        }
+		public event PropertyChangedEventHandler? PropertyChanged;
 
-        public ICommand ChangeAccentCommand { get; }
+		private void DetectCurrentTheme()
+		{
+			// Try to detect current theme from settings
+			var savedTheme = Settings.Default.Theme;
+			var savedAccent = Settings.Default.Accent;
 
-        // Make ChangeThemeCommand settable in derived classes
-        public ICommand ChangeThemeCommand { get; protected set; }
+			// Convert legacy theme names
+			if (savedTheme == "BaseDark")
+				savedTheme = "Dark";
+			else if (savedTheme == "BaseLight")
+				savedTheme = "Light";
 
-        public AccentColorMenuData(string name, Brush colorBrush, Brush borderColorBrush)
-        {
-            Name = name;
-            ColorBrush = colorBrush;
-            BorderColorBrush = borderColorBrush;
-            ChangeAccentCommand = new SimpleCommand<string?>(o => true, DoChangeTheme);
-            ChangeThemeCommand = new SimpleCommand<string?>(o => true, DoChangeTheme); // Initialize to prevent null reference
-        }
+			// Set defaults if not found
+			SelectedBaseTheme = BaseThemes.Contains(savedTheme ?? "Dark") ? savedTheme : BaseThemes.FirstOrDefault() ?? "Dark";
 
-        protected virtual void DoChangeTheme(string? name)
-        {
-            if (!string.IsNullOrEmpty(name))
-            {
-                var app = Application.Current;
-                var accent = ThemeManager.GetAccent(name) ?? new Accent(name, null);
+			// Handle accent/color scheme
+			if (!string.IsNullOrEmpty(savedAccent) && !savedAccent.StartsWith("custom:", StringComparison.OrdinalIgnoreCase))
+			{
+				SelectedColorScheme = ColorSchemes.Contains(savedAccent) ? savedAccent : ColorSchemes.FirstOrDefault() ?? "Steel";
+			}
+			else
+			{
+				SelectedColorScheme = ColorSchemes.FirstOrDefault() ?? "Steel";
+			}
+		}
 
-                if (accent != null)
-                {
-                    var currentTheme = ThemeManager.DetectAppStyle(app);
-                    if (currentTheme != null)
-                    {
-                        ThemeManager.ChangeAppStyle(app, accent, currentTheme.Item1);
-                        Settings.Default.Theme = currentTheme.Item1.Name;
-                        Settings.Default.Accent = accent.Name;
-                        Settings.Default.Save();
-                    }
-                }
-            }
-        }
+		private bool CanApplyTheme()
+			=> !string.IsNullOrEmpty(SelectedBaseTheme) && !string.IsNullOrEmpty(SelectedColorScheme);
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+		private void ApplySelectedTheme()
+		{
+			if (string.IsNullOrEmpty(SelectedBaseTheme) || string.IsNullOrEmpty(SelectedColorScheme))
+				return;
 
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
+			themeService.ApplyBuiltInTheme(SelectedBaseTheme, SelectedColorScheme);
+		}
 
-    public class AppThemeMenuData : AccentColorMenuData
-    {
-        public AppThemeMenuData(string name, Brush colorBrush, Brush borderColorBrush)
-            : base(name, colorBrush, borderColorBrush)
-        {
-            // Assign ChangeThemeCommand specifically for themes
-            ChangeThemeCommand = new SimpleCommand<string?>(o => true, DoChangeTheme);
-        }
+		private bool CanSaveCustomTheme()
+			=> !string.IsNullOrWhiteSpace(CustomThemeName) && !string.IsNullOrEmpty(SelectedBaseTheme);
 
-        protected override void DoChangeTheme(string? name)
-        {
-            if (!string.IsNullOrEmpty(name))
-            {
-                var app = Application.Current;
+		private void SaveCustomTheme()
+		{
+			if (string.IsNullOrEmpty(SelectedBaseTheme))
+				return;
 
-                // Retrieve the app theme from ThemeManager
-                var theme = ThemeManager.AppThemes.FirstOrDefault(t => t.Name == name);
+			var definition = new CustomThemeDefinition
+			{
+				Name = CustomThemeName.Trim(),
+				BaseTheme = SelectedBaseTheme,
+				AccentHex = SelectedCustomColor.ToString()
+			};
 
-                if (theme != null)
-                {
-                    var currentAccent = ThemeManager.DetectAppStyle(app)?.Item2; // Get current accent
+			var existing = CustomThemes.FirstOrDefault(t => string.Equals(t.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
+			if (existing != null)
+			{
+				existing.BaseTheme = definition.BaseTheme;
+				existing.AccentHex = definition.AccentHex;
+			}
+			else
+			{
+				CustomThemes.Add(definition);
+			}
 
-                    if (currentAccent != null)
-                    {
-                        // Apply the selected theme while retaining the existing accent
-                        ThemeManager.ChangeAppStyle(app, currentAccent, theme);
-                        Settings.Default.Theme = name;
-                        Settings.Default.Accent = currentAccent.Name;
-                        Settings.Default.Save();
-                    }
-                    else
-                    {
-                        // Handle case where currentAccent is null
-                        Console.WriteLine("Current accent not detected.");
-                    }
-                }
-                else
-                {
-                    // Handle case where theme is null
-                    Console.WriteLine("Theme not found.");
-                }
-            }
-        }
-    }
+			themeService.SaveCustomThemes(CustomThemes);
+			SelectedCustomTheme = definition;
+			ApplyCustomTheme();
+		}
+
+		private void ApplyCustomTheme()
+		{
+			if (SelectedCustomTheme == null)
+				return;
+
+			themeService.ApplyCustomTheme(SelectedCustomTheme);
+		}
+
+		private void DeleteCustomTheme()
+		{
+			if (SelectedCustomTheme == null)
+				return;
+
+			var toRemove = SelectedCustomTheme;
+			CustomThemes.Remove(toRemove);
+			themeService.SaveCustomThemes(CustomThemes);
+			SelectedCustomTheme = CustomThemes.FirstOrDefault();
+		}
+
+		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+	}
 }

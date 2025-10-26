@@ -8,6 +8,7 @@ using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using static Orbit.Classes.Win32;
+using System.ComponentModel;
 
 namespace Orbit
 {
@@ -18,6 +19,7 @@ namespace Orbit
 		internal static Process process;
 		internal IntPtr rsMainWindowHandle;
 		internal Process pDocked;
+		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private const int SW_MAXIMIZE = 3;
@@ -34,7 +36,8 @@ namespace Orbit
 		internal static IntPtr JagWindow;
 		internal static IntPtr wxWindowNR;
 
-        public int DockedRSHwnd { get; set; }
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int DockedRSHwnd { get; set; }
 
         [DllImport("user32.dll")]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
@@ -58,6 +61,11 @@ namespace Orbit
 			}
 			return parentPid;
 		}
+
+		internal Task<Process> ProcessReadyTask => processReadyTcs.Task;
+
+		[DllImport("user32.dll")]
+		private static extern IntPtr SetFocus(IntPtr hWnd);
 
 		public RSForm()
 		{
@@ -117,8 +125,22 @@ namespace Orbit
 			catch (Exception ex)
 			{
 				Console.WriteLine($"An error occurred: {ex}");
+				processReadyTcs.TrySetException(ex);
+				throw;
 			}
 
+		}
+
+		internal void FocusGameWindow()
+		{
+			try
+			{
+				if (hWndDocked != IntPtr.Zero)
+				{
+					SetFocus(hWndDocked);
+				}
+			}
+			catch { /* best effort */ }
 		}
 
 		private async Task ExecuteRSLoadAsync()
@@ -146,6 +168,8 @@ namespace Orbit
 			{
 				// Log or handle the exception
 				Console.WriteLine(ex.Message);
+				processReadyTcs.TrySetException(ex);
+				throw;
 			}
 		}
 
@@ -171,6 +195,8 @@ namespace Orbit
 			catch (Exception ex)
 			{
 				Console.WriteLine($"An exception occurred: {ex}");
+				processReadyTcs.TrySetException(ex);
+				throw;
 			}
 		}
 
@@ -203,10 +229,16 @@ namespace Orbit
 						ClientSettings.runescapePID = pDocked.Id;
 						pDocked = p;
 						found = true;
+						processReadyTcs.TrySetResult(pDocked);
 
 						break;
 					}
 				}
+			}
+
+			if (!found)
+			{
+				throw new InvalidOperationException("RuneScape client process could not be located.");
 			}
 		}
 
@@ -246,6 +278,25 @@ namespace Orbit
 				hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
 				// ClientSettings.cameraHandle = panel1.Handle;
 				DockedRSHwnd = (int)hWndDocked;
+
+				// Ensure correct child window styles and refresh frame
+				const int GWL_STYLE = -16;
+				const uint WS_CHILD = 0x40000000;
+				const uint WS_VISIBLE = 0x10000000;
+				const uint WS_CLIPSIBLINGS = 0x04000000;
+				const uint WS_CLIPCHILDREN = 0x02000000;
+				const uint WS_POPUP = 0x80000000; // <- now valid as uint
+				uint curStyle = (uint)GetWindowLong(hWndDocked, GWL_STYLE);
+				uint newStyle = (curStyle & ~WS_POPUP) |
+								WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+				SetWindowLong(hWndDocked, GWL_STYLE, (uint)(int)newStyle);
+
+				// Apply style change without moving or resizing yet
+				const int SWP_NOSIZE = 0x0001;
+				const int SWP_NOMOVE = 0x0002;
+				const int SWP_NOACTIVATE = 0x0010;
+				const int SWP_FRAMECHANGED = 0x0020;
+				SetWindowPos(hWndDocked, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 			});
 		}
 
@@ -269,7 +320,9 @@ namespace Orbit
 
 				await Task.Run(() =>
 				{
-					MoveWindow(handle, -8, -32, width + 16, height + 40, true);
+					const int SWP_SHOWWINDOW = 0x0040;
+					const int SWP_FRAMECHANGED = 0x0020;
+					SetWindowPos(handle, IntPtr.Zero, -8, -32, width + 16, height + 40, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
 					Console.WriteLine("Resized RSForm window");
 				});
 			}
@@ -289,7 +342,10 @@ namespace Orbit
 
 				await Task.Factory.StartNew(() =>
 				{
-					MoveWindow(handle, -8, -32, width, height, true);
+					// Force the docked window to top within the panel and refresh frame
+					const int SWP_SHOWWINDOW = 0x0040;
+					const int SWP_FRAMECHANGED = 0x0020;
+					SetWindowPos(handle, IntPtr.Zero, -8, -32, width, height, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
 					Console.WriteLine("Moved window");
 				});
 			}

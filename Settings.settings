@@ -14,5 +14,68 @@
     <Setting Name="CustomAccentColors" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-  </Settings>
+    <Setting Name="HotReloadScriptPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ScriptProfiles" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ConsoleAutoScroll" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="FloatingMenuLeft" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">40</Value>
+    </Setting>
+    <Setting Name="FloatingMenuTop" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">120</Value>
+    </Setting>
+    <Setting Name="FloatingMenuOpacity" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.95</Value>
+    </Setting>
+    <Setting Name="FloatingMenuDirection" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Right</Value>
+    </Setting>
+    <Setting Name="FloatingMenuInactivitySeconds" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="FloatingMenuAutoDirection" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+  <Setting Name="FloatingMenuBackgroundOpacity" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">0.9</Value>
+  </Setting>
+  <Setting Name="AutoInjectOnReady" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuAddSession" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuInject" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuSessions" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuAccountManager" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuScriptControls" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuThemeManager" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuConsole" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuSettings" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowFloatingMenuOnSessionTabs" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowFloatingMenuOnToolTabs" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
+</Settings>
 </SettingsFile>

@@ -1,18 +1,26 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Media;
+﻿using System.Windows;
+using Orbit.Logging;
+using Application = System.Windows.Application;
 
-using System.Windows.Media;
-using Brushes = System.Windows.Media.Brushes;
-using MahApps.Metro;
+namespace Orbit;
 
-namespace Orbit
+public partial class App : Application
 {
-	/// <summary>
-	/// Interaction logic for App.xaml
-	/// </summary>
-	public partial class App : System.Windows.Application
-	{
+	private ConsolePipeServer? _pipeServer;
 
+	protected override void OnStartup(StartupEventArgs e)
+	{
+		base.OnStartup(e);
+
+		ConsoleLogService.Instance.StartCapture();
+		_pipeServer = new ConsolePipeServer();
+		_pipeServer.Start();
+	}
+
+	protected override void OnExit(ExitEventArgs e)
+	{
+		_pipeServer?.Dispose();
+		Settings.Default.Save();
+		base.OnExit(e);
 	}
 }

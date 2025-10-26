@@ -1,44 +1,147 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms.Integration;
-using System.Windows.Forms;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Orbit.Views;
 
 namespace Orbit.Models
 {
-	public class SessionModel
+	public class SessionModel : INotifyPropertyChanged
 	{
+		private SessionState _state;
+		private InjectionState _injectionState;
+		private string _lastError;
+		private Process _rsProcess;
+		private nint _externalHandle;
 
-		public Guid Id { get; set; }
-		public string Name { get; set; }
-		public DateTime CreatedAt { get; set; }
-		public ChildClientView HostControl { get; set; }
-		public RSForm RSForm { get; set; }
-		public Process ExternalProcess { get; set; }
-		public nint ExternalHandle { get; set; }
-
-		// New properties
-		public bool IsClientLoaded { get; set; }
-		public bool ClientLoaded { get; set; }
-		public string ClientStatus { get; set; }
-		public Guid BotId { get; set; } = Guid.NewGuid();
-
-		public Process RSProcess { get; set; } // Add this property
-
-		public void Resize(double width, double height)
+		public SessionModel()
 		{
-			if (HostControl is ChildClientView clientView)
+			State = SessionState.Initializing;
+			InjectionState = InjectionState.NotReady;
+		}
+
+		public Guid Id { get; init; }
+
+		private string name;
+		public string Name
+		{
+			get => name;
+			set
 			{
-				// Pass new dimensions to ChildClientView to resize properly
-				clientView.ResizeWindowAsync((int)width, (int)height);
+				if (name == value)
+					return;
+				name = value;
+				OnPropertyChanged();
 			}
 		}
 
+		public DateTime CreatedAt { get; init; }
+		public ChildClientView HostControl { get; init; }
+		public RSForm RSForm { get; set; }
+
+		public SessionState State
+		{
+			get => _state;
+			private set
+			{
+				if (_state == value)
+					return;
+
+				_state = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(StatusSummary));
+				OnPropertyChanged(nameof(IsInjectable));
+				OnPropertyChanged(nameof(IsHealthy));
+			}
+		}
+
+		public InjectionState InjectionState
+		{
+			get => _injectionState;
+			private set
+			{
+				if (_injectionState == value)
+					return;
+
+				_injectionState = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(StatusSummary));
+				OnPropertyChanged(nameof(IsInjectable));
+				OnPropertyChanged(nameof(IsHealthy));
+			}
+		}
+
+		public string LastError
+		{
+			get => _lastError;
+			private set
+			{
+				if (_lastError == value)
+					return;
+
+				_lastError = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public Process RSProcess
+		{
+			get => _rsProcess;
+			set
+			{
+				if (_rsProcess == value)
+					return;
+
+				_rsProcess = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public nint ExternalHandle
+		{
+			get => _externalHandle;
+			set
+			{
+				if (_externalHandle == value)
+					return;
+
+				_externalHandle = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public string StatusSummary => $"{State} / {InjectionState}";
+
+		public bool IsInjectable => InjectionState == InjectionState.Ready || InjectionState == InjectionState.Failed;
+		public bool IsHealthy => State != SessionState.Failed && InjectionState != InjectionState.Failed;
+
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		public void UpdateState(SessionState state, bool clearError = true)
+		{
+			if (clearError)
+			{
+				LastError = null;
+			}
+			State = state;
+		}
+
+		public void UpdateInjectionState(InjectionState state)
+			=> InjectionState = state;
+
+		public void Fail(Exception exception)
+		{
+			LastError = exception?.Message ?? "Unknown error";
+			State = SessionState.Failed;
+		}
+
+		public void RecordInjectionFailure(Exception exception)
+		{
+			LastError = exception?.Message ?? "Unknown error";
+			InjectionState = InjectionState.Failed;
+			UpdateState(SessionState.ClientReady, clearError: false);
+		}
 
 		public void KillProcess()
 		{
@@ -50,13 +153,11 @@ namespace Orbit.Models
 					RSProcess.Dispose();
 				}
 			}
-			catch (Exception ex)
+			catch
 			{
-				// Handle exception (e.g., log it)
+				// Best-effort shutdown; swallow exceptions for now.
 			}
 		}
-
-
 
 		[DllImport("user32.dll")]
 		private static extern bool SetForegroundWindow(nint hWnd);
@@ -68,5 +169,15 @@ namespace Orbit.Models
 				SetForegroundWindow(ExternalHandle);
 			}
 		}
+
+		public override string ToString()
+		{
+			return string.IsNullOrWhiteSpace(Name)
+				? base.ToString()
+				: Name;
+		}
+
+		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 }

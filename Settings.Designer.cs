@@ -70,5 +70,257 @@ namespace Orbit {
                 this["CustomAccentColors"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HotReloadScriptPath {
+            get {
+                return ((string)(this["HotReloadScriptPath"]));
+            }
+            set {
+                this["HotReloadScriptPath"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ScriptProfiles {
+            get {
+                return ((string)(this["ScriptProfiles"]));
+            }
+            set {
+                this["ScriptProfiles"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ConsoleAutoScroll {
+            get {
+                return ((bool)(this["ConsoleAutoScroll"]));
+            }
+            set {
+                this["ConsoleAutoScroll"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("40")]
+        public double FloatingMenuLeft {
+            get {
+                return ((double)(this["FloatingMenuLeft"]));
+            }
+            set {
+                this["FloatingMenuLeft"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("120")]
+        public double FloatingMenuTop {
+            get {
+                return ((double)(this["FloatingMenuTop"]));
+            }
+            set {
+                this["FloatingMenuTop"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.95")]
+        public double FloatingMenuOpacity {
+            get {
+                return ((double)(this["FloatingMenuOpacity"]));
+            }
+            set {
+                this["FloatingMenuOpacity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Right")]
+        public string FloatingMenuDirection {
+            get {
+                return ((string)(this["FloatingMenuDirection"]));
+            }
+            set {
+                this["FloatingMenuDirection"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public double FloatingMenuInactivitySeconds {
+            get {
+                return ((double)(this["FloatingMenuInactivitySeconds"]));
+            }
+            set {
+                this["FloatingMenuInactivitySeconds"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool FloatingMenuAutoDirection {
+            get {
+                return ((bool)(this["FloatingMenuAutoDirection"]));
+            }
+            set {
+                this["FloatingMenuAutoDirection"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.9")]
+        public double FloatingMenuBackgroundOpacity {
+            get {
+                return ((double)(this["FloatingMenuBackgroundOpacity"]));
+            }
+            set {
+                this["FloatingMenuBackgroundOpacity"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoInjectOnReady {
+            get {
+                return ((bool)(this["AutoInjectOnReady"]));
+            }
+            set {
+                this["AutoInjectOnReady"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuAddSession {
+            get {
+                return ((bool)(this["ShowMenuAddSession"]));
+            }
+            set {
+                this["ShowMenuAddSession"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuInject {
+            get {
+                return ((bool)(this["ShowMenuInject"]));
+            }
+            set {
+                this["ShowMenuInject"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuSessions {
+            get {
+                return ((bool)(this["ShowMenuSessions"]));
+            }
+            set {
+                this["ShowMenuSessions"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuAccountManager {
+            get {
+                return ((bool)(this["ShowMenuAccountManager"]));
+            }
+            set {
+                this["ShowMenuAccountManager"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuScriptControls {
+            get {
+                return ((bool)(this["ShowMenuScriptControls"]));
+            }
+            set {
+                this["ShowMenuScriptControls"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuThemeManager {
+            get {
+                return ((bool)(this["ShowMenuThemeManager"]));
+            }
+            set {
+                this["ShowMenuThemeManager"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuConsole {
+            get {
+                return ((bool)(this["ShowMenuConsole"]));
+            }
+            set {
+                this["ShowMenuConsole"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuSettings {
+            get {
+                return ((bool)(this["ShowMenuSettings"]));
+            }
+            set {
+                this["ShowMenuSettings"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowFloatingMenuOnSessionTabs {
+            get {
+                return ((bool)(this["ShowFloatingMenuOnSessionTabs"]));
+            }
+            set {
+                this["ShowFloatingMenuOnSessionTabs"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ShowFloatingMenuOnToolTabs {
+            get {
+                return ((bool)(this["ShowFloatingMenuOnToolTabs"]));
+            }
+            set {
+                this["ShowFloatingMenuOnToolTabs"] = value;
+            }
+        }
     }
 }
