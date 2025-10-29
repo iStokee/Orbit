@@ -8,7 +8,7 @@
                       xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                       mc:Ignorable="d"
                       Title="Orbit Settings"
-                      Icon="/Orbital.jpg"
+                      Icon="{DynamicResource Orbit.IconImage}"
                       Width="520"
                       Height="520"
                       MinWidth="420"

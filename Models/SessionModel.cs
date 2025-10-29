@@ -14,6 +14,7 @@ namespace Orbit.Models
 		private string _lastError;
 		private Process _rsProcess;
 		private nint _externalHandle;
+		private int? _parentProcessId;
 		private SessionType _sessionType;
 
 		public SessionModel()
@@ -68,6 +69,12 @@ namespace Orbit.Models
 		public DateTime CreatedAt { get; init; }
 		public ChildClientView HostControl { get; init; }
 		public RSForm RSForm { get; set; }
+
+		/// <summary>
+		/// When true, postpone docking until MESharp injection finishes (used for auto-inject flows).
+		/// Manual workflows set this to false so the client docks immediately.
+		/// </summary>
+		public bool RequireInjectionBeforeDock { get; set; } = true;
 
 		public SessionState State
 		{
@@ -127,6 +134,19 @@ namespace Orbit.Models
 			}
 		}
 
+		public int? ParentProcessId
+		{
+			get => _parentProcessId;
+			set
+			{
+				if (_parentProcessId == value)
+					return;
+
+				_parentProcessId = value;
+				OnPropertyChanged();
+			}
+		}
+
 		public nint ExternalHandle
 		{
 			get => _externalHandle;
@@ -143,7 +163,11 @@ namespace Orbit.Models
 		public string StatusSummary => $"{State} / {InjectionState}";
 
 		public bool IsInjectable => InjectionState == InjectionState.Ready || InjectionState == InjectionState.Failed;
-		public bool IsHealthy => State != SessionState.Failed && InjectionState != InjectionState.Failed;
+		public bool IsHealthy =>
+			State != SessionState.Failed &&
+			State != SessionState.ShuttingDown &&
+			State != SessionState.Closed &&
+			InjectionState != InjectionState.Failed;
 
 		public event PropertyChangedEventHandler PropertyChanged;
 
@@ -178,13 +202,40 @@ namespace Orbit.Models
 			{
 				if (RSProcess != null && !RSProcess.HasExited)
 				{
+					UpdateState(SessionState.ShuttingDown, clearError: false);
+					UpdateInjectionState(InjectionState.NotReady);
 					RSProcess.Kill();
 					RSProcess.Dispose();
+				}
+
+				if (ParentProcessId is int parentPid)
+				{
+					try
+					{
+						var parentProcess = Process.GetProcessById(parentPid);
+						if (!parentProcess.HasExited)
+						{
+							parentProcess.Kill();
+							parentProcess.WaitForExit();
+						}
+						parentProcess.Dispose();
+					}
+					catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+					{
+						// Parent may have already exited or be invalid; ignore.
+					}
 				}
 			}
 			catch
 			{
 				// Best-effort shutdown; swallow exceptions for now.
+			}
+			finally
+			{
+				RSProcess = null;
+				ParentProcessId = null;
+				ExternalHandle = nint.Zero;
+				UpdateState(SessionState.Closed, clearError: false);
 			}
 		}
 

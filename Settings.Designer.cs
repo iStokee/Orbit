@@ -322,5 +322,26 @@ namespace Orbit {
                 this["ShowFloatingMenuOnToolTabs"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMemoryErrorDebug {
+            get {
+                object? value = this["ShowMemoryErrorDebug"];
+                if (value is bool flag)
+                {
+                    return flag;
+                }
+
+                // Settings store may not have been initialised yet; return default (true) and cache it.
+                const bool fallback = true;
+                this["ShowMemoryErrorDebug"] = fallback;
+                return fallback;
+            }
+            set {
+                this["ShowMemoryErrorDebug"] = value;
+            }
+        }
     }
 }

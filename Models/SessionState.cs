@@ -6,6 +6,8 @@
 		ClientReady,
 		Injecting,
 		Injected,
-		Failed
+		Failed,
+		ShuttingDown,
+		Closed
 	}
 }

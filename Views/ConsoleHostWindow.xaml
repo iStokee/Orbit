@@ -15,7 +15,7 @@
                       Width="800"
                       MinHeight="300"
                       MinWidth="500"
-                      Icon="/Orbital.jpg"
+                      Icon="{DynamicResource Orbit.IconImage}"
                       WindowStartupLocation="CenterScreen">
 
     <Controls:MetroWindow.IconTemplate>

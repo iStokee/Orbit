@@ -8,7 +8,7 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     Title="Script Manager"
-    Icon="/Orbital.jpg"
+    Icon="{DynamicResource Orbit.IconImage}"
     Width="900"
     Height="650"
     TitleCharacterCasing="Normal"
@@ -68,7 +68,7 @@
                         FontSize="13"
                         Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                         Opacity="0.95"
-                        Text="Manage and organize your script library" />
+                        Text="Manage and organize your script library • Instant hot-reload" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -351,7 +351,7 @@
                     VerticalAlignment="Center"
                     FontSize="11"
                     Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                    Text="Double-click a script to load • Star your favorites for quick access" />
+                    Text="Double-click a script to load (hot-reload enabled) • Star your favorites for quick access" />
 
                 <Button
                     Width="100"

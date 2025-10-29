@@ -20,8 +20,13 @@ namespace Orbit
 		internal IntPtr rsMainWindowHandle;
 		internal Process pDocked;
 		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly TaskCompletionSource<bool> injectionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private static readonly TimeSpan InjectionWaitTimeout = TimeSpan.FromSeconds(15);
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
+		private uint? originalWindowStyle;
+		private bool dockedStylesApplied;
+		private bool isCurrentlyDocked;
 		private const int SW_MAXIMIZE = 3;
 		//internal static List<RuneScapeHandler> rsHandlerList = new List<RuneScapeHandler>();
 		private bool hasStarted = false;
@@ -35,6 +40,8 @@ namespace Orbit
 		internal static IntPtr jagOpenGLViewWindowHandler;
 		internal static IntPtr JagWindow;
 		internal static IntPtr wxWindowNR;
+
+		public int? ParentProcessId { get; private set; }
 
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int DockedRSHwnd { get; set; }
@@ -64,8 +71,17 @@ namespace Orbit
 
 		internal Task<Process> ProcessReadyTask => processReadyTcs.Task;
 
+		internal bool WaitForInjectionBeforeDock { get; set; } = true;
+
+		public event EventHandler<DockedEventArgs> Docked;
+
 		[DllImport("user32.dll")]
 		private static extern IntPtr SetFocus(IntPtr hWnd);
+
+		internal void SignalInjectionReady()
+		{
+			injectionReadyTcs.TrySetResult(true);
+		}
 
 		public RSForm()
 		{
@@ -85,10 +101,19 @@ namespace Orbit
 
 			this.FormBorderStyle = FormBorderStyle.None;
 			hWndDocked = IntPtr.Zero;
+			ParentProcessId = null;
 
 			await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
 			{
-				hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+				if (hWndDocked != IntPtr.Zero)
+				{
+					var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+					if (hWndOriginalParent == IntPtr.Zero)
+					{
+						hWndOriginalParent = previousParent;
+					}
+					isCurrentlyDocked = true;
+				}
 			}));
 
 			Console.WriteLine("LoadRS");
@@ -113,7 +138,15 @@ namespace Orbit
 				// Dock the client to the panel
 				await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
 				{
-					hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+					if (hWndDocked != IntPtr.Zero)
+					{
+						var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+						if (hWndOriginalParent == IntPtr.Zero)
+						{
+							hWndOriginalParent = previousParent;
+						}
+						isCurrentlyDocked = true;
+					}
 				}));
 
 				if (ClientSettings.rs2cPID > 0)
@@ -141,6 +174,66 @@ namespace Orbit
 				}
 			}
 			catch { /* best effort */ }
+		}
+
+		internal void Undock()
+		{
+			void PerformUndock()
+			{
+				if (hWndDocked == IntPtr.Zero)
+				{
+					return;
+				}
+
+				const int GWL_STYLE = -16;
+				const int SWP_NOSIZE = 0x0001;
+				const int SWP_NOMOVE = 0x0002;
+				const int SWP_NOZORDER = 0x0004;
+				const int SWP_NOACTIVATE = 0x0010;
+				const int SWP_FRAMECHANGED = 0x0020;
+
+				if (dockedStylesApplied && originalWindowStyle.HasValue)
+				{
+					SetWindowLong(hWndDocked, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
+					SetWindowPos(
+						hWndDocked,
+						IntPtr.Zero,
+						0,
+						0,
+						0,
+						0,
+						SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+					dockedStylesApplied = false;
+				}
+
+				if (isCurrentlyDocked)
+				{
+					SetParent(hWndDocked, hWndOriginalParent);
+					hWndParent = IntPtr.Zero;
+					isCurrentlyDocked = false;
+				}
+			}
+
+			try
+			{
+				if (IsDisposed)
+				{
+					return;
+				}
+
+				if (InvokeRequired)
+				{
+					Invoke((MethodInvoker)PerformUndock);
+				}
+				else
+				{
+					PerformUndock();
+				}
+			}
+			catch
+			{
+				// best-effort; failures here should not prevent shutdown
+			}
 		}
 
 		private async Task ExecuteRSLoadAsync()
@@ -220,6 +313,7 @@ namespace Orbit
 						rs2client = p;
 						ClientSettings.rs2client = p;
 						runescape = runescapeProcess;
+						ParentProcessId = runescapeProcess?.Id;
 						JagWindow = FindWindowEx(p.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
 						wxWindowNR = FindWindowEx(runescapeProcess.MainWindowHandle, IntPtr.Zero, "wxWindowNR", null);
 
@@ -251,7 +345,7 @@ namespace Orbit
 
 				try
 				{
-					pDocked.WaitForInputIdle(1000);
+					pDocked.WaitForInputIdle(500);
 				}
 				catch (InvalidOperationException ex)
 				{
@@ -272,12 +366,30 @@ namespace Orbit
 				ClientSettings.jagOpenGL = rsWindow;
 			}
 
+			// ensure MESharp injection has been attempted before we re-parent the window
+			if (WaitForInjectionBeforeDock && !injectionReadyTcs.Task.IsCompleted)
+			{
+				Console.WriteLine("[Orbit] Waiting for MESharp injection signal before docking RuneScape window...");
+				var completed = await Task.WhenAny(injectionReadyTcs.Task, Task.Delay(InjectionWaitTimeout)).ConfigureAwait(true);
+				if (completed != injectionReadyTcs.Task)
+				{
+					Console.WriteLine("[Orbit] Injection signal timed out; proceeding to dock the client anyway.");
+				}
+			}
+
 			// dock the client to the panel
+			IntPtr dockedHandle = IntPtr.Zero;
 			panel_DockPanel.Invoke((MethodInvoker)delegate
 			{
-				hWndOriginalParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+				var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+				if (hWndOriginalParent == IntPtr.Zero)
+				{
+					hWndOriginalParent = previousParent;
+				}
+				hWndParent = panel_DockPanel.Handle;
 				// ClientSettings.cameraHandle = panel1.Handle;
 				DockedRSHwnd = (int)hWndDocked;
+				dockedHandle = hWndDocked;
 
 				// Ensure correct child window styles and refresh frame
 				const int GWL_STYLE = -16;
@@ -287,9 +399,15 @@ namespace Orbit
 				const uint WS_CLIPCHILDREN = 0x02000000;
 				const uint WS_POPUP = 0x80000000; // <- now valid as uint
 				uint curStyle = (uint)GetWindowLong(hWndDocked, GWL_STYLE);
+				if (!originalWindowStyle.HasValue)
+				{
+					originalWindowStyle = curStyle;
+				}
 				uint newStyle = (curStyle & ~WS_POPUP) |
 								WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 				SetWindowLong(hWndDocked, GWL_STYLE, (uint)(int)newStyle);
+				dockedStylesApplied = true;
+				isCurrentlyDocked = true;
 
 				// Apply style change without moving or resizing yet
 				const int SWP_NOSIZE = 0x0001;
@@ -298,6 +416,11 @@ namespace Orbit
 				const int SWP_FRAMECHANGED = 0x0020;
 				SetWindowPos(hWndDocked, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 			});
+
+			if (dockedHandle != IntPtr.Zero)
+			{
+				Docked?.Invoke(this, new DockedEventArgs(dockedHandle));
+			}
 		}
 
 		private async Task DockWindowToPanelAsync()
@@ -354,5 +477,15 @@ namespace Orbit
 				Console.WriteLine($"An error occurred while resizing the window: {ex}");
 			}
 		}
+	}
+
+	public sealed class DockedEventArgs : EventArgs
+	{
+		public DockedEventArgs(IntPtr handle)
+		{
+			Handle = handle;
+		}
+
+		public IntPtr Handle { get; }
 	}
 }

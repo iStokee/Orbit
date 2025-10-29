@@ -1,9 +1,11 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 using System.Windows.Controls;
 using Orbit.Logging;
 using Orbit.ViewModels;
 using ListBox = System.Windows.Controls.ListBox;
 using UserControl = System.Windows.Controls.UserControl;
+using DispatcherPriority = System.Windows.Threading.DispatcherPriority;
 
 namespace Orbit.Views;
 
@@ -36,14 +38,15 @@ public partial class ConsoleView : UserControl
 		// Only auto-scroll when new items are added and auto-scroll is enabled
 		if (e.Action == NotifyCollectionChangedAction.Add && _viewModel.AutoScrollEnabled)
 		{
-			// Get the ListBox by name
-			var listBox = this.FindName("ConsoleListBox") as ListBox;
-
-			// Scroll to the last item
-			if (listBox?.Items.Count > 0)
+			// Defer scroll until after layout settles to avoid re-entrancy issues.
+			Dispatcher.BeginInvoke(new Action(() =>
 			{
-				listBox.ScrollIntoView(listBox.Items[^1]);
-			}
+				if (ConsoleListBox is ListBox listBox && listBox.Items.Count > 0)
+				{
+					var lastItem = listBox.Items[^1];
+					listBox.ScrollIntoView(lastItem);
+				}
+			}), DispatcherPriority.ContextIdle);
 		}
 	}
 }

@@ -1,10 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using Application = System.Windows.Application;
 
 namespace Orbit.Logging;
@@ -16,12 +16,16 @@ public sealed class ConsoleLogService
 
 	private readonly ObservableCollection<ConsoleLogEntry> _entries = new();
 	private readonly ReadOnlyObservableCollection<ConsoleLogEntry> _readonlyEntries;
+	private readonly Dispatcher _dispatcher;
+	private readonly ConcurrentQueue<ConsoleLogEntry> _pendingEntries = new();
 	private TextWriter? _originalOut;
 	private TextWriter? _originalError;
 	private bool _isCapturing;
+	private int _flushScheduled;
 
 	public ConsoleLogService()
 	{
+		_dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 		_readonlyEntries = new ReadOnlyObservableCollection<ConsoleLogEntry>(_entries);
 	}
 
@@ -46,31 +50,17 @@ public sealed class ConsoleLogService
 		if (string.IsNullOrWhiteSpace(message))
 			return;
 
-		void AddEntry()
+		var entry = new ConsoleLogEntry(DateTime.Now, source, level, message.TrimEnd());
+		if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
 		{
-		_entries.Add(new ConsoleLogEntry(DateTime.Now, source, level, message.TrimEnd()));
-
-			while (_entries.Count > MaxEntries)
-			{
-				_entries.RemoveAt(0);
-			}
+			// App is shutting down; mutate directly to preserve tail logs.
+			_entries.Add(entry);
+			TrimEntries();
+			return;
 		}
 
-		var dispatcher = Application.Current?.Dispatcher;
-
-		if (dispatcher == null)
-		{
-			AddEntry();
-		}
-		else if (dispatcher.CheckAccess())
-		{
-			AddEntry();
-		}
-		else
-		{
-			// Use async invoke to avoid blocking the caller thread
-			dispatcher.InvokeAsync(AddEntry, System.Windows.Threading.DispatcherPriority.Background);
-		}
+		_pendingEntries.Enqueue(entry);
+		ScheduleFlush();
 	}
 
 	public void AppendExternal(string message, ConsoleLogLevel level)
@@ -78,22 +68,62 @@ public sealed class ConsoleLogService
 
 	public void Clear()
 	{
-		void ClearInternal() => _entries.Clear();
-
-		var dispatcher = Application.Current?.Dispatcher;
-
-		if (dispatcher == null)
+		if (_dispatcher.CheckAccess())
 		{
-			ClearInternal();
+			_pendingEntries.Clear();
+			_entries.Clear();
 		}
-		else if (dispatcher.CheckAccess())
+		else if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
 		{
-			ClearInternal();
+			_pendingEntries.Clear();
+			_entries.Clear();
 		}
 		else
 		{
-			// Use async invoke to avoid blocking the caller thread
-			dispatcher.InvokeAsync(ClearInternal, System.Windows.Threading.DispatcherPriority.Normal);
+			_pendingEntries.Clear();
+			_dispatcher.BeginInvoke(new Action(() => _entries.Clear()), DispatcherPriority.Background);
+		}
+	}
+
+	private void ScheduleFlush()
+	{
+		if (Interlocked.CompareExchange(ref _flushScheduled, 1, 0) == 0)
+		{
+			_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+		}
+	}
+
+	private void FlushPendingEntries()
+	{
+		if (!_dispatcher.CheckAccess())
+		{
+			_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+			return;
+		}
+
+		try
+		{
+			while (_pendingEntries.TryDequeue(out var entry))
+			{
+				_entries.Add(entry);
+				TrimEntries();
+			}
+		}
+		finally
+		{
+			Interlocked.Exchange(ref _flushScheduled, 0);
+			if (!_pendingEntries.IsEmpty)
+			{
+				ScheduleFlush();
+			}
+		}
+	}
+
+	private void TrimEntries()
+	{
+		while (_entries.Count > MaxEntries)
+		{
+			_entries.RemoveAt(0);
 		}
 	}
 }

@@ -48,6 +48,7 @@
     <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -75,7 +76,7 @@
 
   <ItemGroup>
     <Reference Include="csharp_interop">
-      <HintPath>C:\Development\ME\x64\Build_DLL\csharp_interop.dll</HintPath>
+      <HintPath>..\..\C#\csharp_interop\bin\Debug\net8.0-windows\csharp_interop.dll</HintPath>
     </Reference>
   </ItemGroup>
 

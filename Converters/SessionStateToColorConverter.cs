@@ -31,6 +31,8 @@ namespace Orbit.Converters
 					SessionState.Injecting => GetThemeBrush("MahApps.Brushes.Accent2", FallbackBlue),
 					SessionState.Injected => GetThemeBrush("MahApps.Brushes.Accent3", FallbackGreen),
 					SessionState.Failed => GetThemeBrush("MahApps.Brushes.SystemControlErrorTextForeground", FallbackRed),
+					SessionState.ShuttingDown => GetThemeBrush("MahApps.Brushes.Gray7", FallbackGray),
+					SessionState.Closed => GetThemeBrush("MahApps.Brushes.Gray6", FallbackGray),
 					_ => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray)
 				};
 			}

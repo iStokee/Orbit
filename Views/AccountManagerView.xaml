@@ -10,7 +10,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Account Manager"
-    Icon="/Orbital.jpg"
+    Icon="{DynamicResource Orbit.IconImage}"
     Width="800"
     Height="600"
     MinWidth="600"

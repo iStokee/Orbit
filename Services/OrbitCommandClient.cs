@@ -23,6 +23,97 @@ internal static class OrbitCommandClient
     public static Task<bool> SendReloadAsync(string scriptPath, int processId, CancellationToken cancellationToken = default)
         => SendAsync($"RELOAD\t{scriptPath}", "Reload", processId, cancellationToken);
 
+    public static Task<bool> SendDebugMenuVisibleAsync(bool visible, int processId, CancellationToken cancellationToken = default)
+        => SendAsync($"DEBUG_VISIBLE\t{(visible ? 1 : 0)}", "DebugVisible", processId, cancellationToken);
+
+    public static Task<bool> SendInputModeAsync(int mode, int processId, CancellationToken cancellationToken = default)
+        => SendAsync($"SET_INPUT_MODE\t{mode}", "InputMode", processId, cancellationToken);
+
+    public static Task<bool> SendFocusSpoofAsync(bool enabled, int processId, CancellationToken cancellationToken = default)
+        => SendAsync($"SET_FOCUS_SPOOF\t{(enabled ? 1 : 0)}", "FocusSpoof", processId, cancellationToken);
+
+    public static async Task<bool> SendInputModeWithRetryAsync(
+        int mode,
+        int processId,
+        int maxAttempts = 3,
+        TimeSpan? initialDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxAttempts <= 0)
+        {
+            return false;
+        }
+
+        var delay = initialDelay ?? TimeSpan.Zero;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            if (attempt > 1 && delay > TimeSpan.Zero)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+
+            var success = await SendInputModeAsync(mode, processId, cancellationToken).ConfigureAwait(false);
+            if (success)
+            {
+                return true;
+            }
+
+            delay = delay == TimeSpan.Zero
+                ? TimeSpan.FromMilliseconds(200)
+                : TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 1000));
+        }
+
+        return false;
+    }
+
+    public static async Task<bool> SendFocusSpoofWithRetryAsync(
+        bool enabled,
+        int processId,
+        int maxAttempts = 3,
+        TimeSpan? initialDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxAttempts <= 0)
+        {
+            return false;
+        }
+
+        var delay = initialDelay ?? TimeSpan.Zero;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            if (attempt > 1 && delay > TimeSpan.Zero)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+
+            var success = await SendFocusSpoofAsync(enabled, processId, cancellationToken).ConfigureAwait(false);
+            if (success)
+            {
+                return true;
+            }
+
+            delay = delay == TimeSpan.Zero
+                ? TimeSpan.FromMilliseconds(200)
+                : TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 1000));
+        }
+
+        return false;
+    }
+
     private static async Task<bool> SendAsync(string payload, string operation, int? processId, CancellationToken cancellationToken)
     {
         try
@@ -72,8 +163,10 @@ internal static class OrbitCommandClient
                 }
             }
 
+            var detail = ex.ToString();
+            Console.WriteLine($"[MESharpCmd] {operation} request failed: {detail}");
             ConsoleLogService.Instance.Append(
-                $"[MESharpCmd] {operation} request failed: {ex.Message}",
+                $"[MESharpCmd] {operation} request failed: {detail}",
                 ConsoleLogSource.Orbit,
                 ConsoleLogLevel.Warning);
             return false;

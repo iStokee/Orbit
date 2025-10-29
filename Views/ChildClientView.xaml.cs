@@ -166,5 +166,47 @@ namespace Orbit.Views
 			}
 			catch { /* best effort only */ }
 		}
+
+		internal void DetachSession()
+		{
+			try
+			{
+				Dispatcher.Invoke(() =>
+				{
+					try
+					{
+						if (RSPanel != null)
+						{
+							RSPanel.Child = null;
+						}
+					}
+					catch
+					{
+						// Ignore cleanup errors; we're detaching anyway.
+					}
+				});
+			}
+			catch
+			{
+				// Dispatcher may already be shutting down; best effort only.
+			}
+
+			try
+			{
+				if (rsForm != null && !rsForm.IsDisposed)
+				{
+					rsForm.Undock();
+					rsForm.Close();
+					rsForm.Dispose();
+				}
+			}
+			catch
+			{
+				// WinForms teardown can fail if the form is already closing; ignore.
+			}
+
+			hasStarted = false;
+			rsForm = null;
+		}
     }
 }

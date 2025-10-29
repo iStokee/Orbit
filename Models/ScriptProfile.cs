@@ -95,4 +95,10 @@ public class ScriptProfile : INotifyPropertyChanged
 
 	protected void OnPropertyChanged(string propertyName)
 		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+	/// <summary>
+	/// Returns the file path for display in ComboBox text field.
+	/// This is critical for editable ComboBox to show the path instead of type name.
+	/// </summary>
+	public override string ToString() => FilePath ?? string.Empty;
 }

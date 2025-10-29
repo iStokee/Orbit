@@ -325,9 +325,14 @@ namespace Orbit.Services
 			resources["IdealForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("IdealForegroundColorBrush", resources["IdealForegroundColorBrush"]);
 
+			// MahApps v2 window title brushes
+			resources["MahApps.Brushes.WindowTitle"] = CreateFrozenBrush(accentColor);
+			ThemeLogger.LogResourceSet("MahApps.Brushes.WindowTitle", resources["MahApps.Brushes.WindowTitle"]);
+
+			// Additional UI-specific brushes
 			resources["AccentSelectedColorBrush"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("AccentSelectedColorBrush", resources["AccentSelectedColorBrush"]);
-			resources["WindowTitleColorBrush"] = CreateFrozenBrush(accentColor);
+			resources["WindowTitleColorBrush"] = CreateFrozenBrush(accentColor); // Legacy alias
 			ThemeLogger.LogResourceSet("WindowTitleColorBrush", resources["WindowTitleColorBrush"]);
 			resources["ProgressBrush"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("ProgressBrush", resources["ProgressBrush"]);
@@ -374,7 +379,7 @@ namespace Orbit.Services
 				"MahApps.Colors.Accent", "MahApps.Colors.Accent2", "MahApps.Colors.Accent3", "MahApps.Colors.Accent4",
 				"MahApps.Colors.Highlight", "MahApps.Colors.IdealForeground",
 				"MahApps.Brushes.Accent", "MahApps.Brushes.Accent2", "MahApps.Brushes.Accent3", "MahApps.Brushes.Accent4",
-				"MahApps.Brushes.Highlight", "MahApps.Brushes.IdealForeground",
+				"MahApps.Brushes.Highlight", "MahApps.Brushes.IdealForeground", "MahApps.Brushes.WindowTitle",
 				"AccentColor", "AccentColor2", "AccentColor3", "AccentColor4", "HighlightColor", "IdealForegroundColor",
 				"AccentColorBrush", "AccentColorBrush2", "AccentColorBrush3", "AccentColorBrush4",
 				"HighlightBrush", "IdealForegroundColorBrush",

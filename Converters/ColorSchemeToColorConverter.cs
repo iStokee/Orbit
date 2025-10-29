@@ -4,7 +4,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using Color = System.Windows.Media.Color;
 
-namespace Orbit.ViewModels
+namespace Orbit.Converters
 {
 	/// <summary>
 	/// Converts MahApps color scheme names to actual colors for visual display

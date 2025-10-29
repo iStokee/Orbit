@@ -30,4 +30,7 @@ public sealed class ToolTabItem
     /// Icon to display in the tab header.
     /// </summary>
     public PackIconMaterialKind Icon { get; }
+
+    public override string ToString()
+        => string.IsNullOrWhiteSpace(Name) ? base.ToString() : Name;
 }

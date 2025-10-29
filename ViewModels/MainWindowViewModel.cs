@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,15 +21,17 @@ using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using MahApps.Metro.IconPacks;
+using FlowDirection = System.Windows.FlowDirection;
 
 namespace Orbit.ViewModels
 {
 	public class MainWindowViewModel : INotifyPropertyChanged
 	{
 		private readonly SessionManagerService sessionManager;
-		private readonly ThemeService themeService;
-		private readonly ScriptIntegrationService scriptIntegrationService;
-		private SessionModel selectedSession;
+	private readonly ThemeService themeService;
+	private readonly ScriptIntegrationService scriptIntegrationService;
+	private SessionModel selectedSession;
+	private SessionModel? hotReloadTargetSession;
 	private string hotReloadScriptPath;
 	private ScriptProfile selectedScript;
 	private double floatingMenuLeft;
@@ -46,6 +49,7 @@ namespace Orbit.ViewModels
 	private double hostViewportWidth = 1200;
 	private double hostViewportHeight = 900;
 	private bool autoInjectOnReady;
+	private bool debugOverlayWarningLogged;
 
 	public MainWindowViewModel()
 	{
@@ -59,6 +63,10 @@ namespace Orbit.ViewModels
 			Sessions = SessionCollectionService.Instance.Sessions;
 			Tabs = new ObservableCollection<object>();
 			Sessions.CollectionChanged += OnSessionsCollectionChanged;
+	foreach (var session in Sessions)
+	{
+		session.PropertyChanged += OnSessionPropertyChanged;
+	}
 
 		// Sync with global selected session (important for tear-off windows)
 		selectedSession = SessionCollectionService.Instance.GlobalSelectedSession;
@@ -97,14 +105,17 @@ namespace Orbit.ViewModels
 
 		// initialize auto side from current position
 		ComputeAutoActiveSide();
+	HotReloadTargetSession = selectedSession ?? Sessions.FirstOrDefault();
+	ApplyMemoryErrorDebugPreferenceIfInjected();
 
-		ApplyThemeFromSettings();
-	}
+	ApplyThemeFromSettings();
+}
 
-		public ObservableCollection<SessionModel> Sessions { get; }
-		public ObservableCollection<object> Tabs { get; }
-		public IInterTabClient InterTabClient { get; }
-		public ScriptManagerService ScriptManager { get; }
+	public ObservableCollection<SessionModel> Sessions { get; }
+	public ObservableCollection<object> Tabs { get; }
+	public IInterTabClient InterTabClient { get; }
+	public bool HasSessions => Sessions.Count > 0;
+	public ScriptManagerService ScriptManager { get; }
 		public ScriptIntegrationService ScriptIntegration => scriptIntegrationService;
 		public ICommand AddSessionCommand { get; }
 		public ICommand InjectCommand { get; }
@@ -129,6 +140,33 @@ namespace Orbit.ViewModels
 			autoInjectOnReady = value;
 			Settings.Default.AutoInjectOnReady = value;
 			OnPropertyChanged(nameof(AutoInjectOnReady));
+			OnPropertyChanged(nameof(ShowInjectMenuButton));
+
+			foreach (var session in Sessions)
+			{
+				session.RequireInjectionBeforeDock = value;
+				var rsForm = session.RSForm;
+				if (rsForm != null)
+				{
+					rsForm.WaitForInjectionBeforeDock = value;
+					if (!value)
+					{
+						rsForm.SignalInjectionReady();
+					}
+				}
+			}
+		}
+	}
+
+	public bool ShowMemoryErrorDebug
+	{
+		get => Settings.Default.ShowMemoryErrorDebug;
+		set
+		{
+			if (Settings.Default.ShowMemoryErrorDebug == value) return;
+			Settings.Default.ShowMemoryErrorDebug = value;
+			OnPropertyChanged(nameof(ShowMemoryErrorDebug));
+			ApplyMemoryErrorDebugPreferenceIfInjected();
 		}
 	}
 
@@ -177,18 +215,27 @@ namespace Orbit.ViewModels
 
 				selectedSession = value;
 
-				if (selectedSession != null)
-				{
-					selectedSession.PropertyChanged += OnSelectedSessionChanged;
-				}
-
-				// Sync with global selected session so tear-off windows can access it
-				SessionCollectionService.Instance.GlobalSelectedSession = value;
-
-				OnPropertyChanged(nameof(SelectedSession));
-				CommandManager.InvalidateRequerySuggested();
-			}
+		if (selectedSession != null)
+		{
+			selectedSession.PropertyChanged += OnSelectedSessionChanged;
 		}
+
+		// Sync with global selected session so tear-off windows can access it
+		SessionCollectionService.Instance.GlobalSelectedSession = value;
+
+		if (value != null && (hotReloadTargetSession == null || !Sessions.Contains(hotReloadTargetSession)))
+		{
+			HotReloadTargetSession = value;
+		}
+		else if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
+		{
+			HotReloadTargetSession = Sessions.FirstOrDefault();
+		}
+
+		OnPropertyChanged(nameof(SelectedSession));
+		CommandManager.InvalidateRequerySuggested();
+	}
+}
 
 		// Theme Logging Properties
 		public bool IsThemeLoggingEnabled
@@ -263,7 +310,8 @@ namespace Orbit.ViewModels
 				Id = Guid.NewGuid(),
 				Name = $"RuneScape Session {Sessions.Count + 1}",
 				CreatedAt = DateTime.Now,
-				HostControl = new ChildClientView()
+				HostControl = new ChildClientView(),
+				RequireInjectionBeforeDock = AutoInjectOnReady
 			};
 
 			Sessions.Add(session);
@@ -271,22 +319,22 @@ namespace Orbit.ViewModels
 			SelectedSession = session;
 			SelectedTab = session; // Auto-focus the new tab
 
-			try
-			{
-				await sessionManager.InitializeSessionAsync(session);
+		try
+		{
+			await sessionManager.InitializeSessionAsync(session);
 
 			// Auto-inject as soon as the session is ready (if enabled)
 			if (AutoInjectOnReady && session.InjectionState == InjectionState.Ready)
 			{
 				Console.WriteLine($"[Orbit] Session '{session.Name}' is ready, auto-injecting...");
-				await sessionManager.InjectAsync(session);
+				await InjectSessionInternalAsync(session);
 			}
-			}
-			catch (Exception ex)
-			{
+		}
+		catch (Exception ex)
+		{
 			Console.WriteLine($"[Orbit] Session initialization/injection failed: {ex.Message}");
-				// SessionManager already marks the failure on the model.
-			}
+			// SessionManager already marks the failure on the model.
+		}
 			finally
 			{
 				CommandManager.InvalidateRequerySuggested();
@@ -303,7 +351,7 @@ namespace Orbit.ViewModels
 
 			try
 			{
-				await sessionManager.InjectAsync(session);
+				await InjectSessionInternalAsync(session);
 			}
 			catch (Exception)
 			{
@@ -313,6 +361,12 @@ namespace Orbit.ViewModels
 			{
 				CommandManager.InvalidateRequerySuggested();
 			}
+		}
+
+		private async Task InjectSessionInternalAsync(SessionModel session)
+		{
+			await sessionManager.InjectAsync(session);
+			ApplyMemoryErrorDebugPreferenceIfInjected();
 		}
 
         private void ShowSessions()
@@ -361,41 +415,58 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+	public SessionModel? HotReloadTargetSession
+	{
+		get => hotReloadTargetSession;
+		set
 		{
-			if (args.DragablzItem.DataContext is SessionModel session)
-			{
-				// Only show confirmation if the session is actually running or has been injected
-				if (session.State == SessionState.ClientReady || session.InjectionState == InjectionState.Injected)
-				{
-					var result = MessageBox.Show(
-						$"Session '{session.Name}' is active. Are you sure you want to close it?",
-						"Close Active Session",
-						MessageBoxButton.YesNo,
-						MessageBoxImage.Warning);
+				if (ReferenceEquals(hotReloadTargetSession, value))
+					return;
 
-					if (result != MessageBoxResult.Yes)
-					{
-						args.Cancel();
-						return;
-					}
-				}
-
-				session.KillProcess();
-				Sessions.Remove(session);
-				Tabs.Remove(session);
+				hotReloadTargetSession = value;
+				OnPropertyChanged(nameof(HotReloadTargetSession));
+				CommandManager.InvalidateRequerySuggested();
 			}
 		}
 
+	public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
+	{
+		if (args.DragablzItem.DataContext is SessionModel session)
+		{
+			args.Cancel();
+			_ = CloseSessionInternalAsync(session, skipConfirmation: false);
+			return;
+		}
+
+		var removedItem = args.DragablzItem.DataContext;
+		Tabs.Remove(removedItem);
+		HandleTabRemoval(removedItem);
+	}
+
 		private bool CanInject() => SelectedSession?.IsInjectable == true;
 
-		private bool CanLoadScript()
+	private SessionModel? ResolveHotReloadTarget()
+	{
+		if (hotReloadTargetSession != null && Sessions.Contains(hotReloadTargetSession))
 		{
-			// Use local SelectedSession if available, otherwise fall back to global (for tear-off windows)
-			var targetSession = SelectedSession ?? SessionCollectionService.Instance.GlobalSelectedSession;
-			return targetSession?.InjectionState == InjectionState.Injected
-				&& !string.IsNullOrWhiteSpace(hotReloadScriptPath);
+			return hotReloadTargetSession;
 		}
+
+		var fallback = SelectedSession ?? SessionCollectionService.Instance.GlobalSelectedSession;
+		if (fallback != null && Sessions.Contains(fallback))
+		{
+			return fallback;
+		}
+
+		return Sessions.FirstOrDefault();
+	}
+
+	private bool CanLoadScript()
+	{
+		var targetSession = ResolveHotReloadTarget();
+		return targetSession?.InjectionState == InjectionState.Injected
+			&& !string.IsNullOrWhiteSpace(hotReloadScriptPath);
+	}
 
 	private bool CanReloadScript() => CanLoadScript();
 
@@ -592,8 +663,8 @@ namespace Orbit.ViewModels
 			Settings.Default.FloatingMenuDirection = value.ToString();
 			OnPropertyChanged(nameof(FloatingMenuDirection));
 			OnPropertyChanged(nameof(FloatingMenuActiveSide));
+			OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 			OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
-			OnPropertyChanged(nameof(FloatingMenuItemsOrientation));
 		}
 	}
 
@@ -607,9 +678,10 @@ namespace Orbit.ViewModels
 			? OppositeToPlacement(FloatingMenuActiveSide)
 			: ToPlacement(FloatingMenuDirection);
 
-	public Orientation FloatingMenuItemsOrientation => FloatingMenuActiveSide is FloatingMenuDirection.Up or FloatingMenuDirection.Down
-		? Orientation.Horizontal
-		: Orientation.Vertical;
+	public FloatingMenuDirection FloatingMenuExpansionDirection
+		=> FloatingMenuAutoDirection
+			? OppositeOf(FloatingMenuActiveSide)
+			: FloatingMenuDirection;
 
 	public double FloatingMenuInactivitySeconds
 	{
@@ -639,8 +711,8 @@ namespace Orbit.ViewModels
 			// when switching modes, recompute and notify dependents
 			ComputeAutoActiveSide();
 			OnPropertyChanged(nameof(FloatingMenuActiveSide));
+			OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 			OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
-			OnPropertyChanged(nameof(FloatingMenuItemsOrientation));
 		}
 	}
 
@@ -664,8 +736,11 @@ namespace Orbit.ViewModels
 			if (Settings.Default.ShowMenuInject == value) return;
 			Settings.Default.ShowMenuInject = value;
 			OnPropertyChanged(nameof(ShowMenuInject));
+			OnPropertyChanged(nameof(ShowInjectMenuButton));
 		}
 	}
+
+	public bool ShowInjectMenuButton => ShowMenuInject && !AutoInjectOnReady;
 
 	public bool ShowMenuSessions
 	{
@@ -761,20 +836,24 @@ namespace Orbit.ViewModels
 	{
 		if (SelectedTab == null)
 		{
-			IsFloatingMenuVisible = false;
+			if (Tabs.Count == 0 && (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs))
+			{
+				IsFloatingMenuVisible = true;
+			}
+			else
+			{
+				HideFloatingMenu();
+			}
 			return;
 		}
 
-		// Session tabs (RS client windows)
-		if (SelectedTab is SessionModel)
+		if (!ShouldShowFloatingMenuForCurrentTab())
 		{
-			IsFloatingMenuVisible = ShowFloatingMenuOnSessionTabs;
+			HideFloatingMenu();
+			return;
 		}
-		// Tool tabs (Console, Script Manager, Theme Manager, etc.)
-		else
-		{
-			IsFloatingMenuVisible = ShowFloatingMenuOnToolTabs;
-		}
+
+		IsFloatingMenuVisible = true;
 	}
 
 	public void UpdateFloatingMenuPosition(double left, double top, double hostWidth, double hostHeight)
@@ -883,15 +962,34 @@ namespace Orbit.ViewModels
 		};
 	}
 
-	public void ShowFloatingMenu()
+	public bool ShowFloatingMenu()
 	{
+		if (!ShouldShowFloatingMenuForCurrentTab())
+		{
+			IsFloatingMenuVisible = false;
+			return false;
+		}
+
 		IsFloatingMenuVisible = true;
+		return true;
 	}
 
 	public void HideFloatingMenu()
 	{
 		IsFloatingMenuExpanded = false;
 		IsFloatingMenuVisible = false;
+	}
+
+	public bool ShouldShowFloatingMenuForCurrentTab()
+	{
+		if (SelectedTab == null)
+		{
+			return Tabs.Count == 0 && (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs);
+		}
+
+		return SelectedTab is SessionModel
+			? ShowFloatingMenuOnSessionTabs
+			: ShowFloatingMenuOnToolTabs;
 	}
 
 	private void ComputeAutoActiveSide()
@@ -924,8 +1022,8 @@ namespace Orbit.ViewModels
 
 		autoActiveSide = best;
 		OnPropertyChanged(nameof(FloatingMenuActiveSide));
+		OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 		OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
-		OnPropertyChanged(nameof(FloatingMenuItemsOrientation));
 	}
 
 	private static PlacementMode ToPlacement(FloatingMenuDirection side) => side switch
@@ -946,6 +1044,15 @@ namespace Orbit.ViewModels
 		_ => PlacementMode.Right
 	};
 
+	private static FloatingMenuDirection OppositeOf(FloatingMenuDirection side) => side switch
+	{
+		FloatingMenuDirection.Left => FloatingMenuDirection.Right,
+		FloatingMenuDirection.Right => FloatingMenuDirection.Left,
+		FloatingMenuDirection.Up => FloatingMenuDirection.Down,
+		FloatingMenuDirection.Down => FloatingMenuDirection.Up,
+		_ => FloatingMenuDirection.Right
+	};
+
 		private async Task LoadScriptAsync()
 		{
 			if (!CanLoadScript())
@@ -963,14 +1070,24 @@ namespace Orbit.ViewModels
 			// Track script usage
 			ScriptManager.AddOrUpdateScript(path);
 
-			// Use local SelectedSession if available, otherwise fall back to global (for tear-off windows)
-			var targetSession = SelectedSession ?? SessionCollectionService.Instance.GlobalSelectedSession;
+		var targetSession = ResolveHotReloadTarget();
+		if (targetSession == null)
+		{
+			ConsoleLog.Append("[OrbitCmd] No active session available for load.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			return;
+		}
 
-			ConsoleLog.Append($"[OrbitCmd] Requesting load for '{path}' (session PID {targetSession?.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
-			// Use RELOAD for both initial and subsequent loads to avoid legacy runtime restart; send to selected session
-			var success = targetSession?.RSProcess != null
-				? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
-				: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
+		if (targetSession.InjectionState != InjectionState.Injected)
+		{
+			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' is not injected; load aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			return;
+		}
+
+		ConsoleLog.Append($"[OrbitCmd] Requesting load for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
+		// Use RELOAD for both initial and subsequent loads to avoid legacy runtime restart; send to selected session
+		var success = targetSession.RSProcess != null
+			? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
+			: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
 			if (!success)
 			{
 				ConsoleLog.Append("[OrbitCmd] Failed to send load command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
@@ -1022,27 +1139,159 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			// Track script usage
-			ScriptManager.AddOrUpdateScript(path);
+		// Track script usage
+		ScriptManager.AddOrUpdateScript(path);
 
-			// Use local SelectedSession if available, otherwise fall back to global (for tear-off windows)
-			var targetSession = SelectedSession ?? SessionCollectionService.Instance.GlobalSelectedSession;
+		var targetSession = ResolveHotReloadTarget();
+		if (targetSession == null)
+		{
+			ConsoleLog.Append("[OrbitCmd] No active session available for reload.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			return;
+		}
 
-			ConsoleLog.Append($"[OrbitCmd] Requesting reload for '{path}' (session PID {targetSession?.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
-			var success = targetSession?.RSProcess != null
-				? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
-				: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
+		if (targetSession.InjectionState != InjectionState.Injected)
+		{
+			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' is not injected; reload aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			return;
+		}
+
+		ConsoleLog.Append($"[OrbitCmd] Requesting reload for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
+		var success = targetSession.RSProcess != null
+			? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
+			: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
 			if (!success)
 			{
 				ConsoleLog.Append("[OrbitCmd] Failed to send reload command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 			}
 		}
 
-		private void OnSelectedSessionChanged(object sender, PropertyChangedEventArgs e)
+		private void ApplyMemoryErrorDebugPreferenceIfInjected()
 		{
-			if (e.PropertyName == nameof(SessionModel.State) ||
-				e.PropertyName == nameof(SessionModel.InjectionState))
+			if (!Sessions.Any(s => s.InjectionState == InjectionState.Injected))
 			{
+				return;
+			}
+
+			_ = TrySetDebugOverlayVisibleAsync(ShowMemoryErrorDebug);
+		}
+
+		private Task TrySetDebugOverlayVisibleAsync(bool visible)
+		{
+			var targets = Sessions
+				.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null)
+				.ToList();
+
+			if (targets.Count == 0)
+			{
+				return Task.CompletedTask;
+			}
+
+			return Task.WhenAll(targets.Select(session => TrySetDebugOverlayVisibleAsync(session, visible)));
+		}
+
+		private async Task TrySetDebugOverlayVisibleAsync(SessionModel session, bool visible)
+		{
+			if (session.RSProcess == null)
+			{
+				return;
+			}
+
+			const int maxAttempts = 3;
+			TimeSpan retryDelay = TimeSpan.FromMilliseconds(500);
+
+			try
+			{
+				for (var attempt = 1; attempt <= maxAttempts; attempt++)
+				{
+					var success = await OrbitCommandClient
+						.SendDebugMenuVisibleAsync(visible, session.RSProcess.Id, CancellationToken.None)
+						.ConfigureAwait(false);
+
+					if (success)
+					{
+						debugOverlayWarningLogged = false;
+						ConsoleLog.Append(
+							$"[Orbit] MemoryError debug overlay {(visible ? "enabled" : "hidden")} for session '{session.Name}' (PID {session.RSProcess.Id}) on attempt {attempt}.",
+							ConsoleLogSource.Orbit,
+							ConsoleLogLevel.Info);
+
+						// Always release keyboard capture after updating overlay visibility
+						var inputModeApplied = await OrbitCommandClient
+							.SendInputModeWithRetryAsync(1, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+							.ConfigureAwait(false);
+						if (!inputModeApplied)
+						{
+							ConsoleLog.Append("[Orbit] Warning: Unable to set MemoryError input mode to passthrough after overlay update.",
+								ConsoleLogSource.Orbit,
+								ConsoleLogLevel.Warning);
+						}
+
+						var focusSpoofApplied = await OrbitCommandClient
+							.SendFocusSpoofWithRetryAsync(false, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+							.ConfigureAwait(false);
+						if (!focusSpoofApplied)
+						{
+							ConsoleLog.Append("[Orbit] Warning: Unable to disable MemoryError focus spoof after overlay update.",
+								ConsoleLogSource.Orbit,
+								ConsoleLogLevel.Warning);
+						}
+
+						return;
+					}
+
+					if (attempt < maxAttempts)
+					{
+						await Task.Delay(retryDelay).ConfigureAwait(false);
+						retryDelay += retryDelay; // simple backoff
+					}
+				}
+
+				LogDebugOverlayWarning($"command failed for session '{session.Name}' (PID {session.RSProcess.Id}) after {maxAttempts} attempts.");
+			}
+			catch (Exception ex)
+			{
+				LogDebugOverlayWarning(ex);
+			}
+		}
+
+		private void LogDebugOverlayWarning(string message)
+		{
+			if (debugOverlayWarningLogged)
+			{
+				return;
+			}
+
+			ConsoleLog.Append($"[Orbit] Failed to update MemoryError debug overlay: {message}", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			debugOverlayWarningLogged = true;
+		}
+
+		private void LogDebugOverlayWarning(Exception ex)
+		{
+			LogDebugOverlayWarning(ex.Message);
+		}
+
+		private void OnSessionPropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (sender is not SessionModel session)
+			{
+				return;
+			}
+
+			if (e.PropertyName == nameof(SessionModel.InjectionState))
+			{
+				if (session.InjectionState == InjectionState.Injected)
+				{
+					ApplyMemoryErrorDebugPreferenceIfInjected();
+				}
+				CommandManager.InvalidateRequerySuggested();
+			}
+		}
+
+			private void OnSelectedSessionChanged(object sender, PropertyChangedEventArgs e)
+			{
+				if (e.PropertyName == nameof(SessionModel.State) ||
+					e.PropertyName == nameof(SessionModel.InjectionState))
+				{
 				CommandManager.InvalidateRequerySuggested();
 			}
 		}
@@ -1077,14 +1326,140 @@ namespace Orbit.ViewModels
 			if (session == null)
 				return;
 
-			session.KillProcess();
-			Sessions.Remove(session);
+			_ = CloseSessionInternalAsync(session, skipConfirmation: false);
+		}
+
+		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = false)
+		{
+			var sessionsSnapshot = Sessions.OfType<SessionModel>().ToList();
+			foreach (var session in sessionsSnapshot)
+			{
+				await CloseSessionInternalAsync(session, skipConfirmation, forceKillOnTimeout).ConfigureAwait(true);
+			}
+		}
+
+		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = false)
+		{
+			if (session == null)
+			{
+				return;
+			}
+
+			if (!skipConfirmation && ShouldConfirmSessionClose(session))
+			{
+				var result = MessageBox.Show(
+					$"Session '{session.Name}' is active. Are you sure you want to close it?",
+					"Close Active Session",
+					MessageBoxButton.YesNo,
+					MessageBoxImage.Warning);
+
+				if (result != MessageBoxResult.Yes)
+				{
+					return;
+				}
+			}
+
+			try
+			{
+				var pid = session.RSProcess?.Id;
+				ConsoleLog.Append(
+					$"[Orbit] Requesting shutdown for session '{session.Name}'{(pid.HasValue ? $" (PID {pid.Value})" : string.Empty)}.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Info);
+
+				await sessionManager.ShutdownSessionAsync(session, forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
+			}
+			catch (Exception ex)
+			{
+				ConsoleLog.Append(
+					$"[Orbit] Failed to shutdown session '{session.Name}': {ex.Message}",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Error);
+			}
+			finally
+			{
+				if (Sessions.Contains(session))
+				{
+					Sessions.Remove(session);
+				}
+
+				if (Tabs.Contains(session))
+				{
+					Tabs.Remove(session);
+				}
+
+				HandleTabRemoval(session);
+			}
+		}
+
+		private static bool ShouldConfirmSessionClose(SessionModel session)
+		{
+			if (session == null || !session.IsRuneScapeClient)
+			{
+				return false;
+			}
+
+			return session.State == SessionState.ClientReady ||
+				   session.State == SessionState.Injecting ||
+				   session.State == SessionState.Injected ||
+				   session.InjectionState == InjectionState.Injected;
+		}
+
+		private void HandleTabRemoval(object removedItem)
+		{
+			if (Tabs.Count == 0)
+			{
+				SelectedTab = null;
+				SelectedSession = null;
+				UpdateFloatingMenuVisibilityForCurrentTab();
+				return;
+			}
+
+			if (SelectedTab == null || (removedItem != null && ReferenceEquals(removedItem, SelectedTab)))
+			{
+				SelectedTab = Tabs[0];
+			}
+
+			UpdateFloatingMenuVisibilityForCurrentTab();
 		}
 
 		private void OnSessionsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			CommandManager.InvalidateRequerySuggested();
+			if (e.NewItems != null)
+			{
+				foreach (var item in e.NewItems.OfType<SessionModel>())
+				{
+					item.PropertyChanged += OnSessionPropertyChanged;
+				}
+			}
+
+			if (e.OldItems != null)
+			{
+				foreach (var item in e.OldItems.OfType<SessionModel>())
+				{
+					item.PropertyChanged -= OnSessionPropertyChanged;
+				}
+			}
+
+		if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Reset)
+		{
+			if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
+			{
+				HotReloadTargetSession = Sessions.FirstOrDefault();
+			}
+			if (Sessions.Count == 0)
+			{
+				_ = TrySetDebugOverlayVisibleAsync(false);
+			}
 		}
+		else if ((e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace) && HotReloadTargetSession == null)
+		{
+			HotReloadTargetSession = Sessions.FirstOrDefault();
+		}
+
+		OnPropertyChanged(nameof(HasSessions));
+		CommandManager.InvalidateRequerySuggested();
+	}
 
 		protected virtual void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

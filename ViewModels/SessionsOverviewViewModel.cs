@@ -24,9 +24,29 @@ namespace Orbit.ViewModels
 			this.focusSession = focusSession;
 			this.closeSession = closeSession;
 
-			SetActiveCommand = new RelayCommand(_ => activateSession?.Invoke(SelectedSession), _ => SelectedSession != null);
-			FocusCommand = new RelayCommand(_ => focusSession?.Invoke(SelectedSession), _ => SelectedSession != null);
-			CloseCommand = new RelayCommand(_ => closeSession?.Invoke(SelectedSession), _ => SelectedSession != null);
+			SetActiveCommand = new RelayCommand(param =>
+			{
+				if (TryResolveSession(param, out var session))
+				{
+					activateSession?.Invoke(session);
+				}
+			}, param => param is SessionModel);
+
+			FocusCommand = new RelayCommand(param =>
+			{
+				if (TryResolveSession(param, out var session))
+				{
+					focusSession?.Invoke(session);
+				}
+			}, param => param is SessionModel);
+
+			CloseCommand = new RelayCommand(param =>
+			{
+				if (TryResolveSession(param, out var session))
+				{
+					closeSession?.Invoke(session);
+				}
+			}, param => param is SessionModel);
 		}
 
 		public ObservableCollection<SessionModel> Sessions { get; }
@@ -52,5 +72,18 @@ namespace Orbit.ViewModels
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		private bool TryResolveSession(object parameter, out SessionModel session)
+		{
+			if (parameter is SessionModel model)
+			{
+				SelectedSession = model;
+				session = model;
+				return true;
+			}
+
+			session = null;
+			return false;
+		}
 	}
 }

@@ -13,10 +13,10 @@
     xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
     xmlns:views="clr-namespace:Orbit.Views"
     Title="Orbit"
-    Width="1200"
+    Width="1400"
     Height="1000"
     d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel}"
-    Icon="/Orbital.jpg"
+    Icon="{DynamicResource Orbit.IconImage}"
     ShowTitleBar="True"
     SizeChanged="MetroWindow_SizeChanged"
     TitleCharacterCasing="Normal"
@@ -36,9 +36,164 @@
         <converters:IsOfTypeConverter x:Key="IsOfTypeConverter" />
         <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
         <converters:SubtractConverter x:Key="SubtractConverter" />
+        <Style x:Key="Orbit.FloatingMenuToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
+                        <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
+                            </Grid.RenderTransform>
+
+                            <Ellipse
+                                x:Name="Glow"
+                                Margin="-4"
+                                Fill="{DynamicResource MahApps.Brushes.Accent2}"
+                                Opacity="0" />
+                            <Ellipse
+                                x:Name="BaseCircle"
+                                Fill="{TemplateBinding Background}"
+                                Stroke="{TemplateBinding BorderBrush}"
+                                StrokeThickness="{TemplateBinding BorderThickness}" />
+                            <Ellipse
+                                x:Name="HoverRing"
+                                Margin="-1"
+                                Opacity="0.14"
+                                Stroke="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                StrokeThickness="1.4" />
+
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                RecognizesAccessKey="True" />
+
+                            <Polygon
+                                x:Name="IndicatorLeft"
+                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Opacity="0.9"
+                                Points="0,12 0,0 12,0"
+                                Visibility="Collapsed">
+                                <Polygon.RenderTransform>
+                                    <TranslateTransform X="6" Y="18" />
+                                </Polygon.RenderTransform>
+                            </Polygon>
+                            <Polygon
+                                x:Name="IndicatorRight"
+                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Opacity="0.9"
+                                Points="0,0 12,0 12,12"
+                                Visibility="Collapsed">
+                                <Polygon.RenderTransform>
+                                    <TranslateTransform X="30" Y="18" />
+                                </Polygon.RenderTransform>
+                            </Polygon>
+                            <Polygon
+                                x:Name="IndicatorUp"
+                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Opacity="0.9"
+                                Points="0,0 12,0 0,12"
+                                Visibility="Collapsed">
+                                <Polygon.RenderTransform>
+                                    <TranslateTransform X="18" Y="6" />
+                                </Polygon.RenderTransform>
+                            </Polygon>
+                            <Polygon
+                                x:Name="IndicatorDown"
+                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Opacity="0.9"
+                                Points="12,0 12,12 0,12"
+                                Visibility="Collapsed">
+                                <Polygon.RenderTransform>
+                                    <TranslateTransform X="18" Y="30" />
+                                </Polygon.RenderTransform>
+                            </Polygon>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HoverRing" Property="Opacity" Value="0.34" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                FillBehavior="HoldEnd"
+                                                Storyboard.TargetName="ScaleTransform"
+                                                Storyboard.TargetProperty="ScaleX"
+                                                To="1.06"
+                                                Duration="0:0:0.12" />
+                                            <DoubleAnimation
+                                                FillBehavior="HoldEnd"
+                                                Storyboard.TargetName="ScaleTransform"
+                                                Storyboard.TargetProperty="ScaleY"
+                                                To="1.06"
+                                                Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ScaleTransform"
+                                                Storyboard.TargetProperty="ScaleX"
+                                                To="1"
+                                                Duration="0:0:0.14" />
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ScaleTransform"
+                                                Storyboard.TargetProperty="ScaleY"
+                                                To="1"
+                                                Duration="0:0:0.14" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                <Setter TargetName="Glow" Property="Opacity" Value="0.45" />
+                                <Setter TargetName="HoverRing" Property="Opacity" Value="0.5" />
+                                <Setter TargetName="BaseCircle" Property="StrokeThickness" Value="1.8" />
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="BaseCircle" Property="Opacity" Value="0.4" />
+                                <Setter TargetName="HoverRing" Property="Opacity" Value="0" />
+                            </Trigger>
+
+                            <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Left}">
+                                <Setter TargetName="IndicatorLeft" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Right}">
+                                <Setter TargetName="IndicatorRight" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Up}">
+                                <Setter TargetName="IndicatorUp" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Down}">
+                                <Setter TargetName="IndicatorDown" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid MouseUp="RootGrid_MouseUp">
         <!--  Main Content Area  -->
         <DockPanel>
 
@@ -245,11 +400,11 @@
 
                                     <!--  Icon indicator for external scripts  -->
                                     <iconPacks:PackIconMaterial
-                                        Kind="CodeBraces"
                                         Width="14"
                                         Height="14"
                                         Margin="0,0,6,0"
                                         VerticalAlignment="Center"
+                                        Kind="CodeBraces"
                                         ToolTip="External Script Window">
                                         <iconPacks:PackIconMaterial.Style>
                                             <Style TargetType="iconPacks:PackIconMaterial">
@@ -613,24 +768,36 @@
             <Grid>
                 <Border
                     x:Name="FloatingMenuHandle"
-                    Padding="6"
-                    Background="{DynamicResource MahApps.Brushes.Accent}"
-                    CornerRadius="24"
+                    Padding="8"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Accent3}"
+                    BorderThickness="1.4"
+                    CornerRadius="28"
                     MouseMove="FloatingMenu_MouseMove"
                     Opacity="{Binding FloatingMenuOpacity}"
                     PreviewMouseLeftButtonDown="FloatingMenuHandle_PreviewMouseLeftButtonDown"
                     PreviewMouseLeftButtonUp="FloatingMenuHandle_PreviewMouseLeftButtonUp"
                     PreviewMouseMove="FloatingMenuHandle_PreviewMouseMove">
+                    <Border.Background>
+                        <LinearGradientBrush Opacity="0.92" StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
+                            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect
+                            BlurRadius="18"
+                            Opacity="0.35"
+                            ShadowDepth="2"
+                            Color="#80000000" />
+                    </Border.Effect>
                     <ToggleButton
                         x:Name="FloatingMenuToggleButton"
-                        Width="48"
-                        Height="48"
                         IsChecked="{Binding IsFloatingMenuExpanded, Mode=TwoWay}"
-                        Style="{StaticResource MahApps.Styles.Button.Circle}"
+                        Style="{StaticResource Orbit.FloatingMenuToggleStyle}"
                         ToolTip="Orbit Controls">
                         <iconPacks:PackIconGameIcons
-                            Width="26"
-                            Height="26"
+                            Width="28"
+                            Height="28"
                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                             Kind="Orbital" />
                         <ToggleButton.ContextMenu>
@@ -658,95 +825,6 @@
                                     Tag="Down" />
                             </ContextMenu>
                         </ToggleButton.ContextMenu>
-                        <ToggleButton.Template>
-                            <ControlTemplate TargetType="ToggleButton">
-                                <Grid>
-                                    <Border Background="Transparent" />
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    <!--  active side indicator wedges  -->
-                                    <Polygon
-                                        Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                        Opacity="0.9"
-                                        Points="0,12 0,0 12,0"
-                                        Visibility="Collapsed">
-                                        <Polygon.Style>
-                                            <Style TargetType="Polygon">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Left}">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="RenderTransform">
-                                                            <Setter.Value>
-                                                                <TranslateTransform X="6" Y="18" />
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Polygon.Style>
-                                    </Polygon>
-                                    <Polygon
-                                        Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                        Opacity="0.9"
-                                        Points="0,0 12,0 12,12"
-                                        Visibility="Collapsed">
-                                        <Polygon.Style>
-                                            <Style TargetType="Polygon">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Right}">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="RenderTransform">
-                                                            <Setter.Value>
-                                                                <TranslateTransform X="30" Y="18" />
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Polygon.Style>
-                                    </Polygon>
-                                    <Polygon
-                                        Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                        Opacity="0.9"
-                                        Points="0,0 12,0 0,12"
-                                        Visibility="Collapsed">
-                                        <Polygon.Style>
-                                            <Style TargetType="Polygon">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Up}">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="RenderTransform">
-                                                            <Setter.Value>
-                                                                <TranslateTransform X="18" Y="6" />
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Polygon.Style>
-                                    </Polygon>
-                                    <Polygon
-                                        Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                        Opacity="0.9"
-                                        Points="12,12 12,0 0,12"
-                                        Visibility="Collapsed">
-                                        <Polygon.Style>
-                                            <Style TargetType="Polygon">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding FloatingMenuActiveSide}" Value="{x:Static models:FloatingMenuDirection.Down}">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="RenderTransform">
-                                                            <Setter.Value>
-                                                                <TranslateTransform X="18" Y="30" />
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Polygon.Style>
-                                    </Polygon>
-                                </Grid>
-                            </ControlTemplate>
-                        </ToggleButton.Template>
                     </ToggleButton>
                 </Border>
 
@@ -773,7 +851,47 @@
                                 Opacity="{Binding FloatingMenuBackgroundOpacity}"
                                 RadiusX="16"
                                 RadiusY="16" />
-                            <StackPanel Margin="10" Orientation="{Binding FloatingMenuItemsOrientation}">
+                            <StackPanel Margin="10">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Orientation" Value="Vertical" />
+                                        <Setter Property="FlowDirection" Value="LeftToRight" />
+                                        <Setter Property="LayoutTransform">
+                                            <Setter.Value>
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Left}">
+                                                <Setter Property="Orientation" Value="Horizontal" />
+                                                <Setter Property="FlowDirection" Value="RightToLeft" />
+                                                <Setter Property="LayoutTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Right}">
+                                                <Setter Property="Orientation" Value="Horizontal" />
+                                                <Setter Property="FlowDirection" Value="LeftToRight" />
+                                                <Setter Property="LayoutTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Up}">
+                                                <Setter Property="Orientation" Value="Vertical" />
+                                                <Setter Property="FlowDirection" Value="LeftToRight" />
+                                                <Setter Property="LayoutTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="1" ScaleY="-1" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
                                 <StackPanel.Resources>
                                     <Style
                                         x:Key="FloatingMenuButtonStyle"
@@ -782,6 +900,20 @@
                                         <Setter Property="Width" Value="48" />
                                         <Setter Property="Height" Value="48" />
                                         <Setter Property="Margin" Value="4" />
+                                        <Setter Property="LayoutTransform">
+                                            <Setter.Value>
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Up}">
+                                                <Setter Property="LayoutTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="1" ScaleY="-1" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </StackPanel.Resources>
 
@@ -796,7 +928,7 @@
                                     Command="{Binding InjectCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
                                     ToolTip="Inject Session"
-                                    Visibility="{Binding ShowMenuInject, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding ShowInjectMenuButton, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="Needle" />
                                 </Button>
                                 <Button

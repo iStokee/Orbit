@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using Dragablz;
 using Orbit.ViewModels;
+using Application = System.Windows.Application;
 
 namespace Orbit
 {
@@ -15,6 +16,12 @@ namespace Orbit
 
 		public TabEmptiedResponse TabEmptiedHandler(TabablzControl tabControl, Window window)
 		{
+			// Keep the primary shell alive even when all tabs close; allow tear-off shells to close normally.
+			if (ReferenceEquals(window, Application.Current.MainWindow))
+			{
+				return TabEmptiedResponse.DoNothing;
+			}
+
 			return TabEmptiedResponse.CloseWindowOrLayoutBranch;
 		}
 	}

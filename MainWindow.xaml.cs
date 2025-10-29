@@ -7,9 +7,11 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
+using Size = System.Windows.Size;
 
 
 namespace Orbit
@@ -26,6 +28,8 @@ namespace Orbit
 		private Point floatingMenuOrigin;
 		private bool hasCursorBaseline;
 		private POINT lastCursorPoint;
+		private bool forceAppClose;
+	
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
@@ -73,6 +77,37 @@ namespace Orbit
 			floatingMenuWakeTimer.Start();
 
 			viewModel.UpdateHostViewport(ActualWidth, ActualHeight);
+		}
+
+		protected override async void OnClosing(CancelEventArgs e)
+		{
+			if (forceAppClose || !ReferenceEquals(this, System.Windows.Application.Current.MainWindow) || viewModel == null)
+			{
+				base.OnClosing(e);
+				return;
+			}
+
+			if (viewModel.Sessions.Count == 0)
+			{
+				base.OnClosing(e);
+				return;
+			}
+
+			e.Cancel = true;
+
+			try
+			{
+				await viewModel.CloseAllSessionsAsync(skipConfirmation: true);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[Orbit] Failed to shutdown sessions on exit: {ex}");
+			}
+			finally
+			{
+				forceAppClose = true;
+				Dispatcher.BeginInvoke(new Action(Close));
+			}
 		}
 
 		protected override void OnClosed(EventArgs e)
@@ -249,7 +284,19 @@ namespace Orbit
 		private void FloatingMenuInactivityTimer_Tick(object sender, EventArgs e)
 		{
 			floatingMenuInactivityTimer.Stop();
-			viewModel?.HideFloatingMenu();
+			if (viewModel == null)
+			{
+				return;
+			}
+
+			if (viewModel.IsFloatingMenuExpanded || IsPointerOverFloatingMenu())
+			{
+				ResetFloatingMenuInactivityTimer();
+				return;
+			}
+
+			floatingMenuInactivityTimer.Stop();
+			viewModel.HideFloatingMenu();
 		}
 
 		private void FloatingMenuWakeTimer_Tick(object sender, EventArgs e)
@@ -276,8 +323,11 @@ namespace Orbit
 
 			if (!viewModel.IsFloatingMenuVisible && (deltaX > 8 || deltaY > 8))
 			{
-				viewModel.ShowFloatingMenu();
-				ResetFloatingMenuInactivityTimer();
+				var screenPoint = new System.Windows.Point(current.X, current.Y);
+				if (IsCursorNearFloatingMenu(screenPoint) && viewModel.ShowFloatingMenu())
+				{
+					ResetFloatingMenuInactivityTimer();
+				}
 			}
 
 			lastCursorPoint = current;
@@ -290,10 +340,56 @@ namespace Orbit
 				return;
 			}
 
-			viewModel.ShowFloatingMenu();
+			if (!viewModel.ShowFloatingMenu())
+			{
+				floatingMenuInactivityTimer.Stop();
+				return;
+			}
+
 			UpdateFloatingMenuInactivityInterval();
 			floatingMenuInactivityTimer.Stop();
 			floatingMenuInactivityTimer.Start();
+		}
+
+		private bool IsPointerOverFloatingMenu()
+		{
+			if (FloatingMenuHandle?.IsMouseOver == true)
+			{
+				return true;
+			}
+
+			if (FloatingMenuPopupContent?.IsMouseOver == true)
+			{
+				return true;
+			}
+
+			if (FloatingMenuPopup?.IsMouseOver == true)
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		private bool IsCursorNearFloatingMenu(System.Windows.Point screenPoint)
+		{
+			if (viewModel == null || FloatingMenuHandle == null || PresentationSource.FromVisual(this) == null)
+			{
+				return false;
+			}
+
+			var windowPoint = PointFromScreen(screenPoint);
+			var handleWidth = FloatingMenuHandle.ActualWidth > 0 ? FloatingMenuHandle.ActualWidth : 56;
+			var handleHeight = FloatingMenuHandle.ActualHeight > 0 ? FloatingMenuHandle.ActualHeight : 56;
+
+			var handleRect = new Rect(
+				new System.Windows.Point(viewModel.FloatingMenuLeft, viewModel.FloatingMenuTop),
+				new Size(handleWidth, handleHeight));
+
+			const double proximityPadding = 96;
+			handleRect.Inflate(proximityPadding, proximityPadding);
+
+			return handleRect.Contains(windowPoint);
 		}
 
 		private void UpdateFloatingMenuInactivityInterval()
@@ -310,22 +406,44 @@ namespace Orbit
 			}
 		}
 
-		private void FloatingMenuSettingsButton_Click(object sender, RoutedEventArgs e)
-		{
-			viewModel?.OpenSettingsTab();
-			ResetFloatingMenuInactivityTimer();
-		}
+	private void FloatingMenuSettingsButton_Click(object sender, RoutedEventArgs e)
+	{
+		viewModel?.OpenSettingsTab();
+		ResetFloatingMenuInactivityTimer();
+	}
 
-		private void FloatingMenuSetSide_Click(object sender, RoutedEventArgs e)
+	private void FloatingMenuSetSide_Click(object sender, RoutedEventArgs e)
+	{
+		if (sender is FrameworkElement fe && fe.Tag is string tag && viewModel != null)
 		{
-			if (sender is FrameworkElement fe && fe.Tag is string tag && viewModel != null)
+			if (Enum.TryParse<Models.FloatingMenuDirection>(tag, out var side))
 			{
-				if (Enum.TryParse<Models.FloatingMenuDirection>(tag, out var side))
-				{
-					viewModel.FloatingMenuAutoDirection = false;
-					viewModel.FloatingMenuDirection = side;
-				}
+				viewModel.FloatingMenuAutoDirection = false;
+				viewModel.FloatingMenuDirection = side;
 			}
 		}
+	}
+
+	private void RootGrid_MouseUp(object sender, MouseButtonEventArgs e)
+	{
+		if (viewModel == null || e.ChangedButton != MouseButton.Middle)
+		{
+			return;
+		}
+
+		e.Handled = true;
+
+		if (viewModel.IsFloatingMenuVisible)
+		{
+			viewModel.HideFloatingMenu();
+			floatingMenuInactivityTimer.Stop();
+			return;
+		}
+
+		if (viewModel.ShowFloatingMenu())
+		{
+			ResetFloatingMenuInactivityTimer();
+		}
+	}
 	}
 }
