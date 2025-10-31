@@ -4,7 +4,7 @@ using System.Windows;
 using Orbit.Services;
 using Orbit.ViewModels;
 
-namespace Orbit
+namespace Orbit.API
 {
 	/// <summary>
 	/// Public API for external scripts to integrate with Orbit
@@ -55,7 +55,7 @@ namespace Orbit
 		/// <returns>The session ID for the registered script window</returns>
 		/// <exception cref="ArgumentException">Thrown if windowHandle is invalid or tabName is empty</exception>
 		/// <exception cref="InvalidOperationException">Thrown if Orbit is not running</exception>
-		public static Guid RegisterScriptWindow(IntPtr windowHandle, string tabName, int? processId = null)
+		public static Guid RegisterScriptWindow(nint windowHandle, string tabName, int? processId = null)
 		{
 			return ScriptIntegration.RegisterScriptWindow(windowHandle, tabName, processId);
 		}

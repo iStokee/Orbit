@@ -290,6 +290,18 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuApiDocumentation {
+            get {
+                return ((bool)(this["ShowMenuApiDocumentation"]));
+            }
+            set {
+                this["ShowMenuApiDocumentation"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowMenuSettings {
             get {
                 return ((bool)(this["ShowMenuSettings"]));
@@ -322,26 +334,113 @@ namespace Orbit {
                 this["ShowFloatingMenuOnToolTabs"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ShowMemoryErrorDebug {
-            get {
-                object? value = this["ShowMemoryErrorDebug"];
-                if (value is bool flag)
-                {
-                    return flag;
-                }
+		public bool ShowFloatingMenuOnHome {
+			get {
+				return ((bool)(this["ShowFloatingMenuOnHome"]));
+			}
+			set {
+				this["ShowFloatingMenuOnHome"] = value;
+			}
+		}
 
-                // Settings store may not have been initialised yet; return default (true) and cache it.
-                const bool fallback = true;
-                this["ShowMemoryErrorDebug"] = fallback;
-                return fallback;
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("MiddleMouse")]
+		public string FloatingMenuQuickToggle {
+			get {
+				return ((string)(this["FloatingMenuQuickToggle"]));
+			}
+			set {
+				this["FloatingMenuQuickToggle"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("80")]
+		public double FloatingMenuDockEdgeThreshold {
+			get {
+                return ((double)(this["FloatingMenuDockEdgeThreshold"]));
             }
             set {
-                this["ShowMemoryErrorDebug"] = value;
+                this["FloatingMenuDockEdgeThreshold"] = value;
             }
         }
-    }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("120")]
+        public double FloatingMenuDockCornerThreshold {
+            get {
+                return ((double)(this["FloatingMenuDockCornerThreshold"]));
+            }
+            set {
+                this["FloatingMenuDockCornerThreshold"] = value;
+            }
+        }
+        
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0.55")]
+		public double FloatingMenuDockCornerRoundness {
+			get {
+				return ((double)(this["FloatingMenuDockCornerRoundness"]));
+			}
+			set {
+				this["FloatingMenuDockCornerRoundness"] = value;
+			}
+		}
+        
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0.85")]
+		public double FloatingMenuDockEdgeCoverage {
+			get {
+				return ((double)(this["FloatingMenuDockEdgeCoverage"]));
+			}
+			set {
+				this["FloatingMenuDockEdgeCoverage"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0.32")]
+		public double FloatingMenuDockZoneOpacity {
+			get {
+				return ((double)(this["FloatingMenuDockZoneOpacity"]));
+			}
+			set {
+				this["FloatingMenuDockZoneOpacity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("120")]
+		public double FloatingMenuDockCornerHeight {
+			get {
+				return ((double)(this["FloatingMenuDockCornerHeight"]));
+			}
+			set {
+				this["FloatingMenuDockCornerHeight"] = value;
+			}
+		}
+		
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FloatingMenuShowAllSnapZonesOnClip {
+            get {
+                return ((bool)(this["FloatingMenuShowAllSnapZonesOnClip"]));
+            }
+            set {
+                this["FloatingMenuShowAllSnapZonesOnClip"] = value;
+            }
+        }
+	}
 }

@@ -38,7 +38,7 @@ namespace Orbit.Services
 		}
 	}
 
-	internal class ThemeService
+	public class ThemeService
 	{
 		private const string CustomAccentPrefix = "custom:";
 		private const string CustomAccentDictionaryMarkerKey = "__Orbit.CustomAccentDictionary";
@@ -185,6 +185,7 @@ namespace Orbit.Services
 			{
 				ThemeLogger.Log($"Applying theme: {themeName}");
 				ThemeManager.Current.ChangeTheme(Application.Current, theme);
+				ApplyAccentResourcesFromTheme(theme);
 				SaveCurrentTheme(baseTheme, colorScheme);
 				ThemeLogger.Log($"Theme applied successfully");
 			}
@@ -196,9 +197,61 @@ namespace Orbit.Services
 				if (fallback != null)
 				{
 					ThemeManager.Current.ChangeTheme(Application.Current, fallback);
+					ApplyAccentResourcesFromTheme(fallback);
 					SaveCurrentTheme("Dark", "Steel");
 				}
 			}
+		}
+
+		public Color GetCurrentAccentColor()
+		{
+			var resources = Application.Current.Resources;
+
+			if (resources["MahApps.Brushes.Accent"] is SolidColorBrush accentBrush)
+			{
+				return accentBrush.Color;
+			}
+
+			if (resources["MahApps.Colors.Accent"] is Color accentColor)
+			{
+				return accentColor;
+			}
+
+			return Colors.SteelBlue;
+		}
+
+		private static void ApplyAccentResourcesFromTheme(Theme theme)
+		{
+			Color? ResolveColor(object? candidate)
+				=> candidate switch
+				{
+					Color color => color,
+					SolidColorBrush brush => brush.Color,
+					_ => null
+				};
+
+			var resources = theme?.Resources;
+			if (resources == null)
+			{
+				ApplyAccentResources(Colors.SteelBlue);
+				return;
+			}
+
+			Color? accent = resources.Contains("MahApps.Colors.Accent")
+				? ResolveColor(resources["MahApps.Colors.Accent"])
+				: null;
+			if (accent == null && resources.Contains("MahApps.Brushes.Accent"))
+			{
+				accent = ResolveColor(resources["MahApps.Brushes.Accent"]);
+			}
+
+			if (accent == null)
+			{
+				var fallback = Application.Current.TryFindResource("MahApps.Brushes.Accent");
+				accent = ResolveColor(fallback) ?? Colors.SteelBlue;
+			}
+
+			ApplyAccentResources(accent.Value);
 		}
 
 		public void ApplyCustomTheme(CustomThemeDefinition customTheme)
@@ -284,6 +337,14 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("MahApps.Colors.Highlight", highlightColor);
 			resources["MahApps.Colors.IdealForeground"] = idealForeground;
 			ThemeLogger.LogResourceSet("MahApps.Colors.IdealForeground", idealForeground);
+			resources["MahApps.Colors.AccentForeground"] = idealForeground;
+			ThemeLogger.LogResourceSet("MahApps.Colors.AccentForeground", idealForeground);
+			resources["MahApps.Colors.AccentSelectedForeground"] = idealForeground;
+			ThemeLogger.LogResourceSet("MahApps.Colors.AccentSelectedForeground", idealForeground);
+			resources["MahApps.Colors.HighlightForeground"] = idealForeground;
+			ThemeLogger.LogResourceSet("MahApps.Colors.HighlightForeground", idealForeground);
+			resources["ControlzEx.Colors.AccentForeground"] = idealForeground;
+			ThemeLogger.LogResourceSet("ControlzEx.Colors.AccentForeground", idealForeground);
 
 			resources["MahApps.Brushes.Accent"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("MahApps.Brushes.Accent", resources["MahApps.Brushes.Accent"]);
@@ -297,6 +358,14 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("MahApps.Brushes.Highlight", resources["MahApps.Brushes.Highlight"]);
 			resources["MahApps.Brushes.IdealForeground"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("MahApps.Brushes.IdealForeground", resources["MahApps.Brushes.IdealForeground"]);
+			resources["MahApps.Brushes.AccentForeground"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("MahApps.Brushes.AccentForeground", resources["MahApps.Brushes.AccentForeground"]);
+			resources["MahApps.Brushes.AccentSelectedForeground"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("MahApps.Brushes.AccentSelectedForeground", resources["MahApps.Brushes.AccentSelectedForeground"]);
+			resources["MahApps.Brushes.HighlightForeground"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("MahApps.Brushes.HighlightForeground", resources["MahApps.Brushes.HighlightForeground"]);
+			resources["ControlzEx.Brushes.AccentForeground"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("ControlzEx.Brushes.AccentForeground", resources["ControlzEx.Brushes.AccentForeground"]);
 
 			// Legacy aliases for backward compatibility
 			resources["AccentColor"] = accentColor;
@@ -311,6 +380,8 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("HighlightColor", highlightColor);
 			resources["IdealForegroundColor"] = idealForeground;
 			ThemeLogger.LogResourceSet("IdealForegroundColor", idealForeground);
+			resources["AccentForegroundColor"] = idealForeground;
+			ThemeLogger.LogResourceSet("AccentForegroundColor", idealForeground);
 
 			resources["AccentColorBrush"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("AccentColorBrush", resources["AccentColorBrush"]);
@@ -324,6 +395,10 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("HighlightBrush", resources["HighlightBrush"]);
 			resources["IdealForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("IdealForegroundColorBrush", resources["IdealForegroundColorBrush"]);
+			resources["AccentForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("AccentForegroundColorBrush", resources["AccentForegroundColorBrush"]);
+			resources["AccentSelectedForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
+			ThemeLogger.LogResourceSet("AccentSelectedForegroundColorBrush", resources["AccentSelectedForegroundColorBrush"]);
 
 			// MahApps v2 window title brushes
 			resources["MahApps.Brushes.WindowTitle"] = CreateFrozenBrush(accentColor);
@@ -377,12 +452,17 @@ namespace Orbit.Services
 			var keysToRemove = new[]
 			{
 				"MahApps.Colors.Accent", "MahApps.Colors.Accent2", "MahApps.Colors.Accent3", "MahApps.Colors.Accent4",
-				"MahApps.Colors.Highlight", "MahApps.Colors.IdealForeground",
+				"MahApps.Colors.Highlight", "MahApps.Colors.IdealForeground", "MahApps.Colors.AccentForeground",
+				"MahApps.Colors.AccentSelectedForeground", "MahApps.Colors.HighlightForeground",
+				"ControlzEx.Colors.AccentForeground",
 				"MahApps.Brushes.Accent", "MahApps.Brushes.Accent2", "MahApps.Brushes.Accent3", "MahApps.Brushes.Accent4",
 				"MahApps.Brushes.Highlight", "MahApps.Brushes.IdealForeground", "MahApps.Brushes.WindowTitle",
+				"MahApps.Brushes.AccentForeground", "MahApps.Brushes.AccentSelectedForeground", "MahApps.Brushes.HighlightForeground",
+				"ControlzEx.Brushes.AccentForeground",
 				"AccentColor", "AccentColor2", "AccentColor3", "AccentColor4", "HighlightColor", "IdealForegroundColor",
+				"AccentForegroundColor",
 				"AccentColorBrush", "AccentColorBrush2", "AccentColorBrush3", "AccentColorBrush4",
-				"HighlightBrush", "IdealForegroundColorBrush",
+				"HighlightBrush", "IdealForegroundColorBrush", "AccentForegroundColorBrush", "AccentSelectedForegroundColorBrush",
 				"AccentSelectedColorBrush", "WindowTitleColorBrush", "ProgressBrush", "CheckmarkFill", "RightArrowFill"
 			};
 

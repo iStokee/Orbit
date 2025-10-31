@@ -12,6 +12,7 @@ internal sealed class ConsolePipeServer : IDisposable
 	private const string PipeName = "MESharpConsole";
 	private readonly CancellationTokenSource _cts = new();
 	private Task? _listenerTask;
+	private bool _disposed;
 
 	public void Start()
 	{
@@ -90,7 +91,20 @@ internal sealed class ConsolePipeServer : IDisposable
 
 	public void Dispose()
 	{
-		_cts.Cancel();
+		if (_disposed)
+			return;
+
+		_disposed = true;
+
+		try
+		{
+			_cts.Cancel();
+		}
+		catch (ObjectDisposedException)
+		{
+			// already torn down
+		}
+
 		try
 		{
 			_listenerTask?.Wait(1000);
@@ -99,6 +113,7 @@ internal sealed class ConsolePipeServer : IDisposable
 		{
 			// swallow
 		}
+
 		_cts.Dispose();
 	}
 }

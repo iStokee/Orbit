@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Orbit.Views"
+             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
              mc:Ignorable="d">
     
     <Grid >
@@ -11,7 +12,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" BorderBrush="{DynamicResource DarkSlate}" BorderThickness="0">
+        <Border Grid.Column="0" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" BorderThickness="0">
             <WindowsFormsHost
                 x:Name="RSPanel"
                 Visibility="Visible"

@@ -6,28 +6,12 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
     mc:Ignorable="d">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
-        <Style x:Key="Orbit.ScriptCardStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="20" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Margin" Value="0,18,0,0" />
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect
-                        BlurRadius="12"
-                        Opacity="0.12"
-                        ShadowDepth="2"
-                        Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -36,36 +20,23 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Padding="20,18" CornerRadius="14">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                    <GradientStop Offset="0.6" Color="{DynamicResource MahApps.Colors.Accent2}" />
-                    <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent3}" />
-                </LinearGradientBrush>
-            </Border.Background>
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border
-                    Width="56"
-                    Height="56"
-                    VerticalAlignment="Center"
-                    Background="#1FFFFFFF"
-                    CornerRadius="28"
-                    Opacity="0.85">
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                     <iconPacks:PackIconMaterial
-                        Width="32"
-                        Height="32"
-                        Margin="0,0,0,2"
+                        Margin="10,10,0,0"
+                        Width="35"
+                        Height="35"
                         Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                         Kind="CodeBraces" />
                 </Border>
                 <StackPanel
                     Grid.Column="1"
-                    Margin="16,0,0,0"
+                    Margin="12,0,0,0"
                     VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock
@@ -73,17 +44,6 @@
                             FontWeight="Bold"
                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                             Text="Script Controls" />
-                        <Border
-                            Margin="14,2,0,0"
-                            Padding="6,2"
-                            Background="#24FFFFFF"
-                            CornerRadius="4">
-                            <TextBlock
-                                FontSize="11"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Text="HOT RELOAD" />
-                        </Border>
                     </StackPanel>
                     <TextBlock
                         Margin="0,4,0,0"
@@ -95,7 +55,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource Orbit.ScriptCardStyle}">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
             <StackPanel>
                 <StackPanel
                     VerticalAlignment="Center"
@@ -112,13 +72,13 @@
                                 Height="16"
                                 Margin="0,0,6,0"
                                 VerticalAlignment="Center"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                 Kind="CrosshairsGps" />
                             <TextBlock
                                 VerticalAlignment="Center"
                                 FontSize="12"
                                 FontWeight="SemiBold"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                 Text="Target:" />
                         </StackPanel>
                     </Border>
@@ -168,8 +128,18 @@
                             FontWeight="SemiBold"
                             Foreground="{DynamicResource MahApps.Brushes.Gray3}"
                             IsHitTestVisible="False"
-                            Text="No active session"
-                            Visibility="{Binding HasSessions, Converter={StaticResource InverseBooleanConverter}}" />
+                            Text="No active session">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasSessions}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
                 </StackPanel>
 

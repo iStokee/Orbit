@@ -1,19 +1,17 @@
-using Orbit.Services;
 using Orbit.ViewModels;
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using UserControl = System.Windows.Controls.UserControl;
 
 namespace Orbit.Views
 {
-	public partial class AccountManagerView
+	public partial class AccountManagerView : UserControl
 	{
-		private readonly AccountManagerViewModel _viewModel;
-
-		public AccountManagerView(AccountService accountService)
+		public AccountManagerView(AccountManagerViewModel viewModel)
 		{
 			InitializeComponent();
-			_viewModel = new AccountManagerViewModel(accountService);
-			DataContext = _viewModel;
+			DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 		}
 
 		private void NewPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

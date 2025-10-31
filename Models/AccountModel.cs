@@ -13,6 +13,7 @@ namespace Orbit.Models
 		private DateTime _lastUsed = DateTime.MinValue;
 		private bool _autoLogin;
 		private string _notes = string.Empty;
+		private string _nickname = string.Empty;
 
 		[JsonPropertyName("username")]
 		public string Username
@@ -82,6 +83,19 @@ namespace Orbit.Models
 			{
 				if (_notes == value) return;
 				_notes = value;
+				OnPropertyChanged();
+			}
+		}
+
+		[JsonPropertyName("nickname")]
+		public string Nickname
+		{
+			get => _nickname;
+			set
+			{
+				var normalized = value ?? string.Empty;
+				if (_nickname == normalized) return;
+				_nickname = normalized;
 				OnPropertyChanged();
 			}
 		}

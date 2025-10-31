@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
+using System.Windows;
 using System.Windows.Controls;
 using Orbit.Logging;
 using Orbit.ViewModels;
@@ -41,12 +42,49 @@ public partial class ConsoleView : UserControl
 			// Defer scroll until after layout settles to avoid re-entrancy issues.
 			Dispatcher.BeginInvoke(new Action(() =>
 			{
-				if (ConsoleListBox is ListBox listBox && listBox.Items.Count > 0)
-				{
-					var lastItem = listBox.Items[^1];
-					listBox.ScrollIntoView(lastItem);
-				}
+				// Auto-scroll all visible listboxes based on current tab
+				ScrollListBoxToEnd(AllSourcesListBox);
+				ScrollListBoxToEnd(OrbitListBox);
+				ScrollListBoxToEnd(MemoryErrorListBox);
+				ScrollListBoxToEnd(ScriptsListBox);
 			}), DispatcherPriority.ContextIdle);
 		}
+	}
+
+	private void ScrollListBoxToEnd(ListBox? listBox)
+	{
+		if (listBox == null || !listBox.IsVisible || listBox.Items.Count == 0)
+			return;
+
+		var lastItem = listBox.Items[^1];
+		listBox.ScrollIntoView(lastItem);
+	}
+
+	private void CopySelected_Click(object sender, RoutedEventArgs e)
+	{
+		var listBox = GetActiveListBox();
+		if (listBox == null)
+			return;
+
+		var selectedItems = listBox.SelectedItems;
+		if (selectedItems == null || selectedItems.Count == 0)
+			return;
+
+		if (_viewModel.CopySelectedCommand.CanExecute(selectedItems))
+		{
+			_viewModel.CopySelectedCommand.Execute(selectedItems);
+		}
+	}
+
+	private ListBox? GetActiveListBox()
+	{
+		return _viewModel.SelectedTabIndex switch
+		{
+			1 => AllSourcesListBox,
+			2 => OrbitListBox,
+			3 => MemoryErrorListBox,
+			4 => ScriptsListBox,
+			_ => null
+		};
 	}
 }

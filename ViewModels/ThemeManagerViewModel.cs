@@ -24,9 +24,13 @@ namespace Orbit.ViewModels
 		private string? selectedBaseTheme;
 		private string? selectedColorScheme;
 
-		public ThemeManagerViewModel()
+		public ThemeManagerViewModel() : this(new ThemeService())
 		{
-			themeService = new ThemeService();
+		}
+
+		public ThemeManagerViewModel(ThemeService themeService)
+		{
+			this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
 			BaseThemes = themeService.GetAvailableBaseThemes();
 			ColorSchemes = themeService.GetAvailableColorSchemes();
@@ -180,6 +184,7 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(SelectedCustomTheme));
 
 			themeService.ApplyBuiltInTheme(SelectedBaseTheme, SelectedColorScheme);
+			SelectedCustomColor = themeService.GetCurrentAccentColor();
 		}
 
 		private bool CanSaveCustomTheme()
@@ -217,6 +222,15 @@ namespace Orbit.ViewModels
 		{
 			if (SelectedCustomTheme == null)
 				return;
+
+			// Ensure the custom theme honors the current base selection
+			if (!string.IsNullOrEmpty(SelectedBaseTheme) &&
+				!string.Equals(SelectedCustomTheme.BaseTheme, SelectedBaseTheme, StringComparison.OrdinalIgnoreCase))
+			{
+				SelectedCustomTheme.BaseTheme = SelectedBaseTheme;
+				themeService.SaveCustomThemes(CustomThemes);
+				OnPropertyChanged(nameof(SelectedCustomTheme));
+			}
 
 			// Clear the selected color scheme to avoid visual confusion in the UI
 			// (custom themes don't use the built-in color schemes)

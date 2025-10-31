@@ -1,16 +1,23 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using Dragablz;
-using Orbit.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Application = System.Windows.Application;
 
 namespace Orbit
 {
 	public class InterTabClient : IInterTabClient
 	{
+		private readonly IServiceProvider serviceProvider;
+
+		public InterTabClient(IServiceProvider serviceProvider)
+		{
+			this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+		}
+
 		public INewTabHost<Window> GetNewHost(IInterTabClient interTabClient, object partition, TabablzControl source)
 		{
-			var view = new MainWindow();
-			view.DataContext = new MainWindowViewModel();
+			var view = serviceProvider.GetRequiredService<MainWindow>();
 			return new NewTabHost<Window>(view, view.SessionTabControl);
 		}
 

@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              xmlns:converters="clr-namespace:Orbit.Converters"
-             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
     <UserControl.Resources>
         <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
@@ -11,27 +12,48 @@
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
     </UserControl.Resources>
 
-    <Grid Margin="15">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Margin="0,0,0,15" Padding="15,10" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="4">
-            <StackPanel>
-                <TextBlock FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                           Text="Session Manager" />
-                <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                    <TextBlock FontSize="12" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Opacity="0.9"
-                               Text="{Binding Sessions.Count, StringFormat='{}{0} Active Sessions'}" />
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Margin="10,10,0,0"
+                        Width="35"
+                        Height="35"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="ViewDashboard" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Session Manager" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.85"
+                            Text="{Binding Sessions.Count, StringFormat='{}{0} Active Sessions'}" />
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Sessions list -->
-        <ScrollViewer Grid.Row="1" Margin="0,0,0,15" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Sessions}">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Sessions}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Margin="0,0,0,12" Padding="15"
@@ -79,18 +101,18 @@
                                                        Text="{Binding State}"/>
                                         </Border>
                                         <Border Padding="6,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3" Margin="0,0,6,0">
-                                            <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="White"
+                                            <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                                        Text="{Binding InjectionState}"/>
                                         </Border>
                                         <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray2}"
                                                    Text="{Binding CreatedAt, StringFormat='Created: {0:HH:mm:ss}'}"/>
                                     </StackPanel>
-                                    <Border Padding="8,4" Background="#FFFFE0" BorderBrush="#FFD700" BorderThickness="1" CornerRadius="3"
+                                    <Border Padding="8,4" Background="{DynamicResource MahApps.Brushes.Gray9}" BorderBrush="{DynamicResource MahApps.Brushes.Accent3}" BorderThickness="1" CornerRadius="3"
                                             Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
                                         <StackPanel Orientation="Horizontal">
                                             <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                                        Foreground="#FF8C00" Kind="AlertCircle" />
-                                            <TextBlock MaxWidth="500" FontSize="11" Foreground="#8B4513" Text="{Binding LastError}" TextWrapping="Wrap"/>
+                                                                        Foreground="{DynamicResource MahApps.Brushes.Accent}" Kind="AlertCircle" />
+                                            <TextBlock MaxWidth="500" FontSize="11" Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" Text="{Binding LastError}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -110,8 +132,8 @@
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </UserControl>
-

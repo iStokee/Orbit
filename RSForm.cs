@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,27 +45,69 @@ namespace Orbit
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int DockedRSHwnd { get; set; }
 
-        [DllImport("user32.dll")]
+		[DllImport("user32.dll")]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 		[DllImport("user32.dll", SetLastError = true)]
 		internal static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool CloseHandle(IntPtr hObject);
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+		private struct PROCESSENTRY32
+		{
+			public uint dwSize;
+			public uint cntUsage;
+			public uint th32ProcessID;
+			public IntPtr th32DefaultHeapID;
+			public uint th32ModuleID;
+			public uint cntThreads;
+			public uint th32ParentProcessID;
+			public int pcPriClassBase;
+			public uint dwFlags;
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+			public string szExeFile;
+		}
+
+		private static readonly IntPtr InvalidHandleValue = new IntPtr(-1);
+		private const uint TH32CS_SNAPPROCESS = 0x00000002;
 
 		internal static int GetParentProcess(int Id)
 		{
-			int parentPid = 0;
-			using (ManagementObject mo = new ManagementObject("win32_process.handle='" + Id.ToString() + "'"))
+			var snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (snapshot == InvalidHandleValue)
 			{
-				try
-				{
-					mo.Get();
-					parentPid = Convert.ToInt32(mo["ParentProcessId"]);
-				}
-				catch (ArgumentException e)
-				{
-
-				}
+				return 0;
 			}
-			return parentPid;
+
+			try
+			{
+				var entry = new PROCESSENTRY32 { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>() };
+				if (!Process32First(snapshot, ref entry))
+				{
+					return 0;
+				}
+
+				do
+				{
+					if (entry.th32ProcessID == (uint)Id)
+					{
+						return (int)entry.th32ParentProcessID;
+					}
+				}
+				while (Process32Next(snapshot, ref entry));
+			}
+			finally
+			{
+				CloseHandle(snapshot);
+			}
+
+			return 0;
 		}
 
 		internal Task<Process> ProcessReadyTask => processReadyTcs.Task;

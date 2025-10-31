@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Orbit.Services
 {
-	internal class SessionManagerService
+	public class SessionManagerService
 	{
 		private const string DefaultInjectorDll = "XInput1_4_inject.dll";
 		private const uint WM_CLOSE = 0x0010;

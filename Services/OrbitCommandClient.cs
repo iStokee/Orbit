@@ -23,9 +23,6 @@ internal static class OrbitCommandClient
     public static Task<bool> SendReloadAsync(string scriptPath, int processId, CancellationToken cancellationToken = default)
         => SendAsync($"RELOAD\t{scriptPath}", "Reload", processId, cancellationToken);
 
-    public static Task<bool> SendDebugMenuVisibleAsync(bool visible, int processId, CancellationToken cancellationToken = default)
-        => SendAsync($"DEBUG_VISIBLE\t{(visible ? 1 : 0)}", "DebugVisible", processId, cancellationToken);
-
     public static Task<bool> SendInputModeAsync(int mode, int processId, CancellationToken cancellationToken = default)
         => SendAsync($"SET_INPUT_MODE\t{mode}", "InputMode", processId, cancellationToken);
 

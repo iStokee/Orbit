@@ -18,12 +18,14 @@ namespace Orbit.ViewModels;
 public class ScriptManagerViewModel : INotifyPropertyChanged
 {
 	private readonly ScriptManagerService _scriptService;
-	private readonly Window _owner;
 
-	public ScriptManagerViewModel(Window owner)
+	public ScriptManagerViewModel() : this(new ScriptManagerService())
 	{
-		_owner = owner;
-		_scriptService = new ScriptManagerService();
+	}
+
+	public ScriptManagerViewModel(ScriptManagerService scriptService)
+	{
+		_scriptService = scriptService ?? throw new ArgumentNullException(nameof(scriptService));
 
 		AddScriptCommand = new RelayCommand(_ => AddScript());
 		RemoveScriptCommand = new RelayCommand(p => RemoveScript(p as ScriptProfile), p => p is ScriptProfile);

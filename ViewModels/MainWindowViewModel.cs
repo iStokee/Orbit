@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using Orbit.Logging;
 using Orbit.Models;
 using Orbit.Services;
+using Orbit.Tooling;
 using Orbit.Views;
 using Orbit;
 using System;
@@ -27,9 +28,26 @@ namespace Orbit.ViewModels
 {
 	public class MainWindowViewModel : INotifyPropertyChanged
 	{
-		private readonly SessionManagerService sessionManager;
+	private const string AccountManagerToolKey = "AccountManager";
+	private const string ScriptControlsToolKey = "ScriptControls";
+	private const string SettingsToolKey = "Settings";
+	private const string ConsoleToolKey = "Console";
+	private const string ThemeManagerToolKey = "ThemeManager";
+	private const string SessionsOverviewToolKey = "SessionsOverview";
+	private const string ScriptManagerToolKey = "ScriptManager";
+	private const string ApiDocumentationToolKey = "ApiDocumentation";
+	private const string ToolsOverviewToolKey = "ToolsOverview";
+
+	private readonly SessionManagerService sessionManager;
 	private readonly ThemeService themeService;
 	private readonly ScriptIntegrationService scriptIntegrationService;
+	private readonly ScriptManagerService scriptManagerService;
+	private readonly AccountService accountService;
+	private readonly AutoLoginService autoLoginService;
+	private readonly SessionCollectionService sessionCollectionService;
+	private readonly ConsoleLogService consoleLogService;
+	private readonly IToolRegistry toolRegistry;
+	private readonly InterTabClient interTabClient;
 	private SessionModel selectedSession;
 	private SessionModel? hotReloadTargetSession;
 	private string hotReloadScriptPath;
@@ -49,30 +67,47 @@ namespace Orbit.ViewModels
 	private double hostViewportWidth = 1200;
 	private double hostViewportHeight = 900;
 	private bool autoInjectOnReady;
-	private bool debugOverlayWarningLogged;
+	private bool isFloatingMenuClipping;
 
-	public MainWindowViewModel()
+	public MainWindowViewModel(
+		SessionManagerService sessionManager,
+		ThemeService themeService,
+		ScriptIntegrationService scriptIntegrationService,
+		ScriptManagerService scriptManagerService,
+		AccountService accountService,
+		AutoLoginService autoLoginService,
+		SessionCollectionService sessionCollectionService,
+		ConsoleLogService consoleLogService,
+		InterTabClient interTabClient,
+		IToolRegistry toolRegistry)
 	{
-		sessionManager = new SessionManagerService();
-		themeService = new ThemeService();
-		scriptIntegrationService = new ScriptIntegrationService(SessionCollectionService.Instance);
-		ScriptManager = new ScriptManagerService();
-		AccountService = new AccountService();
+		this.sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+		this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+		this.scriptIntegrationService = scriptIntegrationService ?? throw new ArgumentNullException(nameof(scriptIntegrationService));
+		this.scriptManagerService = scriptManagerService ?? throw new ArgumentNullException(nameof(scriptManagerService));
+		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
+		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
+		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+		this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
+		this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
+		this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 
-			// Use shared singleton Sessions collection so all windows can access the same sessions
-			Sessions = SessionCollectionService.Instance.Sessions;
-			Tabs = new ObservableCollection<object>();
-			Sessions.CollectionChanged += OnSessionsCollectionChanged;
-	foreach (var session in Sessions)
-	{
-		session.PropertyChanged += OnSessionPropertyChanged;
-	}
+		ScriptManager = this.scriptManagerService;
+		AccountService = this.accountService;
+		ConsoleLog = this.consoleLogService;
 
-		// Sync with global selected session (important for tear-off windows)
-		selectedSession = SessionCollectionService.Instance.GlobalSelectedSession;
-		SessionCollectionService.Instance.PropertyChanged += OnGlobalSessionChanged;
+		Sessions = this.sessionCollectionService.Sessions;
+		Tabs = new ObservableCollection<object>();
+		Sessions.CollectionChanged += OnSessionsCollectionChanged;
+		foreach (var session in Sessions)
+		{
+			session.PropertyChanged += OnSessionPropertyChanged;
+		}
 
-		InterTabClient = new InterTabClient();
+		selectedSession = this.sessionCollectionService.GlobalSelectedSession;
+		this.sessionCollectionService.PropertyChanged += OnGlobalSessionChanged;
+
+		InterTabClient = this.interTabClient;
 		hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
 
 		AddSessionCommand = new RelayCommand(async _ => await AddSessionAsync());
@@ -80,11 +115,17 @@ namespace Orbit.ViewModels
 		ShowSessionsCommand = new RelayCommand(_ => ShowSessions(), _ => Sessions.Count > 0);
 		OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 		OpenScriptManagerCommand = new RelayCommand(_ => OpenScriptManager());
-		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager());
+		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager(), _ => this.toolRegistry.Find(AccountManagerToolKey) != null);
+		OpenApiDocumentationCommand = new RelayCommand(_ => OpenApiDocumentationTab());
+		OpenSettingsCommand = new RelayCommand(_ => OpenSettingsTab());
+		OpenToolsOverviewCommand = new RelayCommand(_ => OpenToolsOverviewTab());
 		ToggleConsoleCommand = new RelayCommand(_ => ToggleConsole());
 		BrowseScriptCommand = new RelayCommand(_ => BrowseForScript());
 		LoadScriptCommand = new RelayCommand(async _ => await LoadScriptAsync(), _ => CanLoadScript());
 		ReloadScriptCommand = new RelayCommand(async _ => await ReloadScriptAsync(), _ => CanReloadScript());
+		BeginSessionRenameCommand = new RelayCommand(BeginSessionRename, parameter => parameter is SessionModel);
+		CommitSessionRenameCommand = new RelayCommand(CommitSessionRename, parameter => parameter is SessionModel);
+		CancelSessionRenameCommand = new RelayCommand(CancelSessionRename, parameter => parameter is SessionModel);
 
 		floatingMenuLeft = Settings.Default.FloatingMenuLeft;
 		floatingMenuTop = Settings.Default.FloatingMenuTop;
@@ -101,35 +142,42 @@ namespace Orbit.ViewModels
 		floatingMenuAutoDirection = Settings.Default.FloatingMenuAutoDirection;
 		isFloatingMenuVisible = false; // Will be updated when first tab is selected
 		FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
+		FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
 		autoInjectOnReady = Settings.Default.AutoInjectOnReady;
 
 		// initialize auto side from current position
 		ComputeAutoActiveSide();
-	HotReloadTargetSession = selectedSession ?? Sessions.FirstOrDefault();
-	ApplyMemoryErrorDebugPreferenceIfInjected();
+		HotReloadTargetSession = selectedSession ?? Sessions.FirstOrDefault();
 
-	ApplyThemeFromSettings();
-}
+		ApplyThemeFromSettings();
+	}
 
 	public ObservableCollection<SessionModel> Sessions { get; }
 	public ObservableCollection<object> Tabs { get; }
 	public IInterTabClient InterTabClient { get; }
 	public bool HasSessions => Sessions.Count > 0;
 	public ScriptManagerService ScriptManager { get; }
-		public ScriptIntegrationService ScriptIntegration => scriptIntegrationService;
-		public ICommand AddSessionCommand { get; }
-		public ICommand InjectCommand { get; }
-		public ICommand ShowSessionsCommand { get; }
-		public ICommand OpenThemeManagerCommand { get; }
-		public ICommand OpenScriptManagerCommand { get; }
-		public ICommand ToggleConsoleCommand { get; }
-		public ICommand BrowseScriptCommand { get; }
+	public ScriptIntegrationService ScriptIntegration => scriptIntegrationService;
+	public ICommand AddSessionCommand { get; }
+	public ICommand InjectCommand { get; }
+	public ICommand ShowSessionsCommand { get; }
+	public ICommand OpenThemeManagerCommand { get; }
+	public ICommand OpenScriptManagerCommand { get; }
+	public ICommand ToggleConsoleCommand { get; }
+	public ICommand BrowseScriptCommand { get; }
 	public ICommand LoadScriptCommand { get; }
 	public ICommand ReloadScriptCommand { get; }
-	public ConsoleLogService ConsoleLog => ConsoleLogService.Instance;
+	public ICommand BeginSessionRenameCommand { get; }
+	public ICommand CommitSessionRenameCommand { get; }
+	public ICommand CancelSessionRenameCommand { get; }
+	public ConsoleLogService ConsoleLog { get; }
 	public AccountService AccountService { get; }
 	public ICommand OpenAccountManagerCommand { get; }
+	public ICommand OpenApiDocumentationCommand { get; }
+	public ICommand OpenSettingsCommand { get; }
+	public ICommand OpenToolsOverviewCommand { get; }
 	public Array FloatingMenuDirectionOptions { get; }
+	public Array FloatingMenuQuickToggleModes { get; }
 
 	public bool AutoInjectOnReady
 	{
@@ -155,18 +203,6 @@ namespace Orbit.ViewModels
 					}
 				}
 			}
-		}
-	}
-
-	public bool ShowMemoryErrorDebug
-	{
-		get => Settings.Default.ShowMemoryErrorDebug;
-		set
-		{
-			if (Settings.Default.ShowMemoryErrorDebug == value) return;
-			Settings.Default.ShowMemoryErrorDebug = value;
-			OnPropertyChanged(nameof(ShowMemoryErrorDebug));
-			ApplyMemoryErrorDebugPreferenceIfInjected();
 		}
 	}
 
@@ -200,42 +236,42 @@ namespace Orbit.ViewModels
             }
         }
 
-		public SessionModel SelectedSession
+	public SessionModel SelectedSession
+	{
+		get => selectedSession;
+		set
 		{
-			get => selectedSession;
-			set
+			if (selectedSession == value)
+				return;
+
+			if (selectedSession != null)
 			{
-				if (selectedSession == value)
-					return;
+				selectedSession.PropertyChanged -= OnSelectedSessionChanged;
+			}
 
-				if (selectedSession != null)
-				{
-					selectedSession.PropertyChanged -= OnSelectedSessionChanged;
-				}
+			selectedSession = value;
 
-				selectedSession = value;
+			if (selectedSession != null)
+			{
+				selectedSession.PropertyChanged += OnSelectedSessionChanged;
+			}
 
-		if (selectedSession != null)
-		{
-			selectedSession.PropertyChanged += OnSelectedSessionChanged;
+			// Sync with global selected session so tear-off windows can access it
+			sessionCollectionService.GlobalSelectedSession = value;
+
+			if (value != null && (hotReloadTargetSession == null || !Sessions.Contains(hotReloadTargetSession)))
+			{
+				HotReloadTargetSession = value;
+			}
+			else if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
+			{
+				HotReloadTargetSession = Sessions.FirstOrDefault();
+			}
+
+			OnPropertyChanged(nameof(SelectedSession));
+			CommandManager.InvalidateRequerySuggested();
 		}
-
-		// Sync with global selected session so tear-off windows can access it
-		SessionCollectionService.Instance.GlobalSelectedSession = value;
-
-		if (value != null && (hotReloadTargetSession == null || !Sessions.Contains(hotReloadTargetSession)))
-		{
-			HotReloadTargetSession = value;
-		}
-		else if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
-		{
-			HotReloadTargetSession = Sessions.FirstOrDefault();
-		}
-
-		OnPropertyChanged(nameof(SelectedSession));
-		CommandManager.InvalidateRequerySuggested();
 	}
-}
 
 		// Theme Logging Properties
 		public bool IsThemeLoggingEnabled
@@ -366,7 +402,6 @@ namespace Orbit.ViewModels
 		private async Task InjectSessionInternalAsync(SessionModel session)
 		{
 			await sessionManager.InjectAsync(session);
-			ApplyMemoryErrorDebugPreferenceIfInjected();
 		}
 
         private void ShowSessions()
@@ -381,22 +416,26 @@ namespace Orbit.ViewModels
             OpenThemeManagerTab();
         }
 
-		private void OpenScriptManager()
-		{
-			var scriptManager = new ScriptManagerView
-			{
-				Owner = Application.Current.MainWindow
-			};
-			scriptManager.ShowDialog();
-		}
+	private void OpenScriptManager()
+	{
+		if (TryOpenToolByKey(ScriptManagerToolKey))
+			return;
+
+		ConsoleLog.Append(
+			"[Orbit] Script Manager tool is unavailable; falling back to local instance.",
+			ConsoleLogSource.Orbit,
+			ConsoleLogLevel.Warning);
+
+		OpenOrFocusToolTab(
+			key: ScriptManagerToolKey,
+			name: "Script Manager",
+			controlFactory: () => new Views.ScriptManagerPanel(new ScriptManagerViewModel(scriptManagerService)),
+			icon: PackIconMaterialKind.CodeBraces);
+	}
 
 		private void OpenAccountManager()
 		{
-			var accountManager = new AccountManagerView(AccountService)
-			{
-				Owner = Application.Current.MainWindow
-			};
-			accountManager.ShowDialog();
+			OpenAccountManagerTab();
 		}
 
 		public ScriptProfile SelectedScript
@@ -452,7 +491,7 @@ namespace Orbit.ViewModels
 			return hotReloadTargetSession;
 		}
 
-		var fallback = SelectedSession ?? SessionCollectionService.Instance.GlobalSelectedSession;
+	var fallback = SelectedSession ?? sessionCollectionService.GlobalSelectedSession;
 		if (fallback != null && Sessions.Contains(fallback))
 		{
 			return fallback;
@@ -469,6 +508,70 @@ namespace Orbit.ViewModels
 	}
 
 	private bool CanReloadScript() => CanLoadScript();
+
+	private void BeginSessionRename(object parameter)
+	{
+		if (parameter is SessionModel session)
+		{
+			BeginSessionRename(session);
+		}
+	}
+
+	public void BeginSessionRename(SessionModel session)
+	{
+		if (session == null)
+			return;
+
+		session.EditableName = session.Name ?? string.Empty;
+		session.IsRenaming = true;
+	}
+
+	private void CommitSessionRename(object parameter)
+	{
+		if (parameter is SessionModel session)
+		{
+			CommitSessionRename(session);
+		}
+	}
+
+	public void CommitSessionRename(SessionModel session)
+	{
+		if (session == null)
+			return;
+
+		var proposed = session.EditableName?.Trim();
+		session.IsRenaming = false;
+
+		if (string.IsNullOrEmpty(proposed))
+		{
+			session.EditableName = session.Name ?? string.Empty;
+			return;
+		}
+
+		if (!string.Equals(session.Name, proposed, StringComparison.Ordinal))
+		{
+			session.Name = proposed;
+		}
+
+		session.EditableName = session.Name ?? string.Empty;
+	}
+
+	private void CancelSessionRename(object parameter)
+	{
+		if (parameter is SessionModel session)
+		{
+			CancelSessionRename(session);
+		}
+	}
+
+	public void CancelSessionRename(SessionModel session)
+	{
+		if (session == null)
+			return;
+
+		session.IsRenaming = false;
+		session.EditableName = session.Name ?? string.Empty;
+	}
 
 	public double FloatingMenuLeft
 	{
@@ -487,51 +590,106 @@ namespace Orbit.ViewModels
 
 	public void OpenScriptControlsTab()
 	{
-		OpenOrFocusToolTab(
-			key: "ScriptControls",
-			name: "Script Controls",
-			controlFactory: () => new Views.ScriptControlsView(),
-			icon: PackIconMaterialKind.ScriptText);
+		if (!TryOpenToolByKey(ScriptControlsToolKey))
+		{
+			ConsoleLog.Append("[Orbit] Script Controls tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			OpenOrFocusToolTab(
+				key: ScriptControlsToolKey,
+				name: "Script Controls",
+				controlFactory: () => new Views.ScriptControlsView(),
+				icon: PackIconMaterialKind.ScriptText);
+		}
+	}
+
+	public void OpenAccountManagerTab()
+	{
+		if (!TryOpenToolByKey(AccountManagerToolKey))
+		{
+			ConsoleLog.Append("[Orbit] Account Manager tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
 	}
 
     public void OpenSettingsTab()
     {
-        OpenOrFocusToolTab(
-            key: "Settings",
-            name: "Settings",
-            controlFactory: () => new Views.SettingsView(),
-            icon: PackIconMaterialKind.Cog);
+        if (!TryOpenToolByKey(SettingsToolKey))
+        {
+            ConsoleLog.Append("[Orbit] Settings tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+            OpenOrFocusToolTab(
+                key: SettingsToolKey,
+                name: "Settings",
+                controlFactory: () => new Views.SettingsView(),
+                icon: PackIconMaterialKind.Cog);
+        }
     }
 
     public void OpenConsoleTab()
     {
-        OpenOrFocusToolTab(
-            key: "Console",
-            name: "Console",
-            controlFactory: () => new Views.ConsoleView(),
-            icon: PackIconMaterialKind.Console);
+        if (!TryOpenToolByKey(ConsoleToolKey))
+        {
+            ConsoleLog.Append("[Orbit] Console tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+            OpenOrFocusToolTab(
+                key: ConsoleToolKey,
+                name: "Console",
+                controlFactory: () => new Views.ConsoleView(),
+                icon: PackIconMaterialKind.Console);
+        }
     }
 
     public void OpenThemeManagerTab()
     {
-        OpenOrFocusToolTab(
-            key: "ThemeManager",
-            name: "Theme Manager",
-            controlFactory: () => new Views.ThemeManagerPanel(),
-            icon: PackIconMaterialKind.Palette);
+        if (!TryOpenToolByKey(ThemeManagerToolKey))
+        {
+            ConsoleLog.Append("[Orbit] Theme Manager tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+            OpenOrFocusToolTab(
+                key: ThemeManagerToolKey,
+                name: "Theme Manager",
+                controlFactory: () => new Views.ThemeManagerPanel(),
+                icon: PackIconMaterialKind.Palette);
+        }
     }
 
     public void OpenSessionsOverviewTab()
     {
-        OpenOrFocusToolTab(
-            key: "SessionsOverview",
-            name: "Sessions",
-            controlFactory: () => new Views.SessionsOverviewView(
-                new SessionsOverviewViewModel(Sessions, ActivateSession, FocusSession, CloseSession)),
-            icon: PackIconMaterialKind.ViewList);
+        if (!TryOpenToolByKey(SessionsOverviewToolKey))
+        {
+            OpenOrFocusToolTab(
+                key: SessionsOverviewToolKey,
+                name: "Sessions",
+                controlFactory: () => new Views.SessionsOverviewView(
+                    new SessionsOverviewViewModel(Sessions, ActivateSession, FocusSession, CloseSession)),
+                icon: PackIconMaterialKind.ViewList);
+        }
     }
 
-    private void OpenOrFocusToolTab(string key, string name, Func<System.Windows.FrameworkElement> controlFactory, PackIconMaterialKind icon = PackIconMaterialKind.Tools)
+	public void OpenApiDocumentationTab()
+	{
+		if (!TryOpenToolByKey(ApiDocumentationToolKey))
+		{
+			ConsoleLog.Append("[Orbit] API Documentation tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+	}
+
+	public void OpenToolsOverviewTab()
+	{
+		if (!TryOpenToolByKey(ToolsOverviewToolKey))
+		{
+			ConsoleLog.Append("[Orbit] Tools Overview tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+	}
+
+	private bool TryOpenToolByKey(string key)
+	{
+		var tool = toolRegistry.Find(key);
+		if (tool == null)
+		{
+			return false;
+		}
+
+		OpenOrFocusToolTab(tool.Key, tool.DisplayName, () => tool.CreateView(this), tool.Icon);
+		return true;
+	}
+
+	private void OpenOrFocusToolTab(string key, string name, Func<System.Windows.FrameworkElement> controlFactory, PackIconMaterialKind icon = PackIconMaterialKind.Tools)
     {
         // Find existing
         foreach (var item in Tabs)
@@ -629,13 +787,14 @@ namespace Orbit.ViewModels
 			if (isFloatingMenuDockOverlayVisible == value)
 				return;
 		 isFloatingMenuDockOverlayVisible = value;
-			OnPropertyChanged(nameof(IsFloatingMenuDockOverlayVisible));
-			if (!value)
-			{
-				FloatingMenuDockCandidate = FloatingMenuDockRegion.None;
-			}
+		OnPropertyChanged(nameof(IsFloatingMenuDockOverlayVisible));
+		if (!value)
+		{
+			FloatingMenuDockCandidate = FloatingMenuDockRegion.None;
+			IsFloatingMenuClipping = false;
 		}
 	}
+}
 
 	public FloatingMenuDockRegion FloatingMenuDockCandidate
 	{
@@ -665,6 +824,8 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(FloatingMenuActiveSide));
 			OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 			OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
+			OnPropertyChanged(nameof(FloatingMenuPopupHorizontalOffset));
+			OnPropertyChanged(nameof(FloatingMenuPopupVerticalOffset));
 		}
 	}
 
@@ -682,6 +843,48 @@ namespace Orbit.ViewModels
 		=> FloatingMenuAutoDirection
 			? OppositeOf(FloatingMenuActiveSide)
 			: FloatingMenuDirection;
+
+	/// <summary>
+	/// Horizontal offset to center the popup menu on the button's "clock position"
+	/// For Left/Right placements, this centers the menu vertically on the button
+	/// </summary>
+	public double FloatingMenuPopupHorizontalOffset
+	{
+		get
+		{
+			var placement = FloatingMenuPopupPlacement;
+			// For Top/Bottom placements, offset horizontally to center on button
+			if (placement == PlacementMode.Top || placement == PlacementMode.Bottom)
+			{
+				// Button is 52px wide, we want the popup centered horizontally
+				// The popup expands from the edge, so we need to offset by half the button width
+				// to align the popup's center with the button's center
+				return 0; // Top/Bottom placements already center horizontally by default
+			}
+			return 0; // Left/Right don't need horizontal offset
+		}
+	}
+
+	/// <summary>
+	/// Vertical offset to center the popup menu on the button's "clock position"
+	/// For Top/Bottom placements, this centers the menu horizontally on the button
+	/// </summary>
+	public double FloatingMenuPopupVerticalOffset
+	{
+		get
+		{
+			var placement = FloatingMenuPopupPlacement;
+			// For Left/Right placements, offset vertically to center on button
+			if (placement == PlacementMode.Left || placement == PlacementMode.Right)
+			{
+				// Button is 52px tall, we want the popup centered vertically
+				// The popup expands from the edge, so we need to offset by half the button height
+				// to align the popup's center with the button's center
+				return 0; // Left/Right placements already center vertically by default
+			}
+			return 0; // Top/Bottom don't need vertical offset
+		}
+	}
 
 	public double FloatingMenuInactivitySeconds
 	{
@@ -713,6 +916,148 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(FloatingMenuActiveSide));
 			OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 			OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
+			OnPropertyChanged(nameof(FloatingMenuPopupHorizontalOffset));
+			OnPropertyChanged(nameof(FloatingMenuPopupVerticalOffset));
+		}
+	}
+
+	public double FloatingMenuDockEdgeThreshold
+	{
+		get => Settings.Default.FloatingMenuDockEdgeThreshold;
+		set
+		{
+			var normalized = Math.Clamp(value, 40, 200);
+			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeThreshold - normalized) < 0.1)
+				return;
+			Settings.Default.FloatingMenuDockEdgeThreshold = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockEdgeThreshold));
+		}
+	}
+
+	public double FloatingMenuDockCornerThreshold
+	{
+		get => Settings.Default.FloatingMenuDockCornerThreshold;
+		set
+		{
+			var normalized = Math.Clamp(value, 60, 250);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerThreshold - normalized) < 0.1)
+				return;
+			Settings.Default.FloatingMenuDockCornerThreshold = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerThreshold));
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockCornerHeight
+	{
+		get => Settings.Default.FloatingMenuDockCornerHeight;
+		set
+		{
+			var normalized = Math.Clamp(value, 60, 250);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerHeight - normalized) < 0.1)
+				return;
+			Settings.Default.FloatingMenuDockCornerHeight = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerHeight));
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockCornerRoundness
+	{
+		get => Settings.Default.FloatingMenuDockCornerRoundness;
+		set
+		{
+			var normalized = Math.Clamp(value, 0d, 1d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerRoundness - normalized) < 0.01)
+				return;
+			Settings.Default.FloatingMenuDockCornerRoundness = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRoundness));
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockEdgeCoverage
+	{
+		get => Settings.Default.FloatingMenuDockEdgeCoverage;
+		set
+		{
+			var normalized = Math.Clamp(value, 0.05d, 0.95d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeCoverage - normalized) < 0.005)
+				return;
+			Settings.Default.FloatingMenuDockEdgeCoverage = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockEdgeCoverage));
+		}
+	}
+
+	public double FloatingMenuDockZoneOpacity
+	{
+		get => Settings.Default.FloatingMenuDockZoneOpacity;
+		set
+		{
+			var normalized = Math.Clamp(value, 0.05d, 0.9d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockZoneOpacity - normalized) < 0.005)
+				return;
+			Settings.Default.FloatingMenuDockZoneOpacity = normalized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuDockZoneOpacity));
+		}
+	}
+
+	public FloatingMenuQuickToggleMode FloatingMenuQuickToggleMode
+	{
+		get => ParseFloatingMenuQuickToggleMode(Settings.Default.FloatingMenuQuickToggle);
+		set
+		{
+			var serialized = value.ToString();
+			if (string.Equals(Settings.Default.FloatingMenuQuickToggle, serialized, StringComparison.Ordinal))
+				return;
+
+			Settings.Default.FloatingMenuQuickToggle = serialized;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(FloatingMenuQuickToggleMode));
+		}
+	}
+
+	public bool ShowAllSnapZonesOnClip
+	{
+		get => Settings.Default.FloatingMenuShowAllSnapZonesOnClip;
+		set
+		{
+			if (Settings.Default.FloatingMenuShowAllSnapZonesOnClip == value)
+				return;
+			Settings.Default.FloatingMenuShowAllSnapZonesOnClip = value;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(ShowAllSnapZonesOnClip));
+		}
+	}
+
+	public bool IsFloatingMenuClipping
+	{
+		get => isFloatingMenuClipping;
+		private set
+		{
+			if (isFloatingMenuClipping == value)
+				return;
+			isFloatingMenuClipping = value;
+			OnPropertyChanged(nameof(IsFloatingMenuClipping));
+		}
+	}
+
+	public CornerRadius FloatingMenuDockCornerRadius
+	{
+		get
+		{
+			var cornerWidth = Math.Clamp(Settings.Default.FloatingMenuDockCornerThreshold, 60d, 250d);
+			var cornerHeight = Math.Clamp(Settings.Default.FloatingMenuDockCornerHeight, 60d, 250d);
+			var extent = Math.Min(cornerWidth, cornerHeight);
+			var roundness = Math.Clamp(Settings.Default.FloatingMenuDockCornerRoundness, 0d, 1d);
+			var radius = Math.Max(0d, extent * roundness);
+			return new CornerRadius(radius);
 		}
 	}
 
@@ -797,6 +1142,17 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowMenuApiDocumentation
+	{
+		get => Settings.Default.ShowMenuApiDocumentation;
+		set
+		{
+			if (Settings.Default.ShowMenuApiDocumentation == value) return;
+			Settings.Default.ShowMenuApiDocumentation = value;
+			OnPropertyChanged(nameof(ShowMenuApiDocumentation));
+		}
+	}
+
 	public bool ShowMenuSettings
 	{
 		get => Settings.Default.ShowMenuSettings;
@@ -805,6 +1161,18 @@ namespace Orbit.ViewModels
 			if (Settings.Default.ShowMenuSettings == value) return;
 			Settings.Default.ShowMenuSettings = value;
 			OnPropertyChanged(nameof(ShowMenuSettings));
+		}
+	}
+
+	public bool ShowFloatingMenuOnHome
+	{
+		get => Settings.Default.ShowFloatingMenuOnHome;
+		set
+		{
+			if (Settings.Default.ShowFloatingMenuOnHome == value) return;
+			Settings.Default.ShowFloatingMenuOnHome = value;
+			OnPropertyChanged(nameof(ShowFloatingMenuOnHome));
+			UpdateFloatingMenuVisibilityForCurrentTab();
 		}
 	}
 
@@ -836,7 +1204,20 @@ namespace Orbit.ViewModels
 	{
 		if (SelectedTab == null)
 		{
-			if (Tabs.Count == 0 && (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs))
+			if (Tabs.Count == 0)
+			{
+				if (ShowFloatingMenuOnHome || ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs)
+				{
+					IsFloatingMenuVisible = true;
+				}
+				else
+				{
+					HideFloatingMenu();
+				}
+				return;
+			}
+
+			if (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs)
 			{
 				IsFloatingMenuVisible = true;
 			}
@@ -853,7 +1234,12 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		IsFloatingMenuVisible = true;
+	IsFloatingMenuVisible = true;
+	}
+
+	public void SetFloatingMenuClipping(bool clipped)
+	{
+		IsFloatingMenuClipping = clipped;
 	}
 
 	public void UpdateFloatingMenuPosition(double left, double top, double hostWidth, double hostHeight)
@@ -962,9 +1348,9 @@ namespace Orbit.ViewModels
 		};
 	}
 
-	public bool ShowFloatingMenu()
+	public bool ShowFloatingMenu(bool force = false)
 	{
-		if (!ShouldShowFloatingMenuForCurrentTab())
+		if (!force && !ShouldShowFloatingMenuForCurrentTab())
 		{
 			IsFloatingMenuVisible = false;
 			return false;
@@ -984,12 +1370,27 @@ namespace Orbit.ViewModels
 	{
 		if (SelectedTab == null)
 		{
-			return Tabs.Count == 0 && (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs);
+			if (Tabs.Count == 0)
+			{
+				return ShowFloatingMenuOnHome || ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs;
+			}
+
+			return ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs;
 		}
 
 		return SelectedTab is SessionModel
 			? ShowFloatingMenuOnSessionTabs
 			: ShowFloatingMenuOnToolTabs;
+	}
+
+	private static FloatingMenuQuickToggleMode ParseFloatingMenuQuickToggleMode(string value)
+	{
+		if (!string.IsNullOrWhiteSpace(value) && Enum.TryParse(value, out FloatingMenuQuickToggleMode mode))
+		{
+			return mode;
+		}
+
+		return FloatingMenuQuickToggleMode.MiddleMouse;
 	}
 
 	private void ComputeAutoActiveSide()
@@ -1024,6 +1425,8 @@ namespace Orbit.ViewModels
 		OnPropertyChanged(nameof(FloatingMenuActiveSide));
 		OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 		OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
+		OnPropertyChanged(nameof(FloatingMenuPopupHorizontalOffset));
+		OnPropertyChanged(nameof(FloatingMenuPopupVerticalOffset));
 	}
 
 	private static PlacementMode ToPlacement(FloatingMenuDirection side) => side switch
@@ -1165,111 +1568,6 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		private void ApplyMemoryErrorDebugPreferenceIfInjected()
-		{
-			if (!Sessions.Any(s => s.InjectionState == InjectionState.Injected))
-			{
-				return;
-			}
-
-			_ = TrySetDebugOverlayVisibleAsync(ShowMemoryErrorDebug);
-		}
-
-		private Task TrySetDebugOverlayVisibleAsync(bool visible)
-		{
-			var targets = Sessions
-				.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null)
-				.ToList();
-
-			if (targets.Count == 0)
-			{
-				return Task.CompletedTask;
-			}
-
-			return Task.WhenAll(targets.Select(session => TrySetDebugOverlayVisibleAsync(session, visible)));
-		}
-
-		private async Task TrySetDebugOverlayVisibleAsync(SessionModel session, bool visible)
-		{
-			if (session.RSProcess == null)
-			{
-				return;
-			}
-
-			const int maxAttempts = 3;
-			TimeSpan retryDelay = TimeSpan.FromMilliseconds(500);
-
-			try
-			{
-				for (var attempt = 1; attempt <= maxAttempts; attempt++)
-				{
-					var success = await OrbitCommandClient
-						.SendDebugMenuVisibleAsync(visible, session.RSProcess.Id, CancellationToken.None)
-						.ConfigureAwait(false);
-
-					if (success)
-					{
-						debugOverlayWarningLogged = false;
-						ConsoleLog.Append(
-							$"[Orbit] MemoryError debug overlay {(visible ? "enabled" : "hidden")} for session '{session.Name}' (PID {session.RSProcess.Id}) on attempt {attempt}.",
-							ConsoleLogSource.Orbit,
-							ConsoleLogLevel.Info);
-
-						// Always release keyboard capture after updating overlay visibility
-						var inputModeApplied = await OrbitCommandClient
-							.SendInputModeWithRetryAsync(1, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-						if (!inputModeApplied)
-						{
-							ConsoleLog.Append("[Orbit] Warning: Unable to set MemoryError input mode to passthrough after overlay update.",
-								ConsoleLogSource.Orbit,
-								ConsoleLogLevel.Warning);
-						}
-
-						var focusSpoofApplied = await OrbitCommandClient
-							.SendFocusSpoofWithRetryAsync(false, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-						if (!focusSpoofApplied)
-						{
-							ConsoleLog.Append("[Orbit] Warning: Unable to disable MemoryError focus spoof after overlay update.",
-								ConsoleLogSource.Orbit,
-								ConsoleLogLevel.Warning);
-						}
-
-						return;
-					}
-
-					if (attempt < maxAttempts)
-					{
-						await Task.Delay(retryDelay).ConfigureAwait(false);
-						retryDelay += retryDelay; // simple backoff
-					}
-				}
-
-				LogDebugOverlayWarning($"command failed for session '{session.Name}' (PID {session.RSProcess.Id}) after {maxAttempts} attempts.");
-			}
-			catch (Exception ex)
-			{
-				LogDebugOverlayWarning(ex);
-			}
-		}
-
-		private void LogDebugOverlayWarning(string message)
-		{
-			if (debugOverlayWarningLogged)
-			{
-				return;
-			}
-
-			ConsoleLog.Append($"[Orbit] Failed to update MemoryError debug overlay: {message}", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			debugOverlayWarningLogged = true;
-		}
-
-		private void LogDebugOverlayWarning(Exception ex)
-		{
-			LogDebugOverlayWarning(ex.Message);
-		}
-
 		private void OnSessionPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			if (sender is not SessionModel session)
@@ -1279,10 +1577,6 @@ namespace Orbit.ViewModels
 
 			if (e.PropertyName == nameof(SessionModel.InjectionState))
 			{
-				if (session.InjectionState == InjectionState.Injected)
-				{
-					ApplyMemoryErrorDebugPreferenceIfInjected();
-				}
 				CommandManager.InvalidateRequerySuggested();
 			}
 		}
@@ -1308,26 +1602,26 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		private void ActivateSession(SessionModel session)
-		{
-			if (session == null)
-				return;
+	public void ActivateSession(SessionModel session)
+	{
+		if (session == null)
+			return;
 
-			SelectedSession = session;
-		}
+		SelectedSession = session;
+	}
 
-		private void FocusSession(SessionModel session)
-		{
-			session?.SetFocus();
-		}
+	public void FocusSession(SessionModel session)
+	{
+		session?.SetFocus();
+	}
 
-		private void CloseSession(SessionModel session)
-		{
-			if (session == null)
-				return;
+	public void CloseSession(SessionModel session)
+	{
+		if (session == null)
+			return;
 
-			_ = CloseSessionInternalAsync(session, skipConfirmation: false);
-		}
+		_ = CloseSessionInternalAsync(session, skipConfirmation: false);
+	}
 
 		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = false)
 		{
@@ -1446,10 +1740,6 @@ namespace Orbit.ViewModels
 			if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
 			{
 				HotReloadTargetSession = Sessions.FirstOrDefault();
-			}
-			if (Sessions.Count == 0)
-			{
-				_ = TrySetDebugOverlayVisibleAsync(false);
 			}
 		}
 		else if ((e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace) && HotReloadTargetSession == null)

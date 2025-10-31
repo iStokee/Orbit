@@ -3,44 +3,48 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+    xmlns:colorpicker="clr-namespace:ColorPicker;assembly=ColorPicker"
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:viewModels="clr-namespace:Orbit.ViewModels"
-    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit">
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
     <UserControl.Resources>
-        <converters:ColorSchemeToColorConverter x:Key="ColorSchemeToColorConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ColorPicker;component/Styles/DefaultColorPickerStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:ColorSchemeToColorConverter x:Key="ColorSchemeToColorConverter" />
+        </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!--  Header  -->
-        <Border Grid.Row="0" CornerRadius="8,8,0,0">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                    <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
-                </LinearGradientBrush>
-            </Border.Background>
-            <Grid Margin="24,16">
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <iconPacks:PackIconMaterial
-                    Width="48"
-                    Height="48"
-                    Margin="0,0,16,0"
-                    VerticalAlignment="Center"
-                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                    Kind="Palette" />
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Width="35"
+                        Height="35"
+                        Margin="10,10,0,0"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="Palette" />
+                </Border>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center">
                     <TextBlock
                         FontSize="24"
                         FontWeight="Bold"
@@ -57,179 +61,23 @@
         </Border>
 
         <!--  Main Content  -->
-        <Grid Grid.Row="1" Margin="0,20,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1" Margin="0,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-            <!--  Base Themes Column  -->
-            <Border
-                Grid.Column="0"
-                Margin="0,0,10,0"
-                Padding="12"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                BorderThickness="1"
-                CornerRadius="4">
-                <DockPanel>
-                    <StackPanel Margin="0,0,0,12" DockPanel.Dock="Top">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
-                                Width="18"
-                                Height="18"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                Kind="ThemeLightDark" />
-                            <TextBlock
-                                Margin="8,0,0,0"
-                                VerticalAlignment="Center"
-                                FontSize="15"
-                                FontWeight="SemiBold"
-                                Text="Base Theme" />
-                        </StackPanel>
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                            Text="Choose light or dark mode" />
-                    </StackPanel>
+            <!--  Top Row: Live Preview + Theme Mode  -->
+            <Grid Grid.Row="0" Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="2*" />
+                </Grid.ColumnDefinitions>
 
-                    <Button
-                        Height="36"
-                        Margin="0,12,0,0"
-                        Command="{Binding ApplyThemeCommand}"
-                        DockPanel.Dock="Bottom"
-                        Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
-                                Width="16"
-                                Height="16"
-                                Margin="0,0,8,0"
-                                Kind="Check" />
-                            <TextBlock VerticalAlignment="Center" Text="Apply Theme" />
-                        </StackPanel>
-                    </Button>
-
-                    <ListBox
-                        BorderThickness="0"
-                        ItemsSource="{Binding BaseThemes}"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        SelectedItem="{Binding SelectedBaseTheme}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,2" Padding="8,6">
-                                    <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial
-                                            Width="16"
-                                            Height="16"
-                                            VerticalAlignment="Center">
-                                            <iconPacks:PackIconMaterial.Style>
-                                                <Style TargetType="iconPacks:PackIconMaterial">
-                                                    <Setter Property="Kind" Value="WeatherNight" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding}" Value="Light">
-                                                            <Setter Property="Kind" Value="WeatherSunny" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </iconPacks:PackIconMaterial.Style>
-                                        </iconPacks:PackIconMaterial>
-                                        <TextBlock
-                                            Margin="10,0,0,0"
-                                            VerticalAlignment="Center"
-                                            FontSize="13"
-                                            Text="{Binding}" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
-            </Border>
-
-            <!--  Color Schemes Column  -->
-            <Border
-                Grid.Column="1"
-                Margin="0,0,10,0"
-                Padding="12"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                BorderThickness="1"
-                CornerRadius="4">
-                <DockPanel>
-                    <StackPanel Margin="0,0,0,12" DockPanel.Dock="Top">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
-                                Width="18"
-                                Height="18"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                Kind="FormatColorFill" />
-                            <TextBlock
-                                Margin="8,0,0,0"
-                                VerticalAlignment="Center"
-                                FontSize="15"
-                                FontWeight="SemiBold"
-                                Text="Accent Color" />
-                        </StackPanel>
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                            Text="Select your preferred color" />
-                    </StackPanel>
-
-                    <ListBox
-                        BorderThickness="0"
-                        ItemsSource="{Binding ColorSchemes}"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        SelectedItem="{Binding SelectedColorScheme}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,2" Padding="8,6">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Border
-                                            Width="20"
-                                            Height="20"
-                                            VerticalAlignment="Center"
-                                            BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                                            BorderThickness="1"
-                                            CornerRadius="3">
-                                            <Border.Background>
-                                                <SolidColorBrush Color="{Binding Converter={StaticResource ColorSchemeToColorConverter}}" />
-                                            </Border.Background>
-                                        </Border>
-                                        <TextBlock
-                                            Margin="10,0,0,0"
-                                            VerticalAlignment="Center"
-                                            FontSize="13"
-                                            Text="{Binding}" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
-            </Border>
-
-            <!--  Custom Themes & Preview Column  -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <!--  Live Preview  -->
                 <Border
-                    Grid.Row="0"
-                    Margin="0,0,0,10"
-                    Padding="15"
-                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                    BorderThickness="1"
-                    CornerRadius="4">
+                    Grid.Column="0"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource Orbit.ToolCard}">
                     <StackPanel>
                         <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -246,28 +94,27 @@
                                 Text="Live Preview" />
                         </StackPanel>
 
-                        <!--  Preview Elements  -->
                         <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
                             <Button
-                                Width="90"
-                                Height="28"
+                                Width="96"
+                                Height="30"
                                 Margin="0,0,8,0"
                                 Content="Primary"
                                 Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
                             <Button
-                                Width="90"
-                                Height="28"
+                                Width="96"
+                                Height="30"
                                 Content="Secondary" />
                         </StackPanel>
 
                         <Border
-                            Margin="0,0,0,8"
+                            Margin="0,0,5,5"
                             Padding="10,6"
                             Background="{DynamicResource MahApps.Brushes.Accent}"
-                            CornerRadius="3">
+                            CornerRadius="4">
                             <TextBlock
                                 FontWeight="SemiBold"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                 Text="Accent Background" />
                         </Border>
 
@@ -285,148 +132,348 @@
                     </StackPanel>
                 </Border>
 
-                <!--  Custom Theme Creator  -->
                 <Border
-                    Grid.Row="1"
-                    Padding="15"
-                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                    BorderThickness="1"
-                    CornerRadius="4">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
+                    Grid.Column="1"
+                    Margin="0"
+                    Style="{StaticResource Orbit.ToolCard}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                Kind="ThemeLightDark" />
+                            <TextBlock
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                Text="Theme Mode" />
+                        </StackPanel>
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                            Text="Choose the light or dark baseline used across Orbit." />
 
-                        <StackPanel Grid.Row="0">
-                            <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                        <ListBox
+                            Margin="0,16,0,0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            ItemsSource="{Binding BaseThemes}"
+                            SelectedItem="{Binding SelectedBaseTheme}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,2,0">
+                                        <iconPacks:PackIconMaterial
+                                            Width="16"
+                                            Height="16"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,8,0">
+                                            <iconPacks:PackIconMaterial.Style>
+                                                <Style TargetType="iconPacks:PackIconMaterial">
+                                                    <Setter Property="Kind" Value="WeatherNight" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="Light">
+                                                            <Setter Property="Kind" Value="WeatherSunny" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </iconPacks:PackIconMaterial.Style>
+                                        </iconPacks:PackIconMaterial>
+                                        <TextBlock
+                                            Margin="0,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Text="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="22,14" />
+                                    <Setter Property="Margin" Value="0,0,12,0" />
+                                    <Setter Property="MinWidth" Value="132" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border
+                                                    x:Name="Container"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="14">
+                                                    <ContentPresenter
+                                                        Margin="6,2"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.AccentForeground}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <!--  Bottom Row: Custom editor + Presets  -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="2*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Orbit.ToolCard}" Margin="0 10 0 0">
+                    <StackPanel>
+                        <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                Kind="Brush" />
+                            <TextBlock
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                Text="Custom Theme Creator" />
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock
+                                    Margin="0,0,0,4"
+                                    FontSize="12"
+                                    Text="Theme Name" />
+                                <TextBox
+                                    Height="32"
+                                    FontSize="13"
+                                    Text="{Binding CustomThemeName, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <TextBlock
+                                Grid.Column="1"
+                                Margin="16,18,0,0"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                Text="{Binding SelectedBaseTheme, StringFormat='Base: {0}'}" />
+                        </Grid>
+
+                        <TextBlock
+                            Margin="0,0,0,4"
+                            FontSize="12"
+                            Text="Accent Color" />
+                        <Border
+                            Padding="12"
+                            Background="{DynamicResource MahApps.Brushes.Gray8}"
+                            CornerRadius="14">
+                            <colorpicker:StandardColorPicker
+                                MinHeight="340"
+                                HorizontalAlignment="Stretch"
+                                PickerType="HSV"
+                                SelectedColor="{Binding SelectedCustomColor, Mode=TwoWay}"
+                                ShowAlpha="False"
+                                Style="{StaticResource DefaultColorPickerStyle}" />
+                        </Border>
+
+                        <StackPanel
+                            Margin="0,16,0,0"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                            <Button
+                                Width="120"
+                                Height="32"
+                                Margin="0,0,10,0"
+                                Command="{Binding DeleteCustomThemeCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="Delete" />
+                                    <TextBlock VerticalAlignment="Center" Text="Delete" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                Width="120"
+                                Height="32"
+                                Margin="0,0,10,0"
+                                Command="{Binding ApplyCustomThemeCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="Check" />
+                                    <TextBlock VerticalAlignment="Center" Text="Apply" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                Width="130"
+                                Height="32"
+                                Command="{Binding SaveCustomThemeCommand}"
+                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="ContentSave" />
+                                    <TextBlock VerticalAlignment="Center" Text="Save" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource Orbit.ToolCard}" Margin="10 10 0 0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
                                     Width="18"
                                     Height="18"
                                     VerticalAlignment="Center"
                                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                    Kind="Brush" />
+                                    Kind="PaletteSwatch" />
                                 <TextBlock
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     FontSize="15"
                                     FontWeight="SemiBold"
-                                    Text="Custom Theme Creator" />
+                                    Text="Built-in Colors" />
                             </StackPanel>
 
                             <TextBlock
-                                Margin="0,0,0,4"
-                                FontSize="12"
-                                Text="Theme Name" />
-                            <TextBox
-                                Height="32"
-                                Margin="0,0,0,10"
-                                FontSize="13"
-                                Text="{Binding CustomThemeName, UpdateSourceTrigger=PropertyChanged}" />
+                                Grid.Row="1"
+                                Margin="0,6,0,0"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                Text="Preview MahApps accent palettes and apply them instantly." />
 
-                            <TextBlock
-                                Margin="0,0,0,4"
-                                FontSize="12"
-                                Text="Base Theme" />
-                            <ComboBox
-                                Height="32"
-                                Margin="0,0,0,10"
-                                FontSize="13"
-                                ItemsSource="{Binding BaseThemes}"
-                                SelectedItem="{Binding SelectedBaseTheme}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                Width="14"
-                                                Height="14"
-                                                Margin="0,0,6,0"
-                                                VerticalAlignment="Center">
-                                                <iconPacks:PackIconMaterial.Style>
-                                                    <Style TargetType="iconPacks:PackIconMaterial">
-                                                        <Setter Property="Kind" Value="WeatherNight" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding}" Value="Light">
-                                                                <Setter Property="Kind" Value="WeatherSunny" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </iconPacks:PackIconMaterial.Style>
-                                            </iconPacks:PackIconMaterial>
-                                            <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <TextBlock
-                                Margin="0,0,0,4"
-                                FontSize="12"
-                                Text="Accent Color" />
-                            <xctk:ColorCanvas
-                                Width="280"
-                                Height="140"
-                                Margin="0,0,0,12"
-                                SelectedColor="{Binding SelectedCustomColor}" />
-
-                            <StackPanel Orientation="Horizontal">
-                                <Button
-                                    Width="130"
-                                    Height="32"
-                                    Margin="0,0,8,0"
-                                    Command="{Binding SaveCustomThemeCommand}"
-                                    Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="ContentSave" />
-                                        <TextBlock VerticalAlignment="Center" Text="Save" />
-                                    </StackPanel>
-                                </Button>
-
-                                <Button
-                                    Width="130"
-                                    Height="32"
-                                    Margin="0,0,8,0"
-                                    Command="{Binding ApplyCustomThemeCommand}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="Check" />
-                                        <TextBlock VerticalAlignment="Center" Text="Apply" />
-                                    </StackPanel>
-                                </Button>
-
-                                <Button
-                                    Width="90"
-                                    Height="32"
-                                    Command="{Binding DeleteCustomThemeCommand}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="Delete" />
-                                        <TextBlock VerticalAlignment="Center" Text="Delete" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!--  Saved Custom Themes List  -->
-                        <GroupBox
-                            Grid.Row="1"
-                            Margin="0,15,0,0"
-                            Header="Saved Custom Themes">
                             <ListBox
-                                Margin="5"
+                                Grid.Row="2"
+                                Margin="0,12,0,12"
+                                BorderThickness="0"
+                                ItemsSource="{Binding ColorSchemes}"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                SelectedItem="{Binding SelectedColorScheme}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,2" Padding="8,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border
+                                                    Width="24"
+                                                    Height="24"
+                                                    VerticalAlignment="Center"
+                                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4">
+                                                    <Border.Background>
+                                                        <SolidColorBrush Color="{Binding Converter={StaticResource ColorSchemeToColorConverter}}" />
+                                                    </Border.Background>
+                                                </Border>
+                                                <TextBlock
+                                                    Margin="10,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="13"
+                                                    Text="{Binding}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Button
+                                Grid.Row="3"
+                                Width="150"
+                                Height="34"
+                                HorizontalAlignment="Left"
+                                Command="{Binding ApplyThemeCommand}"
+                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,6,0"
+                                        Kind="Check" />
+                                    <TextBlock VerticalAlignment="Center" Text="Apply preset" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Border
+                        Grid.Row="1"
+                        Margin="10,10,0,0"
+                        Style="{StaticResource Orbit.ToolCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="18"
+                                    Height="18"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Kind="ContentDuplicate" />
+                                <TextBlock
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Text="Saved Custom Themes" />
+                            </StackPanel>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Margin="0,4,0,10"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                Text="Select a saved palette to load or apply it immediately." />
+
+                            <ListBox
+                                Grid.Row="2"
                                 BorderThickness="0"
                                 ItemsSource="{Binding CustomThemes}"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
                                 SelectedItem="{Binding SelectedCustomTheme}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
@@ -458,9 +505,9 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                        </GroupBox>
-                    </Grid>
-                </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
     </Grid>

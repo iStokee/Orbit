@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using UserControl = System.Windows.Controls.UserControl;
+using Size = System.Windows.Size;
 
 namespace Orbit.Views
 {
@@ -109,6 +110,26 @@ namespace Orbit.Views
 			{
 				await rsForm.ResizeWindowOvl(width, height);
 			}
+		}
+
+		internal Size GetHostViewportSize()
+		{
+			if (RSPanel != null)
+			{
+				var renderSize = RSPanel.RenderSize;
+				if (renderSize.Width > 0 && renderSize.Height > 0)
+				{
+					return renderSize;
+				}
+
+				var actual = new Size(RSPanel.ActualWidth, RSPanel.ActualHeight);
+				if (actual.Width > 0 && actual.Height > 0)
+				{
+					return actual;
+				}
+			}
+
+			return new Size(ActualWidth, ActualHeight);
 		}
 
 		public Task<RSForm> WaitForSessionAsync() => sessionReadyTcs.Task;

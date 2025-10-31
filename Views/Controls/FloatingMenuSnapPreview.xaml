@@ -1,0 +1,152 @@
+<UserControl
+    x:Class="Orbit.Views.Controls.FloatingMenuSnapPreview"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    x:Name="PreviewRoot"
+    mc:Ignorable="d"
+    d:DesignHeight="220"
+    d:DesignWidth="360">
+
+    <UserControl.Resources>
+        <Style x:Key="SnapIndicatorStylePreview" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Opacity">
+                <Setter.Value>
+                    <Binding ElementName="PreviewRoot" Path="EdgeOpacity" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <converters:RatioToSizeConverter x:Key="RatioToSizeConverter" />
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource MahApps.Brushes.Gray8}">
+        <Viewbox Stretch="Fill">
+            <Grid
+                x:Name="PreviewSurface"
+                Width="820"
+                Height="480">
+                <Border
+                    Margin="20"
+                    CornerRadius="14"
+                    Background="{DynamicResource MahApps.Brushes.Gray7}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+                    BorderThickness="1">
+                    <Grid>
+                        <Border
+                            Width="{Binding EdgeThickness, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Margin="0,18,0,18">
+                            <Border.Height>
+                                <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                                    <Binding ElementName="PreviewSurface" Path="ActualHeight" />
+                                    <Binding ElementName="PreviewRoot" Path="EdgeCoverage" />
+                                </MultiBinding>
+                            </Border.Height>
+                        </Border>
+                        <Border
+                            Width="{Binding EdgeThickness, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,18,0,18">
+                            <Border.Height>
+                                <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                                    <Binding ElementName="PreviewSurface" Path="ActualHeight" />
+                                    <Binding ElementName="PreviewRoot" Path="EdgeCoverage" />
+                                </MultiBinding>
+                            </Border.Height>
+                        </Border>
+
+                        <Border
+                            Height="{Binding EdgeThickness, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Margin="18,0,18,0">
+                            <Border.Width>
+                                <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                                    <Binding ElementName="PreviewSurface" Path="ActualWidth" />
+                                    <Binding ElementName="PreviewRoot" Path="EdgeCoverage" />
+                                </MultiBinding>
+                            </Border.Width>
+                        </Border>
+                        <Border
+                            Height="{Binding EdgeThickness, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Margin="18,0,18,0">
+                            <Border.Width>
+                                <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                                    <Binding ElementName="PreviewSurface" Path="ActualWidth" />
+                                    <Binding ElementName="PreviewRoot" Path="EdgeCoverage" />
+                                </MultiBinding>
+                            </Border.Width>
+                        </Border>
+
+                        <Border
+                            Width="{Binding CornerSize, ElementName=PreviewRoot}"
+                            Height="{Binding CornerHeight, ElementName=PreviewRoot}"
+                            CornerRadius="{Binding CornerRadius, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top" />
+                        <Border
+                            Width="{Binding CornerSize, ElementName=PreviewRoot}"
+                            Height="{Binding CornerHeight, ElementName=PreviewRoot}"
+                            CornerRadius="{Binding CornerRadius, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top" />
+                        <Border
+                            Width="{Binding CornerSize, ElementName=PreviewRoot}"
+                            Height="{Binding CornerHeight, ElementName=PreviewRoot}"
+                            CornerRadius="{Binding CornerRadius, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom" />
+                        <Border
+                            Width="{Binding CornerSize, ElementName=PreviewRoot}"
+                            Height="{Binding CornerHeight, ElementName=PreviewRoot}"
+                            CornerRadius="{Binding CornerRadius, ElementName=PreviewRoot}"
+                            Style="{StaticResource SnapIndicatorStylePreview}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom" />
+
+                        <Ellipse
+                            Width="52"
+                            Height="52"
+                            Fill="{DynamicResource MahApps.Brushes.Accent}"
+                            Opacity="0.85"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect
+                                    BlurRadius="24"
+                                    Opacity="0.45"
+                                    Color="{DynamicResource MahApps.Colors.Accent}" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+
+                        <TextBlock
+                            Margin="0,90,0,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Preview" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Viewbox>
+    </Grid>
+</UserControl>

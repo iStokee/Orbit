@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="Orbit.Views.ScriptManagerPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    MinWidth="760"
+    MinHeight="520"
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+    <UserControl.Resources>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+
+        <Style x:Key="ChipStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0,6" />
+        </Style>
+
+        <DataTemplate x:Key="ScriptItemTemplate">
+            <Border Style="{StaticResource ChipStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="15"
+                            FontWeight="SemiBold"
+                            Text="{Binding Name}" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                            Text="{Binding Description}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                            Text="{Binding FilePath}" />
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Button
+                            Width="32"
+                            Height="32"
+                            Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Kind="Play" />
+                        </Button>
+
+                        <Button
+                            Width="32"
+                            Height="32"
+                            Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            ToolTip="Toggle favorite">
+                            <iconPacks:PackIconMaterial Width="16" Height="16">
+                                <iconPacks:PackIconMaterial.Style>
+                                    <Style TargetType="iconPacks:PackIconMaterial">
+                                        <Setter Property="Kind" Value="StarOutline" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                <Setter Property="Kind" Value="Star" />
+                                                <Setter Property="Foreground" Value="#FFD700" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </iconPacks:PackIconMaterial.Style>
+                            </iconPacks:PackIconMaterial>
+                        </Button>
+
+                        <Button
+                            Width="32"
+                            Height="32"
+                            Command="{Binding DataContext.RemoveScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            ToolTip="Remove">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Kind="Close" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  Header  -->
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Margin="10,10,0,0"
+                        Width="35"
+                        Height="35"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="CodeBraces" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="24"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Script Manager" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.85"
+                        Text="Manage recent scripts and favorites. Double-click to load via hot-reload." />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Actions  -->
+        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
+            <StackPanel Orientation="Horizontal">
+                <Button
+                    Width="160"
+                    Height="40"
+                    Command="{Binding AddScriptCommand}"
+                    Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial
+                            Width="18"
+                            Height="18"
+                            Kind="FilePlus" />
+                        <TextBlock VerticalAlignment="Center" Text="Add Script" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Width="180"
+                    Height="40"
+                    Margin="12,0,0,0"
+                    Command="{Binding ClearMissingCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial
+                            Width="18"
+                            Height="18"
+                            Kind="Broom" />
+                        <TextBlock VerticalAlignment="Center" Text="Remove Missing" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!--  Content  -->
+        <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!--  Favorites  -->
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Text="Favorites" />
+                        <Border
+                            Padding="8,2"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="12"
+                            Margin="12,0,0,0"
+                            Visibility="{Binding HasFavorites, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Text="Pinned for quick access" />
+                        </Border>
+                    </StackPanel>
+
+                    <ListView
+                        x:Name="FavoritesList"
+                        Margin="0,12,0,0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemTemplate="{StaticResource ScriptItemTemplate}"
+                        ItemsSource="{Binding Favorites}"
+                        MouseDoubleClick="OnScriptDoubleClick" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                        Text="Star scripts from the list to keep them here."
+                        Visibility="{Binding HasFavorites, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}" />
+                </StackPanel>
+
+                <!--  Recent Scripts  -->
+                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Text="Recent Scripts" />
+                    <ListView
+                        x:Name="RecentList"
+                        Margin="0,12,0,0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemTemplate="{StaticResource ScriptItemTemplate}"
+                        ItemsSource="{Binding RecentScripts}"
+                        MouseDoubleClick="OnScriptDoubleClick" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Footer  -->
+        <Border Grid.Row="3" Style="{StaticResource Orbit.ToolCard}">
+            <TextBlock
+                FontSize="11"
+                Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                Text="Hot-reload friendly • Scripts run in the selected session from Orbit's Script Controls." />
+        </Border>
+    </Grid>
+</UserControl>

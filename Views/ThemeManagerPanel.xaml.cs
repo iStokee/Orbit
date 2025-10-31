@@ -6,13 +6,13 @@ namespace Orbit.Views;
 
 public partial class ThemeManagerPanel : UserControl
 {
-    public ThemeManagerPanel()
+    public ThemeManagerPanel() : this(null)
+    {
+    }
+
+    public ThemeManagerPanel(ThemeManagerViewModel? viewModel)
     {
         InitializeComponent();
-        if (DataContext == null)
-        {
-            DataContext = new ThemeManagerViewModel();
-        }
+        DataContext = viewModel ?? DataContext ?? new ThemeManagerViewModel();
     }
 }
-

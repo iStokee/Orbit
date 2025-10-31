@@ -12,17 +12,70 @@
     xmlns:models="clr-namespace:Orbit.Models"
     xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
     xmlns:views="clr-namespace:Orbit.Views"
+    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     Title="Orbit"
     Width="1400"
     Height="1000"
-    d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel}"
-    Icon="{DynamicResource Orbit.IconImage}"
+    d:DataContext="{d:DesignInstance viewmodels:MainWindowViewModel,
+                                     IsDesignTimeCreatable=False}"
+    d:DesignHeight="1000"
+    d:DesignWidth="1400"
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
     ShowTitleBar="True"
+    ShowIconOnTitleBar="False"
     SizeChanged="MetroWindow_SizeChanged"
+    TitleBarHeight="35"
     TitleCharacterCasing="Normal"
     WindowStartupLocation="CenterScreen"
+    PreviewMouseUp="MainWindow_PreviewMouseUp"
+    PreviewKeyUp="MainWindow_PreviewKeyUp"
     mc:Ignorable="d">
 
+    <Controls:MetroWindow.TaskbarItemInfo>
+        <shell:TaskbarItemInfo
+            x:Name="TaskbarInfo"
+            Description="Orbit">
+            <shell:TaskbarItemInfo.ThumbnailClipMargin>
+                <Thickness>0</Thickness>
+            </shell:TaskbarItemInfo.ThumbnailClipMargin>
+        </shell:TaskbarItemInfo>
+    </Controls:MetroWindow.TaskbarItemInfo>
+
+    <Controls:MetroWindow.TitleTemplate>
+        <DataTemplate>
+            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                <Border
+                    Width="32"
+                    Height="32"
+                    Margin="0,0,10,0"
+                    Background="Transparent"
+                    CornerRadius="16">
+                    <Viewbox Margin="5">
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="{DynamicResource Orbit.IconImage}"
+                            Stretch="Uniform" />
+                    </Viewbox>
+                </Border>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Text="{Binding}" />
+            </StackPanel>
+        </DataTemplate>
+    </Controls:MetroWindow.TitleTemplate>
+
+    <d:Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- MahApps Dark Theme for Designer -->
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Blue.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </d:Window.Resources>
 
     <Window.Resources>
         <!--  Converters  -->
@@ -36,14 +89,16 @@
         <converters:IsOfTypeConverter x:Key="IsOfTypeConverter" />
         <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
         <converters:SubtractConverter x:Key="SubtractConverter" />
+        <converters:RatioToSizeConverter x:Key="RatioToSizeConverter" />
+        <converters:DockZoneHighlightConverter x:Key="DockZoneHighlightConverter" />
         <Style x:Key="Orbit.FloatingMenuToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="48" />
-            <Setter Property="Height" Value="48" />
+            <Setter Property="Width" Value="52" />
+            <Setter Property="Height" Value="52" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+            <Setter Property="Tag" Value="1.5" />
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -62,19 +117,23 @@
 
                             <Ellipse
                                 x:Name="Glow"
-                                Margin="-4"
-                                Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                Opacity="0" />
+                                Margin="-6"
+                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Opacity="0">
+                                <Ellipse.Effect>
+                                    <BlurEffect Radius="12" />
+                                </Ellipse.Effect>
+                            </Ellipse>
                             <Ellipse
                                 x:Name="BaseCircle"
                                 Fill="{TemplateBinding Background}"
                                 Stroke="{TemplateBinding BorderBrush}"
-                                StrokeThickness="{TemplateBinding BorderThickness}" />
+                                StrokeThickness="{TemplateBinding Tag}" />
                             <Ellipse
                                 x:Name="HoverRing"
                                 Margin="-1"
                                 Opacity="0.14"
-                                Stroke="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Stroke="{DynamicResource MahApps.Brushes.AccentForeground}"
                                 StrokeThickness="1.4" />
 
                             <ContentPresenter
@@ -164,9 +223,9 @@
 
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
-                                <Setter TargetName="Glow" Property="Opacity" Value="0.45" />
-                                <Setter TargetName="HoverRing" Property="Opacity" Value="0.5" />
-                                <Setter TargetName="BaseCircle" Property="StrokeThickness" Value="1.8" />
+                                <Setter TargetName="Glow" Property="Opacity" Value="0.6" />
+                                <Setter TargetName="HoverRing" Property="Opacity" Value="0.6" />
+                                <Setter TargetName="BaseCircle" Property="StrokeThickness" Value="2" />
                             </Trigger>
 
                             <Trigger Property="IsEnabled" Value="False">
@@ -200,6 +259,7 @@
             <!--  TabablzControl bound to Sessions and InterTabClient  -->
             <dragablz:TabablzControl
                 x:Name="SessionTabControl"
+                Padding="5"
                 ItemsSource="{Binding Tabs}"
                 SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                 ShowDefaultCloseButton="True">
@@ -456,51 +516,166 @@
                                             </Style>
                                         </Ellipse.Style>
                                     </Ellipse>
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                        Text="{Binding Name}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Opacity" Value="0.7" />
+                                    <Grid Margin="0,0,4,0" VerticalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Text="{Binding Name}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Opacity" Value="0.7" />
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <!--  Brighter text on selected tab with smooth transition  -->
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation
+                                                                            Storyboard.TargetProperty="Opacity"
+                                                                            To="1.0"
+                                                                            Duration="0:0:0.2">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <QuadraticEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation
+                                                                            Storyboard.TargetProperty="Opacity"
+                                                                            To="0.7"
+                                                                            Duration="0:0:0.15">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <QuadraticEase EasingMode="EaseIn" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.ExitActions>
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <TextBox
+                                            Margin="0"
+                                            Padding="2,0"
+                                            Background="{DynamicResource MahApps.Brushes.Gray7}"
+                                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                                            BorderThickness="0,0,0,1"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            MinWidth="110"
+                                            Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
+                                            VerticalContentAlignment="Center"
+                                            Visibility="Collapsed"
+                                            KeyDown="SessionRenameTextBox_KeyDown"
+                                            LostKeyboardFocus="SessionRenameTextBox_LostKeyboardFocus"
+                                            IsVisibleChanged="SessionRenameTextBox_IsVisibleChanged">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox" BasedOn="{StaticResource MahApps.Styles.TextBox}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                    </Grid>
+
+                                    <Button
+                                        Margin="6,0,0,0"
+                                        Padding="4"
+                                        Width="26"
+                                        Height="26"
+                                        Command="{Binding DataContext.BeginSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
+                                        CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                                <Setter Property="ToolTip" Value="Rename session" />
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Setter Property="Opacity" Value="0.75" />
                                                 <Style.Triggers>
-                                                    <!--  Brighter text on selected tab with smooth transition  -->
+                                                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                        <DataTrigger.EnterActions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation
-                                                                        Storyboard.TargetProperty="Opacity"
-                                                                        To="1.0"
-                                                                        Duration="0:0:0.2">
-                                                                        <DoubleAnimation.EasingFunction>
-                                                                            <QuadraticEase EasingMode="EaseOut" />
-                                                                        </DoubleAnimation.EasingFunction>
-                                                                    </DoubleAnimation>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.EnterActions>
-                                                        <DataTrigger.ExitActions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation
-                                                                        Storyboard.TargetProperty="Opacity"
-                                                                        To="0.7"
-                                                                        Duration="0:0:0.15">
-                                                                        <DoubleAnimation.EasingFunction>
-                                                                            <QuadraticEase EasingMode="EaseIn" />
-                                                                        </DoubleAnimation.EasingFunction>
-                                                                    </DoubleAnimation>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.ExitActions>
-                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                        <Setter Property="Opacity" Value="1" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        </Button.Style>
+                                        <iconPacks:PackIconMaterial
+                                            Width="14"
+                                            Height="14"
+                                            Kind="Pencil"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                    </Button>
+
+                                    <StackPanel
+                                        Margin="4,0,0,0"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+
+                                        <Button
+                                            Width="26"
+                                            Height="26"
+                                            Padding="4"
+                                            Margin="0,0,4,0"
+                                            Command="{Binding DataContext.CommitSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
+                                            CommandParameter="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                                    <Setter Property="ToolTip" Value="Save name" />
+                                                </Style>
+                                            </Button.Style>
+                                            <iconPacks:PackIconMaterial
+                                                Width="14"
+                                                Height="14"
+                                                Kind="Check"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                        </Button>
+
+                                        <Button
+                                            Width="26"
+                                            Height="26"
+                                            Padding="4"
+                                            Command="{Binding DataContext.CancelSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
+                                            CommandParameter="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                                    <Setter Property="ToolTip" Value="Cancel rename" />
+                                                </Style>
+                                            </Button.Style>
+                                            <iconPacks:PackIconMaterial
+                                                Width="14"
+                                                Height="14"
+                                                Kind="Close"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                        </Button>
+                                    </StackPanel>
                                 </StackPanel>
                                 <!--  Tool header  -->
                                 <StackPanel
@@ -605,158 +780,286 @@
 
         </DockPanel>
 
+        <!--  Empty State Background - Branded Orbit Logo (Overlay)  -->
+        <Grid IsHitTestVisible="False">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Tabs.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Viewbox
+                Width="460"
+                Height="460"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <Grid Width="512">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="512" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid.Resources>
+                        <SolidColorBrush
+                            x:Key="OrbitHome.IconBrush"
+                            Opacity="0.85"
+                            Color="{DynamicResource MahApps.Colors.Accent}" />
+                        <SolidColorBrush
+                            x:Key="OrbitHome.RingBrush"
+                            Opacity="0.55"
+                            Color="{DynamicResource MahApps.Colors.Accent2}" />
+                        <SolidColorBrush
+                            x:Key="OrbitHome.TextBrush"
+                            Opacity="0.8"
+                            Color="{DynamicResource MahApps.Colors.AccentForeground}" />
+                    </Grid.Resources>
+
+                    <!--  Orbit Icon with theme-aware coloring using Canvas  -->
+                    <Canvas
+                        Grid.Row="0"
+                        Width="512"
+                        Height="512"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <Canvas.Effect>
+                            <DropShadowEffect
+                                BlurRadius="26"
+                                Direction="315"
+                                Opacity="0.28"
+                                ShadowDepth="6"
+                                Color="{DynamicResource MahApps.Colors.Accent}" />
+                        </Canvas.Effect>
+
+                        <!--  Main icon geometry using shared resource  -->
+                        <Path Data="{StaticResource Orbit.IconGeometry}" Fill="{StaticResource OrbitHome.IconBrush}" />
+
+                    </Canvas>
+
+                    <!--  "Orbit" Text Below Icon  -->
+                    <TextBlock
+                        Grid.Row="1"
+                        Margin="0,36,0,0"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        FontFamily="Segoe UI"
+                        FontSize="72"
+                        FontWeight="Black"
+                        Foreground="{StaticResource OrbitHome.TextBrush}"
+                        Text="Orbit"
+                        TextOptions.TextFormattingMode="Ideal"
+                        TextOptions.TextRenderingMode="Auto">
+                        <TextBlock.Effect>
+                            <DropShadowEffect
+                                BlurRadius="14"
+                                Direction="315"
+                                Opacity="0.3"
+                                ShadowDepth="4"
+                                Color="{DynamicResource MahApps.Colors.Accent}" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
+            </Viewbox>
+        </Grid>
+
         <!--  Snap Zone Visual Indicators  -->
-        <Canvas
+        <Grid
             x:Name="SnapZoneOverlay"
+            Margin="8"
             IsHitTestVisible="False"
             Visibility="{Binding IsFloatingMenuDockOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Canvas.Resources>
+            <Grid.Resources>
                 <Style x:Key="SnapIndicatorStyle" TargetType="Border">
                     <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                    <Setter Property="Opacity" Value="0.3" />
                     <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                    <Setter Property="BorderThickness" Value="3" />
+                    <Setter Property="BorderThickness" Value="2" />
                     <Setter Property="CornerRadius" Value="24" />
+                    <Setter Property="SnapsToDevicePixels" Value="True" />
+                    <Setter Property="Opacity">
+                        <Setter.Value>
+                            <Binding Path="FloatingMenuDockZoneOpacity" />
+                        </Setter.Value>
+                    </Setter>
                 </Style>
-            </Canvas.Resources>
+            </Grid.Resources>
 
             <!--  Left Edge Indicator  -->
             <Border
-                Canvas.Left="0"
-                Canvas.Top="200"
-                Width="120"
-                Height="400"
-                Style="{StaticResource SnapIndicatorStyle}">
+                Width="{Binding FloatingMenuDockEdgeThreshold}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Margin="0,12,0,12">
+                <Border.Height>
+                    <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                        <Binding ElementName="SnapZoneOverlay" Path="ActualHeight" />
+                        <Binding Path="FloatingMenuDockEdgeCoverage" />
+                    </MultiBinding>
+                </Border.Height>
                 <Border.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Left}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
 
             <!--  Right Edge Indicator  -->
             <Border
-                Width="120"
-                Height="400"
-                Style="{StaticResource SnapIndicatorStyle}">
-                <Border.RenderTransform>
-                    <TranslateTransform X="{Binding ActualWidth, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=120}" Y="200" />
-                </Border.RenderTransform>
+                Width="{Binding FloatingMenuDockEdgeThreshold}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Margin="0,12,0,12">
+                <Border.Height>
+                    <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                        <Binding ElementName="SnapZoneOverlay" Path="ActualHeight" />
+                        <Binding Path="FloatingMenuDockEdgeCoverage" />
+                    </MultiBinding>
+                </Border.Height>
                 <Border.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Right}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
 
             <!--  Top Edge Indicator  -->
             <Border
-                Canvas.Left="400"
-                Canvas.Top="0"
-                Width="400"
-                Height="120"
-                Style="{StaticResource SnapIndicatorStyle}">
+                Height="{Binding FloatingMenuDockEdgeThreshold}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="12,0,12,0">
+                <Border.Width>
+                    <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                        <Binding ElementName="SnapZoneOverlay" Path="ActualWidth" />
+                        <Binding Path="FloatingMenuDockEdgeCoverage" />
+                    </MultiBinding>
+                </Border.Width>
                 <Border.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Top}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
 
             <!--  Bottom Edge Indicator  -->
             <Border
-                Width="400"
-                Height="120"
-                Style="{StaticResource SnapIndicatorStyle}">
-                <Border.RenderTransform>
-                    <TranslateTransform X="400" Y="{Binding ActualHeight, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=120}" />
-                </Border.RenderTransform>
+                Height="{Binding FloatingMenuDockEdgeThreshold}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="12,0,12,0">
+                <Border.Width>
+                    <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
+                        <Binding ElementName="SnapZoneOverlay" Path="ActualWidth" />
+                        <Binding Path="FloatingMenuDockEdgeCoverage" />
+                    </MultiBinding>
+                </Border.Width>
                 <Border.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Bottom}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
 
             <!--  Corner Indicators  -->
-            <Ellipse
-                Canvas.Left="24"
-                Canvas.Top="24"
-                Width="80"
-                Height="80"
-                Fill="{DynamicResource MahApps.Brushes.Accent}"
-                Opacity="0.4">
-                <Ellipse.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+            <Border
+                Width="{Binding FloatingMenuDockCornerThreshold}"
+                Height="{Binding FloatingMenuDockCornerHeight}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
+                <Border.Visibility>
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.TopLeft}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
-                </Ellipse.Visibility>
-            </Ellipse>
+                </Border.Visibility>
+            </Border>
 
-            <Ellipse
-                Canvas.Top="24"
-                Width="80"
-                Height="80"
-                Fill="{DynamicResource MahApps.Brushes.Accent}"
-                Opacity="0.4">
-                <Ellipse.RenderTransform>
-                    <TranslateTransform X="{Binding ActualWidth, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=104}" />
-                </Ellipse.RenderTransform>
-                <Ellipse.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+            <Border
+                Width="{Binding FloatingMenuDockCornerThreshold}"
+                Height="{Binding FloatingMenuDockCornerHeight}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top">
+                <Border.Visibility>
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.TopRight}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
-                </Ellipse.Visibility>
-            </Ellipse>
+                </Border.Visibility>
+            </Border>
 
-            <Ellipse
-                Canvas.Left="24"
-                Width="80"
-                Height="80"
-                Fill="{DynamicResource MahApps.Brushes.Accent}"
-                Opacity="0.4">
-                <Ellipse.RenderTransform>
-                    <TranslateTransform Y="{Binding ActualHeight, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=104}" />
-                </Ellipse.RenderTransform>
-                <Ellipse.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+            <Border
+                Width="{Binding FloatingMenuDockCornerThreshold}"
+                Height="{Binding FloatingMenuDockCornerHeight}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom">
+                <Border.Visibility>
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.BottomLeft}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
-                </Ellipse.Visibility>
-            </Ellipse>
+                </Border.Visibility>
+            </Border>
 
-            <Ellipse
-                Width="80"
-                Height="80"
-                Fill="{DynamicResource MahApps.Brushes.Accent}"
-                Opacity="0.4">
-                <Ellipse.RenderTransform>
-                    <TranslateTransform X="{Binding ActualWidth, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=104}" Y="{Binding ActualHeight, ElementName=MainWindowRoot, Converter={StaticResource SubtractConverter}, ConverterParameter=104}" />
-                </Ellipse.RenderTransform>
-                <Ellipse.Visibility>
-                    <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+            <Border
+                Width="{Binding FloatingMenuDockCornerThreshold}"
+                Height="{Binding FloatingMenuDockCornerHeight}"
+                Style="{StaticResource SnapIndicatorStyle}"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom">
+                <Border.Visibility>
+                    <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.BottomRight}" />
+                        <Binding Path="ShowAllSnapZonesOnClip" />
+                        <Binding Path="IsFloatingMenuClipping" />
                     </MultiBinding>
-                </Ellipse.Visibility>
-            </Ellipse>
-        </Canvas>
+                </Border.Visibility>
+            </Border>
+        </Grid>
 
         <Grid
             x:Name="FloatingMenuOverlayAnchor"
+            Margin="5"
             Background="Transparent"
             IsHitTestVisible="False" />
 
         <!--  Floating Orbit Menu (Popup to stay above embedded RS window)  -->
         <Popup
             x:Name="FloatingMenuHandlePopup"
+            Width="Auto"
+            Height="Auto"
             AllowsTransparency="True"
             Focusable="False"
             HorizontalOffset="{Binding FloatingMenuLeft}"
@@ -768,36 +1071,29 @@
             <Grid>
                 <Border
                     x:Name="FloatingMenuHandle"
-                    Padding="8"
+                    Padding="6"
                     BorderBrush="{DynamicResource MahApps.Brushes.Accent3}"
-                    BorderThickness="1.4"
-                    CornerRadius="28"
+                    BorderThickness="1.5"
+                    CornerRadius="29"
                     MouseMove="FloatingMenu_MouseMove"
                     Opacity="{Binding FloatingMenuOpacity}"
                     PreviewMouseLeftButtonDown="FloatingMenuHandle_PreviewMouseLeftButtonDown"
                     PreviewMouseLeftButtonUp="FloatingMenuHandle_PreviewMouseLeftButtonUp"
                     PreviewMouseMove="FloatingMenuHandle_PreviewMouseMove">
                     <Border.Background>
-                        <LinearGradientBrush Opacity="0.92" StartPoint="0,0" EndPoint="1,1">
+                        <LinearGradientBrush Opacity="0.94" StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
                             <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
                         </LinearGradientBrush>
                     </Border.Background>
-                    <Border.Effect>
-                        <DropShadowEffect
-                            BlurRadius="18"
-                            Opacity="0.35"
-                            ShadowDepth="2"
-                            Color="#80000000" />
-                    </Border.Effect>
                     <ToggleButton
                         x:Name="FloatingMenuToggleButton"
                         IsChecked="{Binding IsFloatingMenuExpanded, Mode=TwoWay}"
                         Style="{StaticResource Orbit.FloatingMenuToggleStyle}"
                         ToolTip="Orbit Controls">
                         <iconPacks:PackIconGameIcons
-                            Width="28"
-                            Height="28"
+                            Width="32"
+                            Height="32"
                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                             Kind="Orbital" />
                         <ToggleButton.ContextMenu>
@@ -831,26 +1127,36 @@
                 <Popup
                     x:Name="FloatingMenuPopup"
                     AllowsTransparency="True"
+                    HorizontalOffset="{Binding FloatingMenuPopupHorizontalOffset}"
                     IsOpen="{Binding IsFloatingMenuExpanded, Mode=TwoWay}"
                     Placement="{Binding FloatingMenuPopupPlacement}"
                     PlacementTarget="{Binding ElementName=FloatingMenuToggleButton}"
-                    PopupAnimation="Slide"
-                    StaysOpen="False">
+                    PopupAnimation="Fade"
+                    StaysOpen="False"
+                    VerticalOffset="{Binding FloatingMenuPopupVerticalOffset}">
                     <Border
                         x:Name="FloatingMenuPopupContent"
-                        Padding="10"
+                        Padding="12"
                         Background="Transparent"
-                        BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                        BorderThickness="1"
-                        CornerRadius="16"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Accent2}"
+                        BorderThickness="1.5"
+                        CornerRadius="18"
                         MouseMove="FloatingMenu_MouseMove"
                         Opacity="1">
                         <Grid>
-                            <Rectangle
-                                Fill="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                                Opacity="{Binding FloatingMenuBackgroundOpacity}"
-                                RadiusX="16"
-                                RadiusY="16" />
+                            <Border
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                CornerRadius="18"
+                                Opacity="{Binding FloatingMenuBackgroundOpacity}">
+                                <Border.Effect>
+                                    <DropShadowEffect
+                                        BlurRadius="8"
+                                        Direction="90"
+                                        Opacity="0.15"
+                                        ShadowDepth="1"
+                                        Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+                                </Border.Effect>
+                            </Border>
                             <StackPanel Margin="10">
                                 <StackPanel.Style>
                                     <Style TargetType="StackPanel">
@@ -897,9 +1203,9 @@
                                         x:Key="FloatingMenuButtonStyle"
                                         BasedOn="{StaticResource MahApps.Styles.Button.Circle}"
                                         TargetType="Button">
-                                        <Setter Property="Width" Value="48" />
-                                        <Setter Property="Height" Value="48" />
-                                        <Setter Property="Margin" Value="4" />
+                                        <Setter Property="Width" Value="50" />
+                                        <Setter Property="Height" Value="50" />
+                                        <Setter Property="Margin" Value="5" />
                                         <Setter Property="LayoutTransform">
                                             <Setter.Value>
                                                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -967,11 +1273,24 @@
                                     <iconPacks:PackIconMaterial Kind="Console" />
                                 </Button>
                                 <Button
-                                    Click="FloatingMenuSettingsButton_Click"
+                                    Command="{Binding OpenApiDocumentationCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="Menu settings"
+                                    ToolTip="API Documentation"
+                                    Visibility="{Binding ShowMenuApiDocumentation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenSettingsCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="Settings"
                                     Visibility="{Binding ShowMenuSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="Tune" />
+                                    <iconPacks:PackIconMaterial Kind="Cog" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenToolsOverviewCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="Tools Management">
+                                    <iconPacks:PackIconMaterial Kind="Tools" />
                                 </Button>
                             </StackPanel>
                         </Grid>

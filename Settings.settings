@@ -68,6 +68,9 @@
   <Setting Name="ShowMenuConsole" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuApiDocumentation" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowMenuSettings" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -77,8 +80,32 @@
   <Setting Name="ShowFloatingMenuOnToolTabs" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
   </Setting>
-  <Setting Name="ShowMemoryErrorDebug" Type="System.Boolean" Scope="User">
+  <Setting Name="ShowFloatingMenuOnHome" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="FloatingMenuQuickToggle" Type="System.String" Scope="User">
+    <Value Profile="(Default)">MiddleMouse</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockEdgeThreshold" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">80</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockCornerThreshold" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">120</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockCornerRoundness" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">0.55</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockEdgeCoverage" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">0.85</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockZoneOpacity" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">0.32</Value>
+  </Setting>
+  <Setting Name="FloatingMenuDockCornerHeight" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">120</Value>
+  </Setting>
+  <Setting Name="FloatingMenuShowAllSnapZonesOnClip" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
   </Setting>
 </Settings>
 </SettingsFile>

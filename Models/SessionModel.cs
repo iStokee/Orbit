@@ -16,12 +16,15 @@ namespace Orbit.Models
 		private nint _externalHandle;
 		private int? _parentProcessId;
 		private SessionType _sessionType;
+		private bool _isRenaming;
+		private string _editableName = string.Empty;
 
 		public SessionModel()
 		{
 			State = SessionState.Initializing;
 			InjectionState = InjectionState.NotReady;
 			SessionType = SessionType.RuneScape; // Default to RS3
+			_editableName = Name ?? string.Empty;
 		}
 
 		public Guid Id { get; init; }
@@ -62,6 +65,36 @@ namespace Orbit.Models
 				if (name == value)
 					return;
 				name = value;
+				OnPropertyChanged();
+
+				if (_editableName != value)
+				{
+					_editableName = value;
+					OnPropertyChanged(nameof(EditableName));
+				}
+			}
+		}
+
+		public string EditableName
+		{
+			get => _editableName;
+			set
+			{
+				if (_editableName == value)
+					return;
+				_editableName = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public bool IsRenaming
+		{
+			get => _isRenaming;
+			set
+			{
+				if (_isRenaming == value)
+					return;
+				_isRenaming = value;
 				OnPropertyChanged();
 			}
 		}
