@@ -314,6 +314,18 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuToolsOverview {
+            get {
+                return ((bool)(this["ShowMenuToolsOverview"]));
+            }
+            set {
+                this["ShowMenuToolsOverview"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowFloatingMenuOnSessionTabs {
             get {
                 return ((bool)(this["ShowFloatingMenuOnSessionTabs"]));

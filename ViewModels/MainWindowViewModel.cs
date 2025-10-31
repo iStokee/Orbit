@@ -1164,6 +1164,17 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowMenuToolsOverview
+	{
+		get => Settings.Default.ShowMenuToolsOverview;
+		set
+		{
+			if (Settings.Default.ShowMenuToolsOverview == value) return;
+			Settings.Default.ShowMenuToolsOverview = value;
+			OnPropertyChanged(nameof(ShowMenuToolsOverview));
+		}
+	}
+
 	public bool ShowFloatingMenuOnHome
 	{
 		get => Settings.Default.ShowFloatingMenuOnHome;

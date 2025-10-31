@@ -23,6 +23,8 @@ namespace Orbit.ViewModels
 		private CustomThemeDefinition? selectedCustomTheme;
 		private string? selectedBaseTheme;
 		private string? selectedColorScheme;
+		private bool useCustomForeground;
+		private MediaColor selectedCustomForeground = MediaColors.White;
 
 		public ThemeManagerViewModel() : this(new ThemeService())
 		{
@@ -100,6 +102,41 @@ namespace Orbit.ViewModels
 			}
 		}
 
+		public bool UseCustomForeground
+		{
+			get => useCustomForeground;
+			set
+			{
+				if (useCustomForeground == value)
+					return;
+				useCustomForeground = value;
+				OnPropertyChanged();
+
+				if (SelectedCustomTheme != null)
+				{
+					SelectedCustomTheme.OverrideForeground = value;
+					SelectedCustomTheme.ForegroundHex = value ? SelectedCustomForeground.ToString() : null;
+				}
+			}
+		}
+
+		public MediaColor SelectedCustomForeground
+		{
+			get => selectedCustomForeground;
+			set
+			{
+				if (selectedCustomForeground == value)
+					return;
+				selectedCustomForeground = value;
+				OnPropertyChanged();
+
+				if (UseCustomForeground && SelectedCustomTheme != null)
+				{
+					SelectedCustomTheme.ForegroundHex = selectedCustomForeground.ToString();
+				}
+			}
+		}
+
 		public CustomThemeDefinition? SelectedCustomTheme
 		{
 			get => selectedCustomTheme;
@@ -133,6 +170,32 @@ namespace Orbit.ViewModels
 					{
 						// Ignore malformed colors and keep current picker selection.
 					}
+
+					if (selectedCustomTheme.OverrideForeground && !string.IsNullOrWhiteSpace(selectedCustomTheme.ForegroundHex))
+					{
+						try
+						{
+							var convertedForeground = MediaColorConverter.ConvertFromString(selectedCustomTheme.ForegroundHex);
+							if (convertedForeground is MediaColor foregroundColor)
+							{
+								SelectedCustomForeground = foregroundColor;
+							}
+						}
+						catch
+						{
+							// Ignore parse failures and fall back below.
+						}
+						UseCustomForeground = true;
+					}
+					else
+					{
+						UseCustomForeground = false;
+						SelectedCustomForeground = themeService.GetCurrentForegroundColor();
+					}
+				}
+				else
+				{
+					UseCustomForeground = false;
 				}
 			}
 		}
@@ -168,6 +231,10 @@ namespace Orbit.ViewModels
 			{
 				SelectedColorScheme = ColorSchemes.FirstOrDefault() ?? "Steel";
 			}
+
+			SelectedCustomColor = themeService.GetCurrentAccentColor();
+			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
+			UseCustomForeground = false;
 		}
 
 		private bool CanApplyTheme()
@@ -185,6 +252,8 @@ namespace Orbit.ViewModels
 
 			themeService.ApplyBuiltInTheme(SelectedBaseTheme, SelectedColorScheme);
 			SelectedCustomColor = themeService.GetCurrentAccentColor();
+			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
+			UseCustomForeground = false;
 		}
 
 		private bool CanSaveCustomTheme()
@@ -199,7 +268,9 @@ namespace Orbit.ViewModels
 			{
 				Name = CustomThemeName.Trim(),
 				BaseTheme = SelectedBaseTheme,
-				AccentHex = SelectedCustomColor.ToString()
+				AccentHex = SelectedCustomColor.ToString(),
+				OverrideForeground = UseCustomForeground,
+				ForegroundHex = UseCustomForeground ? SelectedCustomForeground.ToString() : null
 			};
 
 			var existing = CustomThemes.FirstOrDefault(t => string.Equals(t.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
@@ -207,6 +278,8 @@ namespace Orbit.ViewModels
 			{
 				existing.BaseTheme = definition.BaseTheme;
 				existing.AccentHex = definition.AccentHex;
+				existing.OverrideForeground = definition.OverrideForeground;
+				existing.ForegroundHex = definition.ForegroundHex;
 			}
 			else
 			{
@@ -237,7 +310,12 @@ namespace Orbit.ViewModels
 			selectedColorScheme = null;
 			OnPropertyChanged(nameof(SelectedColorScheme));
 
+			SelectedCustomTheme.OverrideForeground = UseCustomForeground;
+			SelectedCustomTheme.ForegroundHex = UseCustomForeground ? SelectedCustomForeground.ToString() : null;
+
 			themeService.ApplyCustomTheme(SelectedCustomTheme);
+			SelectedCustomColor = themeService.GetCurrentAccentColor();
+			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
 		}
 
 		private void DeleteCustomTheme()

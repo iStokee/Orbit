@@ -74,6 +74,9 @@
   <Setting Name="ShowMenuSettings" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuToolsOverview" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowFloatingMenuOnSessionTabs" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>

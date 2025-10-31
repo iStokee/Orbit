@@ -633,6 +633,10 @@
                             Margin="0,4,12,4"
                             Header="Settings"
                             IsOn="{Binding ShowMenuSettings, Mode=TwoWay}" />
+                        <Controls:ToggleSwitch
+                            Margin="12,4,0,4"
+                            Header="Tools Management"
+                            IsOn="{Binding ShowMenuToolsOverview, Mode=TwoWay}" />
                     </UniformGrid>
                 </StackPanel>
             </Border>

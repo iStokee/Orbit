@@ -9,6 +9,7 @@ using System.Windows.Media;
 using Application = System.Windows.Application;
 using ColorConverter = System.Windows.Media.ColorConverter;
 using Color = System.Windows.Media.Color;
+using SystemColors = System.Windows.SystemColors;
 
 namespace Orbit.Services
 {
@@ -17,6 +18,8 @@ namespace Orbit.Services
 		public string Name { get; set; } = string.Empty;
 		public string BaseTheme { get; set; } = "Dark";
 		public string AccentHex { get; set; } = "#FF1BA1E2";
+		public bool OverrideForeground { get; set; }
+		public string? ForegroundHex { get; set; }
 	}
 
 	/// <summary>
@@ -175,6 +178,7 @@ namespace Orbit.Services
 		public void ApplyBuiltInTheme(string baseTheme, string colorScheme)
 		{
 			ThemeLogger.LogThemeChange("Built-in", baseTheme, colorScheme);
+			RemoveCustomForegroundOverrides();
 			RemoveCustomAccentOverrides();
 
 			// v2 format: "Dark.Cyan", "Light.Blue", etc.
@@ -218,6 +222,25 @@ namespace Orbit.Services
 			}
 
 			return Colors.SteelBlue;
+		}
+
+		public Color GetCurrentForegroundColor()
+		{
+			var resources = Application.Current.Resources;
+
+			if (resources.Contains("MahApps.Brushes.ThemeForeground") &&
+			    resources["MahApps.Brushes.ThemeForeground"] is SolidColorBrush brush)
+			{
+				return brush.Color;
+			}
+
+			if (resources.Contains("MahApps.Colors.ThemeForeground") &&
+			    resources["MahApps.Colors.ThemeForeground"] is Color color)
+			{
+				return color;
+			}
+
+			return Colors.White;
 		}
 
 		private static void ApplyAccentResourcesFromTheme(Theme theme)
@@ -269,6 +292,7 @@ namespace Orbit.Services
 			ThemeLogger.Log($"Using base theme: {baseTheme}");
 
 			// Remove any existing custom accent overrides first
+			RemoveCustomForegroundOverrides();
 			RemoveCustomAccentOverrides();
 
 			// Apply base theme first (using a standard color scheme)
@@ -295,6 +319,24 @@ namespace Orbit.Services
 			// We need to apply our custom accents AFTER to ensure they override Steel colors
 			ThemeLogger.Log("Applying custom accent colors");
 			ApplyAccentResources(accentColor);
+
+			if (customTheme.OverrideForeground && !string.IsNullOrWhiteSpace(customTheme.ForegroundHex))
+			{
+				if (TryParseColor(customTheme.ForegroundHex, out var foregroundColor))
+				{
+					ThemeLogger.Log($"Applying custom foreground color: {customTheme.ForegroundHex}");
+					ApplyForegroundResources(foregroundColor);
+				}
+				else
+				{
+					ThemeLogger.Log($"Failed to parse custom foreground {customTheme.ForegroundHex}, keeping theme defaults");
+					RemoveCustomForegroundOverrides();
+				}
+			}
+			else
+			{
+				RemoveCustomForegroundOverrides();
+			}
 
 			ThemeLogger.Log("<<< Custom theme applied successfully");
 
@@ -415,6 +457,79 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("CheckmarkFill", resources["CheckmarkFill"]);
 			resources["RightArrowFill"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("RightArrowFill", resources["RightArrowFill"]);
+		}
+
+		private static void ApplyForegroundResources(Color foregroundColor)
+		{
+			ThemeLogger.Log($"ApplyForegroundResources: {foregroundColor}");
+			var resources = Application.Current.Resources;
+
+			resources["MahApps.Colors.ThemeForeground"] = foregroundColor;
+			ThemeLogger.LogResourceSet("MahApps.Colors.ThemeForeground", foregroundColor);
+
+			SetBrushResource("MahApps.Brushes.ThemeForeground", foregroundColor);
+			SetBrushResource("MahApps.Brushes.Text", foregroundColor);
+			SetBrushResource("MahApps.Brushes.Button.Border.Focus", foregroundColor);
+			SetBrushResource("MahApps.Brushes.TextBox.Border.Focus", foregroundColor);
+			SetBrushResource("MahApps.Brushes.ComboBox.Border.Focus", foregroundColor);
+			SetBrushResource("MahApps.Brushes.Flyout.Foreground", foregroundColor);
+			SetBrushResource("MahApps.Brushes.ContextMenu.Border", foregroundColor);
+			SetBrushResource("MahApps.Brushes.SubMenu.Border", foregroundColor);
+			SetBrushResource("MahApps.Brushes.Button.Square.Foreground.MouseOver", foregroundColor);
+			SetBrushResource("MahApps.Brushes.DataGrid.Selection.Text.Inactive", foregroundColor);
+
+			var overlayAlpha = (byte)Math.Clamp((int)(foregroundColor.A * 0.55), 0, 255);
+			var overlayColor = Color.FromArgb(overlayAlpha, foregroundColor.R, foregroundColor.G, foregroundColor.B);
+			SetBrushResource("MahApps.Brushes.Window.FlyoutOverlay", overlayColor);
+
+			SetBrushResource(SystemColors.ControlTextBrushKey, foregroundColor);
+			SetBrushResource(SystemColors.MenuTextBrushKey, foregroundColor);
+			SetBrushResource(SystemColors.HighlightTextBrushKey, foregroundColor);
+		}
+
+		private static void RemoveCustomForegroundOverrides()
+		{
+			ThemeLogger.Log("RemoveCustomForegroundOverrides: Cleaning up custom foreground resources");
+			var resources = Application.Current.Resources;
+
+			object[] keysToRemove =
+			{
+				"MahApps.Colors.ThemeForeground",
+				"MahApps.Brushes.ThemeForeground",
+				"MahApps.Brushes.Text",
+				"MahApps.Brushes.Button.Border.Focus",
+				"MahApps.Brushes.TextBox.Border.Focus",
+				"MahApps.Brushes.ComboBox.Border.Focus",
+				"MahApps.Brushes.Flyout.Foreground",
+				"MahApps.Brushes.ContextMenu.Border",
+				"MahApps.Brushes.SubMenu.Border",
+				"MahApps.Brushes.Button.Square.Foreground.MouseOver",
+				"MahApps.Brushes.DataGrid.Selection.Text.Inactive",
+				"MahApps.Brushes.Window.FlyoutOverlay",
+				SystemColors.ControlTextBrushKey,
+				SystemColors.MenuTextBrushKey,
+				SystemColors.HighlightTextBrushKey
+			};
+
+			int removedCount = 0;
+			foreach (var key in keysToRemove)
+			{
+				if (resources.Contains(key))
+				{
+					resources.Remove(key);
+					ThemeLogger.LogResourceRemove(key.ToString() ?? key.GetType().Name);
+					removedCount++;
+				}
+			}
+
+			ThemeLogger.Log($"Removed {removedCount} custom foreground resources");
+		}
+
+		private static void SetBrushResource(object key, Color color)
+		{
+			var brush = CreateFrozenBrush(color);
+			Application.Current.Resources[key] = brush;
+			ThemeLogger.LogResourceSet(key.ToString() ?? key.GetType().Name, brush);
 		}
 
 		private static ResourceDictionary EnsureCustomAccentDictionary()

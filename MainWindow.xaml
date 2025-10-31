@@ -1289,7 +1289,8 @@
                                 <Button
                                     Command="{Binding OpenToolsOverviewCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="Tools Management">
+                                    ToolTip="Tools Management"
+                                    Visibility="{Binding ShowMenuToolsOverview, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="Tools" />
                                 </Button>
                             </StackPanel>
