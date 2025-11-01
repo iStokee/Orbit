@@ -162,7 +162,7 @@ namespace Orbit.ViewModels
 			FilteredAccounts = new ObservableCollection<AccountModel>();
 
 			AddAccountCommand = new RelayCommand(_ => AddAccount(), _ => CanAddAccount);
-			DeleteAccountCommand = new RelayCommand(DeleteAccount, _ => SelectedAccount != null);
+			DeleteAccountCommand = new RelayCommand(param => DeleteAccount(param), _ => SelectedAccount != null);
 			ClearFormCommand = new RelayCommand(_ => ClearForm());
 			LoginSelectedAccountCommand = new RelayCommand(async _ => await LoginSelectedAccountAsync(), _ => CanExecuteLogin());
 

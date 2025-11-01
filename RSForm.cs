@@ -13,9 +13,9 @@ namespace Orbit
 {
 	public partial class RSForm : Form
 	{
-		internal static string rs2clientWindowTitle;
-		internal static Process RuneScapeProcess;
-		internal static Process process;
+		private string rs2clientWindowTitle;
+		private Process RuneScapeProcess;
+		private Process process;
 		internal IntPtr rsMainWindowHandle;
 		internal Process pDocked;
 		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -26,24 +26,27 @@ namespace Orbit
 		private uint? originalWindowStyle;
 		private bool dockedStylesApplied;
 		private bool isCurrentlyDocked;
+		private IntPtr dockedHandleCache;
 		private const int SW_MAXIMIZE = 3;
 		//internal static List<RuneScapeHandler> rsHandlerList = new List<RuneScapeHandler>();
 		private bool hasStarted = false;
 		Thread StartRS;
-		internal static IntPtr rsWindow;
-		internal static int rs2ClientID;
-		internal static int runescapeProcessID;
-		internal static IntPtr hWndDocked;
-		internal static Process rs2client = null;
-		internal static Process runescape = null;
-		internal static IntPtr jagOpenGLViewWindowHandler;
-		internal static IntPtr JagWindow;
-		internal static IntPtr wxWindowNR;
+		private IntPtr rsWindow;
+		private int rs2ClientID;
+		private int runescapeProcessID;
+		private IntPtr _dockedHandle;
+		private Process rs2client = null;
+		private Process runescape = null;
+		private IntPtr jagOpenGLViewWindowHandler;
+		private IntPtr JagWindow;
+		private IntPtr wxWindowNR;
 
 		public int? ParentProcessId { get; private set; }
 
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public int DockedRSHwnd { get; set; }
+		public IntPtr DockedRSHwnd { get; private set; }
+
+		public IntPtr DockedClientHandle => _dockedHandle;
 
 		[DllImport("user32.dll")]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
@@ -141,14 +144,14 @@ namespace Orbit
 			}
 
 			this.FormBorderStyle = FormBorderStyle.None;
-			hWndDocked = IntPtr.Zero;
+			_dockedHandle = IntPtr.Zero;
 			ParentProcessId = null;
 
 			await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
 			{
-				if (hWndDocked != IntPtr.Zero)
+				if (_dockedHandle != IntPtr.Zero)
 				{
-					var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+					var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
 					if (hWndOriginalParent == IntPtr.Zero)
 					{
 						hWndOriginalParent = previousParent;
@@ -161,15 +164,15 @@ namespace Orbit
 			await LoadRS();
 
 			hasStarted = true;
-			Console.WriteLine($"Finished loading {hWndDocked}");
+			Console.WriteLine($"Finished loading {_dockedHandle}");
 		}
 
 		public async Task LoadRS()
 		{
-			if (hWndDocked != IntPtr.Zero)
-			{
-				return;
-			}
+				if (_dockedHandle != IntPtr.Zero)
+				{
+					return;
+				}
 
 			try
 			{
@@ -179,9 +182,9 @@ namespace Orbit
 				// Dock the client to the panel
 				await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
 				{
-					if (hWndDocked != IntPtr.Zero)
+					if (_dockedHandle != IntPtr.Zero)
 					{
-						var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+						var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
 						if (hWndOriginalParent == IntPtr.Zero)
 						{
 							hWndOriginalParent = previousParent;
@@ -192,26 +195,60 @@ namespace Orbit
 
 				if (ClientSettings.rs2cPID > 0)
 				{
-					ResizeWindow();
-					Console.WriteLine("Game client resized successfully");
+						ResizeWindow();
+						Console.WriteLine("Game client resized successfully");
+					}
 				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"An error occurred: {ex}");
-				processReadyTcs.TrySetException(ex);
-				throw;
+				catch (Exception ex)
+				{
+					Console.WriteLine($"An error occurred: {ex}");
+					processReadyTcs.TrySetException(ex);
+					throw;
+				}
+
 			}
 
+		public IntPtr GetRenderSurfaceHandle()
+		{
+			var dockedHandle = dockedHandleCache;
+			if (dockedHandle == IntPtr.Zero)
+			{
+				dockedHandle = DockedRSHwnd;
+			}
+
+			if (dockedHandle == IntPtr.Zero)
+			{
+				dockedHandle = _dockedHandle;
+			}
+
+			if (dockedHandle == IntPtr.Zero)
+			{
+				return IntPtr.Zero;
+			}
+
+			var renderView = FindWindowEx(dockedHandle, IntPtr.Zero, "JagRenderView", null);
+			if (renderView != IntPtr.Zero)
+			{
+				return renderView;
+			}
+
+			// Legacy clients sometimes host rendering inside a Sun AWT canvas.
+			var sunCanvas = FindWindowEx(dockedHandle, IntPtr.Zero, "SunAwtCanvas", null);
+			if (sunCanvas != IntPtr.Zero)
+			{
+				return sunCanvas;
+			}
+
+			return dockedHandle;
 		}
 
 		internal void FocusGameWindow()
 		{
 			try
 			{
-				if (hWndDocked != IntPtr.Zero)
+				if (_dockedHandle != IntPtr.Zero)
 				{
-					SetFocus(hWndDocked);
+					SetFocus(_dockedHandle);
 				}
 			}
 			catch { /* best effort */ }
@@ -221,7 +258,7 @@ namespace Orbit
 		{
 			void PerformUndock()
 			{
-				if (hWndDocked == IntPtr.Zero)
+				if (_dockedHandle == IntPtr.Zero)
 				{
 					return;
 				}
@@ -233,11 +270,11 @@ namespace Orbit
 				const int SWP_NOACTIVATE = 0x0010;
 				const int SWP_FRAMECHANGED = 0x0020;
 
-				if (dockedStylesApplied && originalWindowStyle.HasValue)
-				{
-					SetWindowLong(hWndDocked, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
-					SetWindowPos(
-						hWndDocked,
+					if (dockedStylesApplied && originalWindowStyle.HasValue)
+					{
+						SetWindowLong(_dockedHandle, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
+						SetWindowPos(
+							_dockedHandle,
 						IntPtr.Zero,
 						0,
 						0,
@@ -249,11 +286,13 @@ namespace Orbit
 
 				if (isCurrentlyDocked)
 				{
-					SetParent(hWndDocked, hWndOriginalParent);
-					hWndParent = IntPtr.Zero;
-					isCurrentlyDocked = false;
+						SetParent(_dockedHandle, hWndOriginalParent);
+						hWndParent = IntPtr.Zero;
+						isCurrentlyDocked = false;
+					}
+
+					dockedHandleCache = IntPtr.Zero;
 				}
-			}
 
 			try
 			{
@@ -279,7 +318,7 @@ namespace Orbit
 
 		private async Task ExecuteRSLoadAsync()
 		{
-			if (hWndDocked != IntPtr.Zero)
+			if (_dockedHandle != IntPtr.Zero)
 			{
 				return;
 			}
@@ -379,8 +418,8 @@ namespace Orbit
 
 		private async Task WaitForAndSetDockingWindowAsync()
 		{
-			// Your logic to wait for the docking window and set hWndDocked
-			while (hWndDocked == IntPtr.Zero)
+			// Your logic to wait for the docking window and set _dockedHandle
+			while (_dockedHandle == IntPtr.Zero)
 			{
 				//wait for the window to be ready for input;
 
@@ -400,8 +439,8 @@ namespace Orbit
 					break; //abort if the process finished before we got a handle.
 				}
 
-				hWndDocked = pDocked.MainWindowHandle;  //cache the window handle
-				ClientSettings.gameHandle = hWndDocked;
+				_dockedHandle = pDocked.MainWindowHandle;  //cache the window handle
+				ClientSettings.gameHandle = _dockedHandle;
 				Process q = Process.GetProcessById(rs2ClientID);
 				rsWindow = FindWindowEx(q.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
 				ClientSettings.jagOpenGL = rsWindow;
@@ -422,15 +461,16 @@ namespace Orbit
 			IntPtr dockedHandle = IntPtr.Zero;
 			panel_DockPanel.Invoke((MethodInvoker)delegate
 			{
-				var previousParent = SetParent(hWndDocked, panel_DockPanel.Handle);
+				var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
 				if (hWndOriginalParent == IntPtr.Zero)
 				{
 					hWndOriginalParent = previousParent;
 				}
 				hWndParent = panel_DockPanel.Handle;
-				// ClientSettings.cameraHandle = panel1.Handle;
-				DockedRSHwnd = (int)hWndDocked;
-				dockedHandle = hWndDocked;
+					// ClientSettings.cameraHandle = panel1.Handle;
+					DockedRSHwnd = _dockedHandle;
+					dockedHandleCache = _dockedHandle;
+					dockedHandle = _dockedHandle;
 
 				// Ensure correct child window styles and refresh frame
 				const int GWL_STYLE = -16;
@@ -439,14 +479,14 @@ namespace Orbit
 				const uint WS_CLIPSIBLINGS = 0x04000000;
 				const uint WS_CLIPCHILDREN = 0x02000000;
 				const uint WS_POPUP = 0x80000000; // <- now valid as uint
-				uint curStyle = (uint)GetWindowLong(hWndDocked, GWL_STYLE);
+				uint curStyle = (uint)GetWindowLong(_dockedHandle, GWL_STYLE);
 				if (!originalWindowStyle.HasValue)
 				{
 					originalWindowStyle = curStyle;
 				}
 				uint newStyle = (curStyle & ~WS_POPUP) |
 								WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-				SetWindowLong(hWndDocked, GWL_STYLE, (uint)(int)newStyle);
+				SetWindowLong(_dockedHandle, GWL_STYLE, (uint)(int)newStyle);
 				dockedStylesApplied = true;
 				isCurrentlyDocked = true;
 
@@ -455,7 +495,7 @@ namespace Orbit
 				const int SWP_NOMOVE = 0x0002;
 				const int SWP_NOACTIVATE = 0x0010;
 				const int SWP_FRAMECHANGED = 0x0020;
-				SetWindowPos(hWndDocked, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+				SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 			});
 
 			if (dockedHandle != IntPtr.Zero)
@@ -480,7 +520,7 @@ namespace Orbit
 		{
 			try
 			{
-				IntPtr handle = hWndDocked;
+				IntPtr handle = _dockedHandle;
 
 				await Task.Run(() =>
 				{
@@ -500,7 +540,7 @@ namespace Orbit
 		{
 			try
 			{
-				IntPtr handle = hWndDocked;
+				IntPtr handle = _dockedHandle;
 				int width = panel_DockPanel.Width + 16;
 				int height = panel_DockPanel.Height + 40;
 

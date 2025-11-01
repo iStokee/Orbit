@@ -77,6 +77,12 @@
   <Setting Name="ShowMenuToolsOverview" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuSessionGallery" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowMenuSessionGrid" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowFloatingMenuOnSessionTabs" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -109,6 +115,24 @@
   </Setting>
   <Setting Name="FloatingMenuShowAllSnapZonesOnClip" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
+  </Setting>
+  <Setting Name="SessionGridOverflowPolicy" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">0</Value>
+  </Setting>
+  <Setting Name="SessionGridConflictResolution" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">0</Value>
+  </Setting>
+  <Setting Name="SessionGridMaxSplitsPerAxis" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">2</Value>
+  </Setting>
+  <Setting Name="SessionGridStickyLayout" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowFloatingMenuAutoShow" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="ShowThemeManagerWelcomeMessage" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
   </Setting>
 </Settings>
 </SettingsFile>

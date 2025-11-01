@@ -15,10 +15,23 @@ namespace Orbit.Services
 	{
 		private const string DefaultInjectorDll = "XInput1_4_inject.dll";
 		private const uint WM_CLOSE = 0x0010;
-		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(8);
+		private const int SW_HIDE = 0;
+		private const uint SWP_NOSIZE = 0x0001;
+		private const uint SWP_NOMOVE = 0x0002;
+		private const uint SWP_NOZORDER = 0x0004;
+		private const uint SWP_NOACTIVATE = 0x0010;
+		private const uint SWP_HIDEWINDOW = 0x0080;
+		private static readonly nint HWND_TOP = nint.Zero;
+		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(3);
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool PostMessage(nint hWnd, uint msg, nint wParam, nint lParam);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         public async Task InitializeSessionAsync(SessionModel session)
         {
@@ -33,6 +46,7 @@ namespace Orbit.Services
 				dockedHandler = async (_, args) =>
 				{
 					session.ExternalHandle = args.Handle;
+					session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
 					try { clientView.FocusEmbeddedClient(); } catch { }
 
 					if (session.InjectionState != InjectionState.Injected)
@@ -67,7 +81,8 @@ namespace Orbit.Services
 				session.RSForm = rsForm;
 				session.RSProcess = rsForm?.pDocked ?? throw new InvalidOperationException("RuneScape process handle is unavailable.");
 				session.ParentProcessId = rsForm?.ParentProcessId;
-				session.ExternalHandle = rsForm.DockedRSHwnd;
+				session.ExternalHandle = rsForm.DockedClientHandle;
+				session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
 				if (session.RSProcess != null)
 				{
 					var parentInfo = session.ParentProcessId.HasValue ? session.ParentProcessId.Value.ToString() : "n/a";
@@ -201,6 +216,12 @@ namespace Orbit.Services
 			session.UpdateState(SessionState.ShuttingDown, clearError: false);
 			session.UpdateInjectionState(InjectionState.NotReady);
 
+			HideWindowSilently(externalHandle);
+			if (process?.MainWindowHandle is nint mainHandle and not 0 && mainHandle != externalHandle)
+			{
+				HideWindowSilently(mainHandle);
+			}
+
 			// Detach embedded host to release Win32 parenting
 			if (session.HostControl is ChildClientView childHost)
 			{
@@ -273,6 +294,7 @@ namespace Orbit.Services
 			session.RSProcess = null;
 			session.ParentProcessId = null;
 			session.ExternalHandle = nint.Zero;
+			session.RenderSurfaceHandle = nint.Zero;
 			session.UpdateState(SessionState.Closed, clearError: false);
 		}
 
@@ -328,6 +350,22 @@ namespace Orbit.Services
 			finally
 			{
 				process.Dispose();
+			}
+		}
+
+		private static void HideWindowSilently(nint handle)
+		{
+			if (handle == nint.Zero)
+				return;
+
+			try
+			{
+				ShowWindow(handle, SW_HIDE);
+				SetWindowPos(handle, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+			}
+			catch
+			{
+				// Window may already be closing; ignore failures.
 			}
 		}
 

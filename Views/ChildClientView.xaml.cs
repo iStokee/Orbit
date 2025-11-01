@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using UserControl = System.Windows.Controls.UserControl;
 using Size = System.Windows.Size;
+using WF = System.Windows.Forms;
+using Drawing = System.Drawing;
 
 namespace Orbit.Views
 {
@@ -33,6 +35,8 @@ namespace Orbit.Views
         internal RSForm rsForm;
         internal bool hasStarted = false;
 		private readonly TaskCompletionSource<RSForm> sessionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly SessionParkingHost parkingHost = new();
+		private Size lastViewportSize = new Size(800, 600);
 
         public ChildClientView()
         {
@@ -40,6 +44,7 @@ namespace Orbit.Views
             _ = LoadNewSession();
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
+            IsVisibleChanged += OnIsVisibleChanged;
         }
 
         private void RSPanel_Loaded(object sender, RoutedEventArgs e)
@@ -54,6 +59,7 @@ namespace Orbit.Views
         private void RSPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             // Resize docked client when the WindowsFormsHost layout changes
+			lastViewportSize = new Size(Math.Max(1, e.NewSize.Width), Math.Max(1, e.NewSize.Height));
             _ = ResizeWindowAsync((int)Math.Max(0, e.NewSize.Width), (int)Math.Max(0, e.NewSize.Height));
         }
 
@@ -65,6 +71,8 @@ namespace Orbit.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+			RestoreSessionFromParking();
+
             if (Parent is TabItem parentTab && parentTab.Parent is TabablzControl tabControl)
             {
                 tabControl.SizeChanged += OnTabControlSizeChanged;
@@ -86,6 +94,8 @@ namespace Orbit.Views
 			{
 				tabControl.SizeChanged -= OnTabControlSizeChanged;
 			}
+
+			ParkSessionIntoOffscreenHost();
 		}
 
         private async void OnTabControlSizeChanged(object sender, SizeChangedEventArgs e)
@@ -167,6 +177,7 @@ namespace Orbit.Views
 
                 // Mark the session as started
                 hasStarted = true;
+				RestoreSessionFromParking();
 				sessionReadyTcs.TrySetResult(rsForm);
             }
             catch (Exception ex)
@@ -186,6 +197,114 @@ namespace Orbit.Views
 				rsForm?.FocusGameWindow();
 			}
 			catch { /* best effort only */ }
+		}
+
+		private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+		{
+			if (rsForm == null)
+			{
+				return;
+			}
+
+			if (e.NewValue is bool isVisible)
+			{
+				if (isVisible)
+				{
+					RestoreSessionFromParking();
+					var viewport = GetHostViewportSize();
+					if (viewport.Width > 0 && viewport.Height > 0)
+					{
+						lastViewportSize = viewport;
+						_ = ResizeWindowAsync((int)Math.Max(0, viewport.Width), (int)Math.Max(0, viewport.Height));
+					}
+				}
+				else
+				{
+					var viewport = GetHostViewportSize();
+					if (viewport.Width > 0 && viewport.Height > 0)
+					{
+						lastViewportSize = viewport;
+					}
+					ParkSessionIntoOffscreenHost();
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets the window handle that should be used for thumbnail capture.
+		/// Returns the docked RS client handle if available, otherwise IntPtr.Zero.
+		/// </summary>
+		public IntPtr GetCaptureHandle()
+		{
+			try
+			{
+				// Priority: RenderSurfaceHandle > DockedClientHandle > RSForm.Handle
+				if (rsForm != null)
+				{
+					var renderSurface = rsForm.GetRenderSurfaceHandle();
+					if (renderSurface != IntPtr.Zero)
+					{
+						return renderSurface;
+					}
+
+					var dockedHandle = rsForm.DockedClientHandle;
+					if (dockedHandle != IntPtr.Zero)
+					{
+						return dockedHandle;
+					}
+
+					// Fallback to the RSForm's own handle
+					if (rsForm.Handle != IntPtr.Zero)
+					{
+						return rsForm.Handle;
+					}
+				}
+
+				return IntPtr.Zero;
+			}
+			catch
+			{
+				return IntPtr.Zero;
+			}
+		}
+
+		private void RestoreSessionFromParking()
+		{
+			if (rsForm == null)
+				return;
+
+			try
+			{
+				parkingHost.Release(rsForm);
+				if (RSPanel != null && RSPanel.Child != rsForm)
+				{
+					RSPanel.Child = rsForm;
+				}
+			}
+			catch
+			{
+				// If the RSPanel is disposing, we'll reattach on next load.
+			}
+		}
+
+		private void ParkSessionIntoOffscreenHost()
+		{
+			if (rsForm == null)
+				return;
+
+			try
+			{
+				if (RSPanel?.Child == rsForm)
+				{
+					RSPanel.Child = null;
+				}
+			}
+			catch
+			{
+				// The panel may already be gone; continue parking regardless.
+			}
+
+			parkingHost.Park(rsForm, lastViewportSize);
 		}
 
 		internal void DetachSession()
@@ -216,6 +335,28 @@ namespace Orbit.Views
 			{
 				if (rsForm != null && !rsForm.IsDisposed)
 				{
+					if (rsForm.InvokeRequired)
+					{
+						rsForm.BeginInvoke(new Action(() =>
+						{
+							try { rsForm.Hide(); } catch { }
+						}));
+					}
+					else
+					{
+						try { rsForm.Hide(); } catch { }
+					}
+				}
+			}
+			catch
+			{
+				// Hide best-effort only.
+			}
+
+			try
+			{
+				if (rsForm != null && !rsForm.IsDisposed)
+				{
 					rsForm.Undock();
 					rsForm.Close();
 					rsForm.Dispose();
@@ -228,6 +369,103 @@ namespace Orbit.Views
 
 			hasStarted = false;
 			rsForm = null;
+			parkingHost.Dispose();
+			IsVisibleChanged -= OnIsVisibleChanged;
+		}
+
+		private sealed class SessionParkingHost : IDisposable
+		{
+			private readonly WF.Form hostForm;
+			private readonly WF.Panel hostPanel;
+			private bool disposed;
+
+			public SessionParkingHost()
+			{
+				hostPanel = new WF.Panel { Dock = WF.DockStyle.Fill };
+				hostForm = new WF.Form
+				{
+					FormBorderStyle = WF.FormBorderStyle.None,
+					ShowInTaskbar = false,
+					StartPosition = WF.FormStartPosition.Manual,
+					Location = new Drawing.Point(-20000, -20000),
+					Size = new Drawing.Size(2, 2),
+					Opacity = 0.01,
+					TopMost = false,
+					Text = "SessionParkingHost"
+				};
+				hostForm.Controls.Add(hostPanel);
+				hostForm.Load += (_, _) => hostForm.Hide();
+				hostForm.CreateControl();
+				hostForm.Show();
+				hostForm.Hide();
+			}
+
+			public void Park(WF.Control control, Size viewportSize)
+			{
+				if (disposed || control == null)
+					return;
+
+				EnsureFormReady(viewportSize);
+
+				if (control.Parent == hostPanel)
+				{
+					control.Dock = WF.DockStyle.Fill;
+					return;
+				}
+
+				if (control.Parent != null)
+				{
+					control.Parent.Controls.Remove(control);
+				}
+
+				hostPanel.Controls.Add(control);
+				control.Dock = WF.DockStyle.Fill;
+			}
+
+			public void Release(WF.Control control)
+			{
+				if (disposed || control == null)
+					return;
+
+				if (control.Parent == hostPanel)
+				{
+					hostPanel.Controls.Remove(control);
+				}
+			}
+
+			private void EnsureFormReady(Size viewportSize)
+			{
+				if (disposed)
+					return;
+
+				var width = Math.Max(1, (int)Math.Ceiling(viewportSize.Width));
+				var height = Math.Max(1, (int)Math.Ceiling(viewportSize.Height));
+
+				hostForm.Location = new Drawing.Point(-20000, -20000);
+				hostForm.Size = new Drawing.Size(width, height);
+				if (!hostForm.Visible)
+				{
+					hostForm.Show();
+				}
+				hostForm.Refresh();
+			}
+
+			public void Dispose()
+			{
+				if (disposed)
+					return;
+
+				disposed = true;
+				try
+				{
+					hostForm?.Close();
+				}
+				catch
+				{
+					// Ignore shutdown issues.
+				}
+				hostForm?.Dispose();
+			}
 		}
     }
 }

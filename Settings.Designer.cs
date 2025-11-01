@@ -326,6 +326,30 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuSessionGallery {
+            get {
+                return ((bool)(this["ShowMenuSessionGallery"]));
+            }
+            set {
+                this["ShowMenuSessionGallery"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuSessionGrid {
+            get {
+                return ((bool)(this["ShowMenuSessionGrid"]));
+            }
+            set {
+                this["ShowMenuSessionGrid"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowFloatingMenuOnSessionTabs {
             get {
                 return ((bool)(this["ShowFloatingMenuOnSessionTabs"]));
@@ -445,14 +469,86 @@ namespace Orbit {
 		
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool FloatingMenuShowAllSnapZonesOnClip {
-            get {
-                return ((bool)(this["FloatingMenuShowAllSnapZonesOnClip"]));
-            }
+		[global::System.Configuration.DefaultSettingValueAttribute("False")]
+		public bool FloatingMenuShowAllSnapZonesOnClip {
+			get {
+				return ((bool)(this["FloatingMenuShowAllSnapZonesOnClip"]));
+			}
             set {
-                this["FloatingMenuShowAllSnapZonesOnClip"] = value;
-            }
-        }
+				this["FloatingMenuShowAllSnapZonesOnClip"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int SessionGridOverflowPolicy {
+			get {
+				return ((int)(this["SessionGridOverflowPolicy"]));
+			}
+			set {
+				this["SessionGridOverflowPolicy"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int SessionGridConflictResolution {
+			get {
+				return ((int)(this["SessionGridConflictResolution"]));
+			}
+			set {
+				this["SessionGridConflictResolution"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("2")]
+		public int SessionGridMaxSplitsPerAxis {
+			get {
+				return ((int)(this["SessionGridMaxSplitsPerAxis"]));
+			}
+			set {
+				this["SessionGridMaxSplitsPerAxis"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("True")]
+		public bool SessionGridStickyLayout {
+			get {
+				return ((bool)(this["SessionGridStickyLayout"]));
+			}
+			set {
+				this["SessionGridStickyLayout"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("True")]
+		public bool ShowFloatingMenuAutoShow {
+			get {
+				return ((bool)(this["ShowFloatingMenuAutoShow"]));
+			}
+			set {
+				this["ShowFloatingMenuAutoShow"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("True")]
+		public bool ShowThemeManagerWelcomeMessage {
+			get {
+				return ((bool)(this["ShowThemeManagerWelcomeMessage"]));
+			}
+			set {
+				this["ShowThemeManagerWelcomeMessage"] = value;
+			}
+		}
 	}
 }

@@ -1,0 +1,352 @@
+<UserControl
+    x:Class="Orbit.Views.UnifiedToolsManagerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="700"
+    d:DesignWidth="900"
+    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <converters:BooleanToAccentBrushConverter x:Key="BooleanToAccentBrushConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  Header  -->
+        <Border
+            Grid.Row="0"
+            Padding="20,16"
+            Background="{DynamicResource MahApps.Brushes.Accent}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial
+                        Width="28"
+                        Height="28"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        Kind="ViewDashboard" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="20"
+                        FontWeight="SemiBold"
+                        Foreground="White"
+                        Text="Tools &amp; Plugins Dashboard" />
+                </StackPanel>
+                <TextBlock
+                    Margin="40,4,0,0"
+                    FontSize="13"
+                    Foreground="White"
+                    Opacity="0.8"
+                    Text="Manage built-in tools and dynamically loaded plugins" />
+            </StackPanel>
+        </Border>
+
+        <!--  Toolbar  -->
+        <Border
+            Grid.Row="1"
+            Padding="20,12"
+            Background="{DynamicResource MahApps.Brushes.Gray10}"
+            BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+            BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!--  Action Buttons  -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        Padding="16,8"
+                        Command="{Binding ImportPluginCommand}"
+                        Content="Import Plugin"
+                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,8,0"
+                                        Kind="Import" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+
+                    <Button
+                        Margin="0,0,8,0"
+                        Padding="16,8"
+                        Command="{Binding AutoLoadAllCommand}"
+                        Content="Auto-Load Plugins"
+                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,8,0"
+                                        Kind="PlaylistPlay" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+
+                    <Button
+                        Padding="16,8"
+                        Command="{Binding RefreshCommand}"
+                        Content="Refresh"
+                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,8,0"
+                                        Kind="Refresh" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                </StackPanel>
+
+                <!--  Search Box  -->
+                <TextBox
+                    Grid.Row="1"
+                    Margin="0,12,0,0"
+                    mah:TextBoxHelper.ClearTextButton="True"
+                    mah:TextBoxHelper.Watermark="Search tools and plugins..."
+                    Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}">
+                    <mah:TextBoxHelper.ButtonContent>
+                        <iconPacks:PackIconMaterial
+                            Width="16"
+                            Height="16"
+                            Kind="Magnify" />
+                    </mah:TextBoxHelper.ButtonContent>
+                </TextBox>
+            </Grid>
+        </Border>
+
+        <!--  Tools Grid  -->
+        <ScrollViewer
+            Grid.Row="2"
+            Padding="20,16"
+            VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding ToolCards}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            Width="400"
+                            Margin="0,0,16,16"
+                            Padding="16"
+                            Background="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            BorderBrush="{DynamicResource MahApps.Brushes.Accent4}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!--  Header  -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!--  Icon  -->
+                                    <Border
+                                        Grid.Column="0"
+                                        Margin="0,0,12,0"
+                                        Padding="8"
+                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        CornerRadius="4">
+                                        <iconPacks:PackIconMaterial
+                                            Width="24"
+                                            Height="24"
+                                            Foreground="White"
+                                            Kind="{Binding Icon}" />
+                                    </Border>
+
+                                    <!--  Name and Type  -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock
+                                            FontSize="16"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                            Text="{Binding DisplayName}" />
+                                        <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
+                                            <Border
+                                                Padding="6,2"
+                                                Background="{Binding IsPlugin, Converter={StaticResource BooleanToAccentBrushConverter}}"
+                                                CornerRadius="2">
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    Text="{Binding ToolType}" />
+                                            </Border>
+                                            <TextBlock
+                                                Margin="6,0,0,0"
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                                Text="{Binding Version, StringFormat='v{0}'}"
+                                                Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!--  Menu Visibility Toggle  -->
+                                    <mah:ToggleSwitch
+                                        Grid.Column="2"
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        IsOn="{Binding IsVisibleInMenu}"
+                                        OffContent="Hidden"
+                                        OnContent="In Menu" />
+                                </Grid>
+
+                                <!--  Description  -->
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Margin="0,12,0,0"
+                                    FontSize="13"
+                                    Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                    Text="{Binding Description}"
+                                    TextWrapping="Wrap" />
+
+                                <!--  Plugin Details  -->
+                                <StackPanel
+                                    Grid.Row="2"
+                                    Margin="0,12,0,0"
+                                    Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray}">
+                                        <Run Text="Author:" />
+                                        <Run Foreground="{DynamicResource MahApps.Brushes.Accent}" Text="{Binding Author, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock
+                                        Margin="0,2,0,0"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource MahApps.Brushes.Gray}">
+                                        <Run Text="Loaded:" />
+                                        <Run Text="{Binding LoadedAt, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Expander
+                                        Margin="0,4,0,0"
+                                        Header="Path"
+                                        IsExpanded="False">
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            FontFamily="Consolas"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                            Text="{Binding PluginPath}"
+                                            TextWrapping="Wrap" />
+                                    </Expander>
+                                </StackPanel>
+
+                                <!--  Actions  -->
+                                <StackPanel
+                                    Grid.Row="3"
+                                    Margin="0,12,0,0"
+                                    Orientation="Horizontal"
+                                    Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Button
+                                        Margin="0,0,8,0"
+                                        Padding="12,6"
+                                        Command="{Binding ReloadCommand}"
+                                        Content="Hot Reload"
+                                        FontSize="12"
+                                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                                        <Button.ContentTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <iconPacks:PackIconMaterial
+                                                        Width="14"
+                                                        Height="14"
+                                                        Margin="0,0,4,0"
+                                                        Kind="Reload" />
+                                                    <TextBlock Text="{Binding}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </Button.ContentTemplate>
+                                    </Button>
+
+                                    <Button
+                                        Padding="12,6"
+                                        Command="{Binding UnloadCommand}"
+                                        Content="Unload"
+                                        FontSize="12"
+                                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                                        <Button.ContentTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <iconPacks:PackIconMaterial
+                                                        Width="14"
+                                                        Height="14"
+                                                        Margin="0,0,4,0"
+                                                        Kind="Close" />
+                                                    <TextBlock Text="{Binding}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </Button.ContentTemplate>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!--  Status Bar  -->
+        <Border
+            Grid.Row="3"
+            Padding="20,10"
+            Background="{DynamicResource MahApps.Brushes.Gray10}"
+            BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+            BorderThickness="0,1,0,0">
+            <Grid>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource MahApps.Brushes.Text}"
+                    Text="{Binding StatusMessage}" />
+
+                <mah:ProgressRing
+                    Width="20"
+                    Height="20"
+                    HorizontalAlignment="Right"
+                    IsActive="{Binding IsLoading}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

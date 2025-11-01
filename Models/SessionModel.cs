@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Windows.Media.Imaging;
 using Orbit.Views;
 
 namespace Orbit.Models
@@ -18,6 +19,14 @@ namespace Orbit.Models
 		private SessionType _sessionType;
 		private bool _isRenaming;
 		private string _editableName = string.Empty;
+		private BitmapSource _thumbnail;
+		private DateTime _lastThumbnailUpdate = DateTime.MinValue;
+		private bool _galleryOverrideEnabled;
+		private bool _galleryAutoRefreshEnabled = true;
+		private double _galleryRefreshIntervalSeconds = 5;
+		private nint _renderSurfaceHandle;
+		private bool _gallerySizeOverrideEnabled;
+		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
 
 		public SessionModel()
 		{
@@ -193,6 +202,21 @@ namespace Orbit.Models
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets the direct render surface handle (e.g. JagRenderView child window).
+		/// </summary>
+		public nint RenderSurfaceHandle
+		{
+			get => _renderSurfaceHandle;
+			set
+			{
+				if (_renderSurfaceHandle == value)
+					return;
+				_renderSurfaceHandle = value;
+				OnPropertyChanged();
+			}
+		}
+
 		public string StatusSummary => $"{State} / {InjectionState}";
 
 		public bool IsInjectable => InjectionState == InjectionState.Ready || InjectionState == InjectionState.Failed;
@@ -268,6 +292,7 @@ namespace Orbit.Models
 				RSProcess = null;
 				ParentProcessId = null;
 				ExternalHandle = nint.Zero;
+				RenderSurfaceHandle = nint.Zero;
 				UpdateState(SessionState.Closed, clearError: false);
 			}
 		}
@@ -282,6 +307,94 @@ namespace Orbit.Models
 				SetForegroundWindow(ExternalHandle);
 			}
 		}
+
+		/// <summary>
+		/// Gets or sets the thumbnail preview image for this session
+		/// </summary>
+		public BitmapSource Thumbnail
+		{
+			get => _thumbnail;
+			set
+			{
+				if (_thumbnail == value)
+					return;
+				_thumbnail = value;
+				_lastThumbnailUpdate = DateTime.UtcNow;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(HasThumbnail));
+			}
+		}
+
+		/// <summary>
+		/// Gets whether this session has a thumbnail available
+		/// </summary>
+		public bool HasThumbnail => _thumbnail != null;
+
+		/// <summary>
+		/// Gets the age of the current thumbnail in seconds
+		/// </summary>
+		public double ThumbnailAge => _lastThumbnailUpdate == DateTime.MinValue
+			? double.MaxValue
+			: (DateTime.UtcNow - _lastThumbnailUpdate).TotalSeconds;
+
+		/// <summary>
+		/// Gets or sets whether this session overrides the global gallery refresh settings.
+		/// </summary>
+		public bool GalleryOverrideEnabled
+		{
+			get => _galleryOverrideEnabled;
+			set
+			{
+				if (_galleryOverrideEnabled == value)
+					return;
+				_galleryOverrideEnabled = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(UsesGlobalGallerySettings));
+				OnPropertyChanged(nameof(GalleryIntervalIsEnabled));
+			}
+		}
+
+		/// <summary>
+		/// Gets whether this session follows the global gallery refresh settings.
+		/// </summary>
+		public bool UsesGlobalGallerySettings => !_galleryOverrideEnabled;
+
+		/// <summary>
+		/// Gets or sets whether this session auto-refreshes thumbnails when overrides are enabled.
+		/// </summary>
+		public bool GalleryAutoRefreshEnabled
+		{
+			get => _galleryAutoRefreshEnabled;
+			set
+			{
+				if (_galleryAutoRefreshEnabled == value)
+					return;
+				_galleryAutoRefreshEnabled = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(GalleryIntervalIsEnabled));
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the custom refresh interval (in seconds) when overrides are enabled.
+		/// </summary>
+		public double GalleryRefreshIntervalSeconds
+		{
+			get => _galleryRefreshIntervalSeconds;
+			set
+			{
+				var clamped = Math.Clamp(value, 1, 120);
+				if (Math.Abs(_galleryRefreshIntervalSeconds - clamped) < 0.01)
+					return;
+				_galleryRefreshIntervalSeconds = clamped;
+				OnPropertyChanged();
+			}
+		}
+
+		/// <summary>
+		/// Gets whether the interval slider should be enabled for this session.
+		/// </summary>
+		public bool GalleryIntervalIsEnabled => _galleryOverrideEnabled && _galleryAutoRefreshEnabled;
 
 		public override string ToString()
 		{

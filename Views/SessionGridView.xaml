@@ -1,0 +1,236 @@
+<UserControl x:Class="Orbit.Views.SessionGridView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+             xmlns:converters="clr-namespace:Orbit.Converters"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             xmlns:models="clr-namespace:Orbit.Models"
+             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+
+    <UserControl.Resources>
+        <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
+        <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Margin="10,10,0,0"
+                        Width="35"
+                        Height="35"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="GridLarge" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Grid Layout" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.85"
+                            Text="Snap sessions to corners and edges" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Command="{Binding AutoAssignCommand}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Width="40" Height="40"
+                            ToolTip="Auto-Assign Sessions to Grid"
+                            Margin="0,0,8,0">
+                        <iconPacks:PackIconMaterial Width="20" Height="20" Kind="ViewGridOutline" />
+                    </Button>
+                    <Button Command="{Binding ApplyGridCommand}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Width="40" Height="40"
+                            ToolTip="Apply Grid Layout"
+                            Margin="0,0,8,0">
+                        <iconPacks:PackIconMaterial Width="20" Height="20" Kind="CheckBold"
+                                                   Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+                    </Button>
+                    <Button Command="{Binding ClearGridCommand}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Width="40" Height="40"
+                            ToolTip="Clear Grid Assignments"
+                            Margin="0,0,8,0">
+                        <iconPacks:PackIconMaterial Width="20" Height="20" Kind="Close"
+                                                   Foreground="#F44336" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Grid Visualization -->
+        <Border Grid.Row="1" Margin="0,12,0,0" Padding="16"
+                Background="{DynamicResource MahApps.Brushes.Gray9}"
+                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                BorderThickness="1" CornerRadius="6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+                    <StackPanel Margin="0,0,18,0" Width="200">
+                        <TextBlock Text="Overflow behaviour"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Margin="0,0,0,4" />
+                        <ComboBox ItemsSource="{Binding OverflowPolicies}"
+                                  SelectedItem="{Binding OverflowPolicy}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,18,0" Width="200">
+                        <TextBlock Text="Conflict resolution"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Margin="0,0,0,4" />
+                        <ComboBox ItemsSource="{Binding ConflictResolutions}"
+                                  SelectedItem="{Binding ConflictResolution}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,18,0" Width="200">
+                        <TextBlock Text="Grid density"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Margin="0,0,0,4" />
+                        <Slider Minimum="1"
+                                Maximum="3"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                Value="{Binding MaxSplitsPerAxis}"
+                                Width="160" />
+                        <TextBlock Text="{Binding MaxSplitsPerAxis, StringFormat='{}{0} x {0} cells'}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Opacity="0.8"
+                                   Margin="0,6,0,0" />
+                    </StackPanel>
+                    <StackPanel Width="160">
+                        <TextBlock Text="Persist layout"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Margin="0,0,0,4" />
+                        <Controls:ToggleSwitch
+                            IsOn="{Binding StickyLayout}"
+                            OnContent="Sticky"
+                            OffContent="Temporary" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Grid.Row="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                        BorderThickness="1">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding PreviewCells}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="{Binding MaxSplitsPerAxis}"
+                                                 Columns="{Binding MaxSplitsPerAxis}" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="4"
+                                            CornerRadius="4"
+                                            Height="48"
+                                            Width="64"
+                                            Background="{DynamicResource MahApps.Brushes.Gray9}"
+                                            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                            BorderThickness="1" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Margin="0,12,0,0">
+                            <TextBlock Text="Drop session tabs into the grid or adjust the assignments below."
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                       TextAlignment="Center" />
+                            <TextBlock Text="Overflow, conflict, and persistence rules apply when you apply the grid."
+                                       FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                       Opacity="0.75"
+                                       TextAlignment="Center"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Session Assignment List -->
+        <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Sessions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,12" Padding="15"
+                                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+                                    BorderThickness="1" CornerRadius="6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Status indicator -->
+                                    <Ellipse Grid.Column="0" Width="16" Height="16" Margin="0,0,12,0"
+                                             Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}" />
+
+                                    <!-- Session name -->
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="14"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+
+                                    <!-- Position selector -->
+                                    <ComboBox Grid.Column="2" Width="150"
+                                              ItemsSource="{Binding DataContext.GridPositions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                              SelectedItem="{Binding DataContext.SessionPositions[Id], RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -10,9 +10,9 @@
     xmlns:local="clr-namespace:Orbit"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="clr-namespace:Orbit.Models"
+    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
     xmlns:views="clr-namespace:Orbit.Views"
-    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     Title="Orbit"
     Width="1400"
     Height="1000"
@@ -21,20 +21,18 @@
     d:DesignHeight="1000"
     d:DesignWidth="1400"
     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-    ShowTitleBar="True"
+    PreviewKeyUp="MainWindow_PreviewKeyUp"
+    PreviewMouseUp="MainWindow_PreviewMouseUp"
     ShowIconOnTitleBar="False"
+    ShowTitleBar="True"
     SizeChanged="MetroWindow_SizeChanged"
     TitleBarHeight="35"
     TitleCharacterCasing="Normal"
     WindowStartupLocation="CenterScreen"
-    PreviewMouseUp="MainWindow_PreviewMouseUp"
-    PreviewKeyUp="MainWindow_PreviewKeyUp"
     mc:Ignorable="d">
 
     <Controls:MetroWindow.TaskbarItemInfo>
-        <shell:TaskbarItemInfo
-            x:Name="TaskbarInfo"
-            Description="Orbit">
+        <shell:TaskbarItemInfo x:Name="TaskbarInfo" Description="Orbit">
             <shell:TaskbarItemInfo.ThumbnailClipMargin>
                 <Thickness>0</Thickness>
             </shell:TaskbarItemInfo.ThumbnailClipMargin>
@@ -71,7 +69,7 @@
     <d:Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- MahApps Dark Theme for Designer -->
+                <!--  MahApps Dark Theme for Designer  -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Blue.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
@@ -568,22 +566,22 @@
                                         </TextBlock>
 
                                         <TextBox
+                                            MinWidth="110"
                                             Margin="0"
                                             Padding="2,0"
+                                            VerticalContentAlignment="Center"
                                             Background="{DynamicResource MahApps.Brushes.Gray7}"
                                             BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                                             BorderThickness="0,0,0,1"
                                             FontWeight="SemiBold"
                                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                            MinWidth="110"
-                                            Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
-                                            VerticalContentAlignment="Center"
-                                            Visibility="Collapsed"
+                                            IsVisibleChanged="SessionRenameTextBox_IsVisibleChanged"
                                             KeyDown="SessionRenameTextBox_KeyDown"
                                             LostKeyboardFocus="SessionRenameTextBox_LostKeyboardFocus"
-                                            IsVisibleChanged="SessionRenameTextBox_IsVisibleChanged">
+                                            Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
+                                            Visibility="Collapsed">
                                             <TextBox.Style>
-                                                <Style TargetType="TextBox" BasedOn="{StaticResource MahApps.Styles.TextBox}">
+                                                <Style BasedOn="{StaticResource MahApps.Styles.TextBox}" TargetType="TextBox">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsRenaming}" Value="True">
@@ -596,14 +594,14 @@
                                     </Grid>
 
                                     <Button
-                                        Margin="6,0,0,0"
-                                        Padding="4"
                                         Width="26"
                                         Height="26"
+                                        Margin="6,0,0,0"
+                                        Padding="4"
                                         Command="{Binding DataContext.BeginSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                                         CommandParameter="{Binding}">
                                         <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                            <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                                 <Setter Property="ToolTip" Value="Rename session" />
                                                 <Setter Property="Visibility" Value="Visible" />
                                                 <Setter Property="Opacity" Value="0.75" />
@@ -620,14 +618,14 @@
                                         <iconPacks:PackIconMaterial
                                             Width="14"
                                             Height="14"
-                                            Kind="Pencil"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Kind="Pencil" />
                                     </Button>
 
                                     <StackPanel
                                         Margin="4,0,0,0"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center">
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal">
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -642,20 +640,20 @@
                                         <Button
                                             Width="26"
                                             Height="26"
-                                            Padding="4"
                                             Margin="0,0,4,0"
+                                            Padding="4"
                                             Command="{Binding DataContext.CommitSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                                             CommandParameter="{Binding}">
                                             <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                                     <Setter Property="ToolTip" Value="Save name" />
                                                 </Style>
                                             </Button.Style>
                                             <iconPacks:PackIconMaterial
                                                 Width="14"
                                                 Height="14"
-                                                Kind="Check"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Kind="Check" />
                                         </Button>
 
                                         <Button
@@ -665,15 +663,15 @@
                                             Command="{Binding DataContext.CancelSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                                             CommandParameter="{Binding}">
                                             <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Circle}">
+                                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                                     <Setter Property="ToolTip" Value="Cancel rename" />
                                                 </Style>
                                             </Button.Style>
                                             <iconPacks:PackIconMaterial
                                                 Width="14"
                                                 Height="14"
-                                                Kind="Close"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Kind="Close" />
                                         </Button>
                                     </StackPanel>
                                 </StackPanel>
@@ -890,10 +888,10 @@
             <!--  Left Edge Indicator  -->
             <Border
                 Width="{Binding FloatingMenuDockEdgeThreshold}"
-                Style="{StaticResource SnapIndicatorStyle}"
+                Margin="0,12,0,12"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
-                Margin="0,12,0,12">
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Height>
                     <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
                         <Binding ElementName="SnapZoneOverlay" Path="ActualHeight" />
@@ -913,10 +911,10 @@
             <!--  Right Edge Indicator  -->
             <Border
                 Width="{Binding FloatingMenuDockEdgeThreshold}"
-                Style="{StaticResource SnapIndicatorStyle}"
+                Margin="0,12,0,12"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
-                Margin="0,12,0,12">
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Height>
                     <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
                         <Binding ElementName="SnapZoneOverlay" Path="ActualHeight" />
@@ -936,10 +934,10 @@
             <!--  Top Edge Indicator  -->
             <Border
                 Height="{Binding FloatingMenuDockEdgeThreshold}"
-                Style="{StaticResource SnapIndicatorStyle}"
+                Margin="12,0,12,0"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
-                Margin="12,0,12,0">
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Width>
                     <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
                         <Binding ElementName="SnapZoneOverlay" Path="ActualWidth" />
@@ -959,10 +957,10 @@
             <!--  Bottom Edge Indicator  -->
             <Border
                 Height="{Binding FloatingMenuDockEdgeThreshold}"
-                Style="{StaticResource SnapIndicatorStyle}"
+                Margin="12,0,12,0"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
-                Margin="12,0,12,0">
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Width>
                     <MultiBinding Converter="{StaticResource RatioToSizeConverter}">
                         <Binding ElementName="SnapZoneOverlay" Path="ActualWidth" />
@@ -983,10 +981,10 @@
             <Border
                 Width="{Binding FloatingMenuDockCornerThreshold}"
                 Height="{Binding FloatingMenuDockCornerHeight}"
-                Style="{StaticResource SnapIndicatorStyle}"
-                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
                 HorizontalAlignment="Left"
-                VerticalAlignment="Top">
+                VerticalAlignment="Top"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Visibility>
                     <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
@@ -1000,10 +998,10 @@
             <Border
                 Width="{Binding FloatingMenuDockCornerThreshold}"
                 Height="{Binding FloatingMenuDockCornerHeight}"
-                Style="{StaticResource SnapIndicatorStyle}"
-                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Top">
+                VerticalAlignment="Top"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Visibility>
                     <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
@@ -1017,10 +1015,10 @@
             <Border
                 Width="{Binding FloatingMenuDockCornerThreshold}"
                 Height="{Binding FloatingMenuDockCornerHeight}"
-                Style="{StaticResource SnapIndicatorStyle}"
-                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
                 HorizontalAlignment="Left"
-                VerticalAlignment="Bottom">
+                VerticalAlignment="Bottom"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Visibility>
                     <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
@@ -1034,10 +1032,10 @@
             <Border
                 Width="{Binding FloatingMenuDockCornerThreshold}"
                 Height="{Binding FloatingMenuDockCornerHeight}"
-                Style="{StaticResource SnapIndicatorStyle}"
-                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Bottom">
+                VerticalAlignment="Bottom"
+                CornerRadius="{Binding FloatingMenuDockCornerRadius}"
+                Style="{StaticResource SnapIndicatorStyle}">
                 <Border.Visibility>
                     <MultiBinding Converter="{StaticResource DockZoneHighlightConverter}">
                         <Binding Path="FloatingMenuDockCandidate" />
@@ -1243,6 +1241,20 @@
                                     ToolTip="Manage Sessions"
                                     Visibility="{Binding ShowMenuSessions, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="ViewList" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenSessionGalleryCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="Session Gallery"
+                                    Visibility="{Binding ShowMenuSessionGallery, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="ViewModule" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenSessionGridCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="Session Grid Layout"
+                                    Visibility="{Binding ShowMenuSessionGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="GridLarge" />
                                 </Button>
                                 <Button
                                     Command="{Binding OpenAccountManagerCommand}"

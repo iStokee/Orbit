@@ -8,11 +8,22 @@ public interface IToolRegistry
 {
 	IEnumerable<IOrbitTool> Tools { get; }
 	IOrbitTool? Find(string key);
+
+	/// <summary>
+	/// Registers a dynamically loaded plugin tool.
+	/// </summary>
+	void RegisterPluginTool(IOrbitTool tool);
+
+	/// <summary>
+	/// Unregisters a dynamically loaded plugin tool.
+	/// </summary>
+	bool UnregisterPluginTool(string key);
 }
 
 internal sealed class ToolRegistry : IToolRegistry
 {
 	private readonly Dictionary<string, IOrbitTool> _tools;
+	private readonly object _lock = new();
 
 	public ToolRegistry(IEnumerable<IOrbitTool> tools)
 	{
@@ -30,13 +41,47 @@ internal sealed class ToolRegistry : IToolRegistry
 			}, StringComparer.Ordinal);
 	}
 
-	public IEnumerable<IOrbitTool> Tools => _tools.Values;
+	public IEnumerable<IOrbitTool> Tools
+	{
+		get
+		{
+			lock (_lock)
+			{
+				return _tools.Values.ToList();
+			}
+		}
+	}
 
 	public IOrbitTool? Find(string key)
 	{
 		if (string.IsNullOrWhiteSpace(key))
 			return null;
 
-		return _tools.TryGetValue(key, out var tool) ? tool : null;
+		lock (_lock)
+		{
+			return _tools.TryGetValue(key, out var tool) ? tool : null;
+		}
+	}
+
+	public void RegisterPluginTool(IOrbitTool tool)
+	{
+		if (tool == null)
+			throw new ArgumentNullException(nameof(tool));
+
+		lock (_lock)
+		{
+			_tools[tool.Key] = tool;
+		}
+	}
+
+	public bool UnregisterPluginTool(string key)
+	{
+		if (string.IsNullOrWhiteSpace(key))
+			return false;
+
+		lock (_lock)
+		{
+			return _tools.Remove(key);
+		}
 	}
 }

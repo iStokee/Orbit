@@ -546,6 +546,10 @@
                     <StackPanel Margin="0,10,0,0">
                         <Controls:ToggleSwitch
                             Margin="0,4"
+                            Header="Auto-show menu on startup"
+                            IsOn="{Binding ShowFloatingMenuAutoShow, Mode=TwoWay}" />
+                        <Controls:ToggleSwitch
+                            Margin="0,4"
                             Header="Show on Orbit home (no tabs open)"
                             IsOn="{Binding ShowFloatingMenuOnHome, Mode=TwoWay}" />
                         <Controls:ToggleSwitch
@@ -556,6 +560,20 @@
                             Margin="0,4"
                             Header="Show on tool tabs (Console, Script Manager, etc.)"
                             IsOn="{Binding ShowFloatingMenuOnToolTabs, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <TextBlock
+                        Margin="0,24,0,8"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Welcome messages" />
+
+                    <StackPanel Margin="0,4,0,0">
+                        <Controls:ToggleSwitch
+                            Margin="0,4"
+                            Header="Show Theme Manager welcome popup"
+                            IsOn="{Binding ShowThemeManagerWelcomeMessage, Mode=TwoWay}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

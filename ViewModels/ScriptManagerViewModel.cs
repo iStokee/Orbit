@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using Orbit.Logging;
 using Orbit.Models;
 using Orbit.Services;
 using System;
@@ -111,27 +112,46 @@ public class ScriptManagerViewModel : INotifyPropertyChanged
         // Route to the currently selected session in the main window when available
         var mainWindow = System.Windows.Application.Current?.MainWindow as Orbit.MainWindow;
         var mainVm = mainWindow?.DataContext as Orbit.ViewModels.MainWindowViewModel;
-        var pid = mainVm?.SelectedSession?.RSProcess?.Id;
+        var selectedSession = mainVm?.SelectedSession;
+        var pid = selectedSession?.RSProcess?.Id;
+
+		// Check if session is ready for injection
+		if (selectedSession == null)
+		{
+			ConsoleLogService.Instance.Append(
+				"[ScriptManager] No session selected. Please select a session first.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
+		if (selectedSession.InjectionState != InjectionState.Injected)
+		{
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Session '{selectedSession.Name}' is not injected. Inject MESharp before loading scripts.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
+		ConsoleLogService.Instance.Append(
+			$"[ScriptManager] Requesting load for '{profile.Name}' to session '{selectedSession.Name}' (PID {pid})",
+			ConsoleLogSource.Orbit,
+			ConsoleLogLevel.Info);
+
         var success = pid.HasValue
             ? await OrbitCommandClient.SendReloadAsync(profile.FilePath, pid.Value, CancellationToken.None)
             : await OrbitCommandClient.SendReloadAsync(profile.FilePath, CancellationToken.None);
 
-		if (success)
+		if (!success)
 		{
-			MessageBox.Show(
-				$"Script '{profile.Name}' loaded successfully!",
-				"Script Loaded",
-				MessageBoxButton.OK,
-				MessageBoxImage.Information);
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Failed to send load command for '{profile.Name}'. Check if MESharp is running.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
 		}
-		else
-		{
-			MessageBox.Show(
-				$"Failed to load script '{profile.Name}'. Check console for details.",
-				"Load Failed",
-				MessageBoxButton.OK,
-				MessageBoxImage.Warning);
-		}
+		// Note: success=true only means the command was sent, not that the script loaded.
+		// Check the MESharp console for actual script loading results.
 	}
 
 	private void ClearMissing()

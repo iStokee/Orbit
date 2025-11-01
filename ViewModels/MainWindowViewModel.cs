@@ -36,7 +36,7 @@ namespace Orbit.ViewModels
 	private const string SessionsOverviewToolKey = "SessionsOverview";
 	private const string ScriptManagerToolKey = "ScriptManager";
 	private const string ApiDocumentationToolKey = "ApiDocumentation";
-	private const string ToolsOverviewToolKey = "ToolsOverview";
+	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
 
 	private readonly SessionManagerService sessionManager;
 	private readonly ThemeService themeService;
@@ -64,8 +64,8 @@ namespace Orbit.ViewModels
 	private bool floatingMenuAutoDirection;
 	private bool isFloatingMenuDockOverlayVisible;
 	private FloatingMenuDockRegion floatingMenuDockCandidate = FloatingMenuDockRegion.None;
-	private double hostViewportWidth = 1200;
-	private double hostViewportHeight = 900;
+	public double hostViewportWidth = 1200;
+	public double hostViewportHeight = 900;
 	private bool autoInjectOnReady;
 	private bool isFloatingMenuClipping;
 
@@ -113,6 +113,8 @@ namespace Orbit.ViewModels
 		AddSessionCommand = new RelayCommand(async _ => await AddSessionAsync());
 		InjectCommand = new RelayCommand(async _ => await InjectAsync(), _ => CanInject());
 		ShowSessionsCommand = new RelayCommand(_ => ShowSessions(), _ => Sessions.Count > 0);
+		OpenSessionGalleryCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGallery"));
+		OpenSessionGridCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGrid"));
 		OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 		OpenScriptManagerCommand = new RelayCommand(_ => OpenScriptManager());
 		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager(), _ => this.toolRegistry.Find(AccountManagerToolKey) != null);
@@ -123,9 +125,9 @@ namespace Orbit.ViewModels
 		BrowseScriptCommand = new RelayCommand(_ => BrowseForScript());
 		LoadScriptCommand = new RelayCommand(async _ => await LoadScriptAsync(), _ => CanLoadScript());
 		ReloadScriptCommand = new RelayCommand(async _ => await ReloadScriptAsync(), _ => CanReloadScript());
-		BeginSessionRenameCommand = new RelayCommand(BeginSessionRename, parameter => parameter is SessionModel);
-		CommitSessionRenameCommand = new RelayCommand(CommitSessionRename, parameter => parameter is SessionModel);
-		CancelSessionRenameCommand = new RelayCommand(CancelSessionRename, parameter => parameter is SessionModel);
+		BeginSessionRenameCommand = new RelayCommand(param => BeginSessionRename(param), param => param is SessionModel);
+		CommitSessionRenameCommand = new RelayCommand(param => CommitSessionRename(param), param => param is SessionModel);
+		CancelSessionRenameCommand = new RelayCommand(param => CancelSessionRename(param), param => param is SessionModel);
 
 		floatingMenuLeft = Settings.Default.FloatingMenuLeft;
 		floatingMenuTop = Settings.Default.FloatingMenuTop;
@@ -161,6 +163,8 @@ namespace Orbit.ViewModels
 	public ICommand AddSessionCommand { get; }
 	public ICommand InjectCommand { get; }
 	public ICommand ShowSessionsCommand { get; }
+	public ICommand OpenSessionGalleryCommand { get; }
+	public ICommand OpenSessionGridCommand { get; }
 	public ICommand OpenThemeManagerCommand { get; }
 	public ICommand OpenScriptManagerCommand { get; }
 	public ICommand ToggleConsoleCommand { get; }
@@ -473,7 +477,7 @@ namespace Orbit.ViewModels
 		if (args.DragablzItem.DataContext is SessionModel session)
 		{
 			args.Cancel();
-			_ = CloseSessionInternalAsync(session, skipConfirmation: false);
+			_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
 			return;
 		}
 
@@ -673,7 +677,7 @@ namespace Orbit.ViewModels
 	{
 		if (!TryOpenToolByKey(ToolsOverviewToolKey))
 		{
-			ConsoleLog.Append("[Orbit] Tools Overview tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			ConsoleLog.Append("[Orbit] Tools dashboard is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 		}
 	}
 
@@ -1175,6 +1179,28 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowMenuSessionGallery
+	{
+		get => Settings.Default.ShowMenuSessionGallery;
+		set
+		{
+			if (Settings.Default.ShowMenuSessionGallery == value) return;
+			Settings.Default.ShowMenuSessionGallery = value;
+			OnPropertyChanged(nameof(ShowMenuSessionGallery));
+		}
+	}
+
+	public bool ShowMenuSessionGrid
+	{
+		get => Settings.Default.ShowMenuSessionGrid;
+		set
+		{
+			if (Settings.Default.ShowMenuSessionGrid == value) return;
+			Settings.Default.ShowMenuSessionGrid = value;
+			OnPropertyChanged(nameof(ShowMenuSessionGrid));
+		}
+	}
+
 	public bool ShowFloatingMenuOnHome
 	{
 		get => Settings.Default.ShowFloatingMenuOnHome;
@@ -1631,10 +1657,10 @@ namespace Orbit.ViewModels
 		if (session == null)
 			return;
 
-		_ = CloseSessionInternalAsync(session, skipConfirmation: false);
+		_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
 	}
 
-		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = false)
+		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = true)
 		{
 			var sessionsSnapshot = Sessions.OfType<SessionModel>().ToList();
 			foreach (var session in sessionsSnapshot)
@@ -1643,7 +1669,7 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = false)
+		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = true)
 		{
 			if (session == null)
 			{

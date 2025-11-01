@@ -15,6 +15,12 @@ using Application = System.Windows.Application;
 
 namespace Orbit.ViewModels
 {
+	public enum ThemeColorEditorMode
+	{
+		Accent,
+		Foreground
+	}
+
 	public class ThemeManagerViewModel : INotifyPropertyChanged
 	{
 		private readonly ThemeService themeService;
@@ -25,6 +31,7 @@ namespace Orbit.ViewModels
 		private string? selectedColorScheme;
 		private bool useCustomForeground;
 		private MediaColor selectedCustomForeground = MediaColors.White;
+		private ThemeColorEditorMode activeColorEditor = ThemeColorEditorMode.Accent;
 
 		public ThemeManagerViewModel() : this(new ThemeService())
 		{
@@ -99,6 +106,10 @@ namespace Orbit.ViewModels
 					return;
 				selectedCustomColor = value;
 				OnPropertyChanged();
+				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
+				{
+					OnPropertyChanged(nameof(ActiveColorSelection));
+				}
 			}
 		}
 
@@ -111,11 +122,17 @@ namespace Orbit.ViewModels
 					return;
 				useCustomForeground = value;
 				OnPropertyChanged();
+				OnPropertyChanged(nameof(IsActiveColorEditable));
 
 				if (SelectedCustomTheme != null)
 				{
 					SelectedCustomTheme.OverrideForeground = value;
 					SelectedCustomTheme.ForegroundHex = value ? SelectedCustomForeground.ToString() : null;
+				}
+
+				if (!useCustomForeground && ActiveColorEditor == ThemeColorEditorMode.Foreground)
+				{
+					ActiveColorEditor = ThemeColorEditorMode.Accent;
 				}
 			}
 		}
@@ -129,6 +146,10 @@ namespace Orbit.ViewModels
 					return;
 				selectedCustomForeground = value;
 				OnPropertyChanged();
+				if (ActiveColorEditor == ThemeColorEditorMode.Foreground)
+				{
+					OnPropertyChanged(nameof(ActiveColorSelection));
+				}
 
 				if (UseCustomForeground && SelectedCustomTheme != null)
 				{
@@ -197,8 +218,71 @@ namespace Orbit.ViewModels
 				{
 					UseCustomForeground = false;
 				}
+
+				OnPropertyChanged(nameof(ActiveColorSelection));
 			}
 		}
+
+		public ThemeColorEditorMode ActiveColorEditor
+		{
+			get => activeColorEditor;
+			set
+			{
+				if (activeColorEditor == value)
+					return;
+				activeColorEditor = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(IsAccentEditorSelected));
+				OnPropertyChanged(nameof(IsForegroundEditorSelected));
+				OnPropertyChanged(nameof(ActiveColorSelection));
+				OnPropertyChanged(nameof(IsActiveColorEditable));
+			}
+		}
+
+		public bool IsAccentEditorSelected
+		{
+			get => ActiveColorEditor == ThemeColorEditorMode.Accent;
+			set
+			{
+				if (value)
+					ActiveColorEditor = ThemeColorEditorMode.Accent;
+			}
+		}
+
+		public bool IsForegroundEditorSelected
+		{
+			get => ActiveColorEditor == ThemeColorEditorMode.Foreground;
+			set
+			{
+				if (value)
+				{
+					ActiveColorEditor = ThemeColorEditorMode.Foreground;
+					// Automatically enable custom foreground when foreground editor is selected
+					if (!UseCustomForeground)
+					{
+						UseCustomForeground = true;
+					}
+				}
+			}
+		}
+
+		public MediaColor ActiveColorSelection
+		{
+			get => ActiveColorEditor == ThemeColorEditorMode.Accent ? SelectedCustomColor : SelectedCustomForeground;
+			set
+			{
+				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
+				{
+					SelectedCustomColor = value;
+				}
+				else
+				{
+					SelectedCustomForeground = value;
+				}
+			}
+		}
+
+		public bool IsActiveColorEditable => ActiveColorEditor == ThemeColorEditorMode.Accent || UseCustomForeground;
 
 		public ICommand ApplyThemeCommand { get; }
 		public ICommand SaveCustomThemeCommand { get; }

@@ -59,6 +59,7 @@ public partial class App : Application
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
 		services.AddSingleton<ScriptIntegrationService>();
 		services.AddSingleton<SessionManagerService>();
+		services.AddSingleton<SessionGridManager>();
 		services.AddSingleton<ThemeService>();
 		services.AddSingleton<ScriptManagerService>();
 		services.AddSingleton<AccountService>();
@@ -86,9 +87,23 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool, SessionsOverviewTool>();
 		services.AddSingleton<IOrbitTool, ScriptManagerTool>();
 		services.AddSingleton<IOrbitTool, AccountManagerTool>();
+		services.AddSingleton<IOrbitTool>(sp => new SessionGalleryTool(sp.GetRequiredService<SessionCollectionService>()));
+		services.AddSingleton<IOrbitTool>(sp => new SessionGridTool(sp.GetRequiredService<SessionCollectionService>(), sp.GetRequiredService<SessionGridManager>()));
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ApiDocumentationTool>();
-		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
+		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
+		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
+		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.PluginManagerTool>();
+		// New unified dashboard
+		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.UnifiedToolsManagerTool>();
 		services.AddSingleton<IToolRegistry, ToolRegistry>();
+
+		// Plugin system
+		services.AddSingleton<Plugins.PluginManager>(sp =>
+		{
+			var toolRegistry = sp.GetRequiredService<IToolRegistry>();
+			var pluginDirectory = Plugins.PluginManager.GetDefaultPluginDirectory();
+			return new Plugins.PluginManager(toolRegistry, pluginDirectory);
+		});
 
 		services.AddTransient<MainWindowViewModel>();
 		services.AddTransient<MainWindow>();
