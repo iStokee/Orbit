@@ -146,46 +146,90 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- Interactive Grid Drop Zone -->
                 <Border Grid.Row="1"
+                        x:Name="GridDropZone"
                         CornerRadius="8"
-                        Padding="16"
+                        Padding="12"
                         Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                         BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                        BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ItemsControl ItemsSource="{Binding PreviewCells}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Rows="{Binding MaxSplitsPerAxis}"
-                                                 Columns="{Binding MaxSplitsPerAxis}" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="4"
-                                            CornerRadius="4"
-                                            Height="48"
-                                            Width="64"
-                                            Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
-                                            BorderThickness="1" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        BorderThickness="2"
+                        MinHeight="300"
+                        AllowDrop="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <StackPanel Margin="0,12,0,0">
-                            <TextBlock Text="Drop session tabs into the grid or adjust the assignments below."
-                                       FontWeight="SemiBold"
+                        <!-- Grid Cells -->
+                        <Grid x:Name="GridCellContainer" Grid.Row="0">
+                            <ItemsControl ItemsSource="{Binding GridCells}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="{Binding MaxSplitsPerAxis}"
+                                                     Columns="{Binding MaxSplitsPerAxis}" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="{Binding DataContext.DropZonePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CornerRadius="8"
+                                                Background="{DynamicResource MahApps.Brushes.Gray9}"
+                                                BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                                BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <!-- Highlight when drop target -->
+                                                        <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                            <Setter Property="BorderThickness" Value="2" />
+                                                            <Setter Property="Opacity" Value="{Binding DataContext.DropZoneOpacity, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <!-- Cell content -->
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8">
+                                                <TextBlock Text="{Binding Position, Converter={StaticResource EnumDescriptionConverter}}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           TextAlignment="Center"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                <TextBlock Text="{Binding SessionCount, StringFormat='{}{0} sessions'}"
+                                                           FontSize="9"
+                                                           Margin="0,4,0,0"
+                                                           TextAlignment="Center"
+                                                           Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                                           Visibility="{Binding HasSessions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+
+                        <!-- Help Text -->
+                        <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                            <TextBlock FontWeight="SemiBold"
                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                       TextAlignment="Center" />
-                            <TextBlock Text="Overflow, conflict, and persistence rules apply when you apply the grid."
+                                       TextAlignment="Center">
+                                <Run Text="Drag session tabs into cells" />
+                                <Run Text=" • " Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+                                <Run Text="Adjust assignments below" />
+                            </TextBlock>
+                            <TextBlock Text="Overflow, conflict, and persistence rules apply when you click Apply Grid."
                                        FontSize="11"
                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                                        Opacity="0.75"
                                        TextAlignment="Center"
                                        Margin="0,4,0,0" />
                         </StackPanel>
-                    </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>

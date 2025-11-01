@@ -331,6 +331,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "Sessions" => Settings.Default.ShowMenuSessions,
             "SessionGallery" => Settings.Default.ShowMenuSessionGallery,
             "SessionGrid" => Settings.Default.ShowMenuSessionGrid,
+            "OrbitView" => Settings.Default.ShowMenuOrbitView,
             "AccountManager" => Settings.Default.ShowMenuAccountManager,
             "ScriptControls" => Settings.Default.ShowMenuScriptControls,
             "ThemeManager" => Settings.Default.ShowMenuThemeManager,
@@ -357,6 +358,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
                         break;
                     case "SessionGrid":
                         _mainWindowViewModel.ShowMenuSessionGrid = value;
+                        break;
+                    case "OrbitView":
+                        _mainWindowViewModel.ShowMenuOrbitView = value;
                         break;
                     case "AccountManager":
                         _mainWindowViewModel.ShowMenuAccountManager = value;
@@ -393,6 +397,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
                 break;
             case "SessionGrid":
                 Settings.Default.ShowMenuSessionGrid = value;
+                break;
+            case "OrbitView":
+                Settings.Default.ShowMenuOrbitView = value;
                 break;
             case "AccountManager":
                 Settings.Default.ShowMenuAccountManager = value;

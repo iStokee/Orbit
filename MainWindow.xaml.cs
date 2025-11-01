@@ -140,11 +140,19 @@ namespace Orbit
 
 			try
 			{
-				await viewModel.CloseAllSessionsAsync(skipConfirmation: true);
+				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: false);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine($"[Orbit] Failed to shutdown sessions on exit: {ex}");
+			}
+			try
+			{
+				await viewModel.ShutdownTrackedProcessesAsync();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[Orbit] Failed to close tracked RuneScape processes on exit: {ex}");
 			}
 			finally
 			{
@@ -855,6 +863,12 @@ namespace Orbit
 		private void MainWindow_Loaded(object sender, RoutedEventArgs e)
 		{
 			UpdateTaskbarOverlay();
+
+			// Auto-open Orbit View if enabled
+			if (Settings.Default.AutoOpenOrbitViewOnStartup)
+			{
+				viewModel?.OpenOrbitViewCommand?.Execute(null);
+			}
 		}
 	}
 }

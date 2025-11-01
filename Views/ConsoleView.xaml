@@ -306,7 +306,7 @@
                                                     <TextBlock
                                                         Margin="0,2,0,0"
                                                         FontSize="12"
-                                                        Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                                        Foreground="{DynamicResource MahApps.Brushes.Gray5}"
                                                         Text="{Binding Description}" />
                                                 </StackPanel>
 

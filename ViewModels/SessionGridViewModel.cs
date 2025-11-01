@@ -26,6 +26,11 @@ namespace Orbit.ViewModels
 		private readonly Func<int, int, (int width, int height)> _getViewportSize;
 		private readonly Dictionary<Guid, SessionGridPosition> _sessionPositions = new();
 
+		// Drop zone state
+		private SessionGridPosition _dropZoneCandidate = SessionGridPosition.None;
+		private bool _isDropOverlayVisible;
+		private bool _isDragInProgress;
+
 		public SessionGridViewModel(
 			SessionCollectionService sessionCollectionService,
 			SessionGridManager gridManager,
@@ -66,6 +71,19 @@ namespace Orbit.ViewModels
 			AutoAssignCommand = new RelayCommand(_ => AutoAssignSessions());
 			ApplyGridCommand = new RelayCommand(_ => ApplyGridLayout());
 			ClearGridCommand = new RelayCommand(_ => ClearGrid());
+
+			// Initialize grid cells
+			GridCells = new ObservableCollection<GridCellViewModel>();
+			RefreshGridCells();
+
+			// Listen for MaxSplitsPerAxis changes to rebuild grid cells
+			PropertyChanged += (s, e) =>
+			{
+				if (e.PropertyName == nameof(MaxSplitsPerAxis))
+				{
+					RefreshGridCells();
+				}
+			};
 		}
 
 		/// <summary>
@@ -160,6 +178,61 @@ namespace Orbit.ViewModels
 		public IEnumerable<int> PreviewCells => Enumerable.Range(1, MaxSplitsPerAxis * MaxSplitsPerAxis);
 
 		/// <summary>
+		/// Collection of grid cells for the interactive drop zone overlay
+		/// </summary>
+		public ObservableCollection<GridCellViewModel> GridCells { get; }
+
+		/// <summary>
+		/// The grid position currently being targeted during a drag operation
+		/// </summary>
+		public SessionGridPosition DropZoneCandidate
+		{
+			get => _dropZoneCandidate;
+			set
+			{
+				if (_dropZoneCandidate == value)
+					return;
+				_dropZoneCandidate = value;
+				OnPropertyChanged();
+			}
+		}
+
+		/// <summary>
+		/// Whether the drop zone overlay is currently visible
+		/// </summary>
+		public bool IsDropOverlayVisible
+		{
+			get => _isDropOverlayVisible;
+			set
+			{
+				if (_isDropOverlayVisible == value)
+					return;
+				_isDropOverlayVisible = value;
+				OnPropertyChanged();
+			}
+		}
+
+		/// <summary>
+		/// Whether a drag operation is currently in progress
+		/// </summary>
+		public bool IsDragInProgress
+		{
+			get => _isDragInProgress;
+			set
+			{
+				if (_isDragInProgress == value)
+					return;
+				_isDragInProgress = value;
+				OnPropertyChanged();
+			}
+		}
+
+		// Settings pass-through for XAML binding
+		public double DropZonePadding => Settings.Default.SessionGridDropZonePadding;
+		public double DropZoneOpacity => Settings.Default.SessionGridDropZoneOpacity;
+		public bool ShowAllZonesOnDrag => Settings.Default.SessionGridShowAllZonesOnDrag;
+
+		/// <summary>
 		/// Command to auto-assign sessions to grid positions
 		/// </summary>
 		public ICommand AutoAssignCommand { get; }
@@ -188,6 +261,7 @@ namespace Orbit.ViewModels
 				_sessionPositions[session.Id] = _gridManager.GetSessionPosition(session);
 			}
 
+			UpdateCellSessionCounts();
 			OnPropertyChanged(nameof(SessionPositions));
 		}
 
@@ -246,6 +320,7 @@ namespace Orbit.ViewModels
 				_sessionPositions[key] = SessionGridPosition.None;
 			}
 
+			UpdateCellSessionCounts();
 			OnPropertyChanged(nameof(SessionPositions));
 		}
 
@@ -292,6 +367,76 @@ namespace Orbit.ViewModels
 			}
 
 			return position.ToString();
+		}
+
+		/// <summary>
+		/// Rebuilds the GridCells collection based on the current MaxSplitsPerAxis setting
+		/// </summary>
+		private void RefreshGridCells()
+		{
+			GridCells.Clear();
+
+			// Add cells based on grid density
+			switch (MaxSplitsPerAxis)
+			{
+				case 1:
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.Fullscreen));
+					break;
+				case 2:
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.TopLeft));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.TopRight));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.BottomLeft));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.BottomRight));
+					break;
+				case 3:
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.TopLeft));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.TopCenter));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.TopRight));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.MiddleLeft));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.Center));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.MiddleRight));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.BottomLeft));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.BottomCenter));
+					GridCells.Add(new GridCellViewModel(SessionGridPosition.BottomRight));
+					break;
+			}
+
+			UpdateCellSessionCounts();
+		}
+
+		/// <summary>
+		/// Updates the session count for each grid cell based on current assignments
+		/// </summary>
+		private void UpdateCellSessionCounts()
+		{
+			foreach (var cell in GridCells)
+			{
+				var count = _sessionPositions.Count(kvp => kvp.Value == cell.Position);
+				cell.UpdateSessionCount(count);
+			}
+		}
+
+		/// <summary>
+		/// Assigns a session to a specific grid position (called when session is dropped)
+		/// </summary>
+		public void AssignSessionToPosition(Guid sessionId, SessionGridPosition position)
+		{
+			if (!_sessionPositions.ContainsKey(sessionId))
+				_sessionPositions[sessionId] = SessionGridPosition.None;
+
+			_sessionPositions[sessionId] = position;
+			UpdateCellSessionCounts();
+			OnPropertyChanged(nameof(SessionPositions));
+
+			// If sticky layout, update the grid manager immediately
+			if (StickyLayout)
+			{
+				var session = Sessions.FirstOrDefault(s => s.Id == sessionId);
+				if (session != null)
+				{
+					_gridManager.SetSessionPosition(session, position, ConflictResolution, null);
+				}
+			}
 		}
 	}
 }

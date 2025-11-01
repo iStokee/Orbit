@@ -20,7 +20,14 @@ namespace Orbit
 		internal Process pDocked;
 		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private readonly TaskCompletionSource<bool> injectionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-		private static readonly TimeSpan InjectionWaitTimeout = TimeSpan.FromSeconds(15);
+		private readonly TaskCompletionSource<bool> injectionStartedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private static readonly TimeSpan InjectionWaitTimeout = TimeSpan.FromSeconds(6);
+		private static readonly TimeSpan InjectionStartGracePeriod = TimeSpan.FromSeconds(2);
+		private static readonly TimeSpan ProcessDetectionTimeout = TimeSpan.FromSeconds(45);
+		private static readonly TimeSpan ProcessPollInterval = TimeSpan.FromMilliseconds(250);
+		private static readonly TimeSpan WindowHandleTimeout = TimeSpan.FromSeconds(25);
+		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
+		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private uint? originalWindowStyle;
@@ -121,6 +128,11 @@ namespace Orbit
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr SetFocus(IntPtr hWnd);
+
+		internal void SignalInjectionStarting()
+		{
+			injectionStartedTcs.TrySetResult(true);
+		}
 
 		internal void SignalInjectionReady()
 		{
@@ -254,7 +266,7 @@ namespace Orbit
 			catch { /* best effort */ }
 		}
 
-		internal void Undock()
+		internal void Undock(bool restoreParent = true, bool restoreStyles = true)
 		{
 			void PerformUndock()
 			{
@@ -269,30 +281,34 @@ namespace Orbit
 				const int SWP_NOZORDER = 0x0004;
 				const int SWP_NOACTIVATE = 0x0010;
 				const int SWP_FRAMECHANGED = 0x0020;
+				const int SWP_HIDEWINDOW = 0x0080;
 
-					if (dockedStylesApplied && originalWindowStyle.HasValue)
-					{
-						SetWindowLong(_dockedHandle, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
-						SetWindowPos(
-							_dockedHandle,
-						IntPtr.Zero,
-						0,
-						0,
-						0,
-						0,
-						SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+				if (restoreStyles && dockedStylesApplied && originalWindowStyle.HasValue)
+				{
+					SetWindowLong(_dockedHandle, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
+					var restoreFlags = (uint)(SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+					SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, (int)restoreFlags);
 					dockedStylesApplied = false;
 				}
 
 				if (isCurrentlyDocked)
 				{
+					if (restoreParent)
+					{
 						SetParent(_dockedHandle, hWndOriginalParent);
-						hWndParent = IntPtr.Zero;
-						isCurrentlyDocked = false;
+					}
+					else
+					{
+						var hideFlags = (uint)(SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+						SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, (int)hideFlags);
 					}
 
-					dockedHandleCache = IntPtr.Zero;
+					hWndParent = IntPtr.Zero;
+					isCurrentlyDocked = false;
 				}
+
+				dockedHandleCache = IntPtr.Zero;
+			}
 
 			try
 			{
@@ -361,9 +377,16 @@ namespace Orbit
 					}
 				};
 				pDocked.Start();
-				Console.WriteLine("Process started, waiting for just a moment...");
-				Thread.Sleep(9000);
-				pDocked.Refresh();
+				Console.WriteLine($"[Orbit] Launcher process started (PID {pDocked.Id}). Waiting for bootstrap...");
+				await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
+				try
+				{
+					pDocked.Refresh();
+				}
+				catch (InvalidOperationException)
+				{
+					// Launcher may already have exited once the client starts.
+				}
 			}
 			catch (Exception ex)
 			{
@@ -375,128 +398,232 @@ namespace Orbit
 
 		private async Task FindAndSetRsClientAsync()
 		{
-			//Your logic to find the RS client and set associated properties
-			Process runescapeProcess = pDocked;
-			bool found = false;
-			int counter = 0;
-
-			while (!found && !pDocked.HasExited)
+			if (pDocked == null)
 			{
-				pDocked.Refresh();
-				counter++;
+				throw new InvalidOperationException("Launcher process not initialized.");
+			}
 
-				Process[] processes = Process.GetProcessesByName("rs2client");
-				foreach (Process p in processes)
+			var launcherProcess = pDocked;
+			var launcherPid = launcherProcess.Id;
+			DateTime launcherStartTime;
+			try
+			{
+				launcherStartTime = launcherProcess.StartTime;
+			}
+			catch (Exception)
+			{
+				launcherStartTime = DateTime.Now;
+			}
+
+			Console.WriteLine($"[Orbit] Waiting for RuneScape client process spawned by launcher PID {launcherPid}...");
+			var stopwatch = Stopwatch.StartNew();
+			var fallbackEnabled = false;
+
+			while (stopwatch.Elapsed < ProcessDetectionTimeout)
+			{
+				try
 				{
-					if (GetParentProcess(p.Id) == pDocked.Id)
+					launcherProcess.Refresh();
+				}
+				catch (InvalidOperationException)
+				{
+					// Launcher may have exited once the game client bootstraps.
+				}
+
+				Process? confirmedClient = null;
+				foreach (var candidate in Process.GetProcessesByName("rs2client"))
+				{
+					try
 					{
-						rs2client = p;
-						ClientSettings.rs2client = p;
-						runescape = runescapeProcess;
-						ParentProcessId = runescapeProcess?.Id;
-						JagWindow = FindWindowEx(p.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
-						wxWindowNR = FindWindowEx(runescapeProcess.MainWindowHandle, IntPtr.Zero, "wxWindowNR", null);
+						var candidateParent = GetParentProcess(candidate.Id);
+						if (candidateParent == launcherPid)
+						{
+							confirmedClient = Process.GetProcessById(candidate.Id);
+							break;
+						}
 
-						rs2ClientID = p.Id;
-						ClientSettings.rs2cPID = p.Id;
-						runescapeProcessID = pDocked.Id;
-						ClientSettings.runescapePID = pDocked.Id;
-						pDocked = p;
-						found = true;
-						processReadyTcs.TrySetResult(pDocked);
-
-						break;
+						if (candidateParent == 0 && fallbackEnabled)
+						{
+							try
+							{
+								if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
+								{
+									confirmedClient = Process.GetProcessById(candidate.Id);
+									break;
+								}
+							}
+							catch (Exception)
+							{
+								// Ignore StartTime access failures; continue scanning.
+							}
+						}
+					}
+					finally
+					{
+						candidate.Dispose();
 					}
 				}
+
+				if (confirmedClient != null)
+				{
+					rs2client = confirmedClient;
+					ClientSettings.rs2client = confirmedClient;
+					runescape = launcherProcess;
+					ParentProcessId = launcherProcess?.Id;
+					try
+					{
+						JagWindow = FindWindowEx(confirmedClient.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
+					}
+					catch (Exception)
+					{
+						JagWindow = IntPtr.Zero;
+					}
+
+					try
+					{
+						wxWindowNR = launcherProcess?.MainWindowHandle != IntPtr.Zero
+							? FindWindowEx(launcherProcess.MainWindowHandle, IntPtr.Zero, "wxWindowNR", null)
+							: IntPtr.Zero;
+					}
+					catch (Exception)
+					{
+						wxWindowNR = IntPtr.Zero;
+					}
+
+					rs2ClientID = confirmedClient.Id;
+					ClientSettings.rs2cPID = confirmedClient.Id;
+					runescapeProcessID = launcherPid;
+					ClientSettings.runescapePID = launcherPid;
+					pDocked = confirmedClient;
+					processReadyTcs.TrySetResult(confirmedClient);
+					Console.WriteLine($"[Orbit] RuneScape client detected (PID {confirmedClient.Id})");
+					return;
+				}
+
+				if (!fallbackEnabled && stopwatch.Elapsed > TimeSpan.FromSeconds(8))
+				{
+					Console.WriteLine("[Orbit] Falling back to StartTime matching while waiting for client parent linkage...");
+					fallbackEnabled = true;
+				}
+
+				await Task.Delay(ProcessPollInterval).ConfigureAwait(false);
 			}
 
-			if (!found)
-			{
-				throw new InvalidOperationException("RuneScape client process could not be located.");
-			}
+			var message = "[Orbit] RuneScape client process could not be located within the allotted timeout.";
+			Console.WriteLine(message);
+			var timeoutException = new TimeoutException(message);
+			processReadyTcs.TrySetException(timeoutException);
+			throw timeoutException;
 		}
 
 		private async Task WaitForAndSetDockingWindowAsync()
 		{
-			// Your logic to wait for the docking window and set _dockedHandle
-			while (_dockedHandle == IntPtr.Zero)
+			var stopwatch = Stopwatch.StartNew();
+			while (_dockedHandle == IntPtr.Zero && stopwatch.Elapsed < WindowHandleTimeout)
 			{
-				//wait for the window to be ready for input;
-
 				try
 				{
-					pDocked.WaitForInputIdle(500);
+					pDocked.Refresh();
 				}
-				catch (InvalidOperationException ex)
+				catch (InvalidOperationException)
 				{
-					//  ConsoleRespond($"Input idle: {ex}");
+					// Process may have exited or not yet exposed a window; continue polling.
 				}
 
-				pDocked.Refresh(); //update process info
 				if (pDocked.HasExited)
 				{
-
-					break; //abort if the process finished before we got a handle.
+					Console.WriteLine("[Orbit] RuneScape process exited before a main window handle became available.");
+					break;
 				}
 
-				_dockedHandle = pDocked.MainWindowHandle;  //cache the window handle
-				ClientSettings.gameHandle = _dockedHandle;
-				Process q = Process.GetProcessById(rs2ClientID);
-				rsWindow = FindWindowEx(q.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
-				ClientSettings.jagOpenGL = rsWindow;
-			}
-
-			// ensure MESharp injection has been attempted before we re-parent the window
-			if (WaitForInjectionBeforeDock && !injectionReadyTcs.Task.IsCompleted)
-			{
-				Console.WriteLine("[Orbit] Waiting for MESharp injection signal before docking RuneScape window...");
-				var completed = await Task.WhenAny(injectionReadyTcs.Task, Task.Delay(InjectionWaitTimeout)).ConfigureAwait(true);
-				if (completed != injectionReadyTcs.Task)
+				_dockedHandle = pDocked.MainWindowHandle;
+				if (_dockedHandle != IntPtr.Zero)
 				{
-					Console.WriteLine("[Orbit] Injection signal timed out; proceeding to dock the client anyway.");
+					ClientSettings.gameHandle = _dockedHandle;
+					try
+					{
+						var clientProcess = Process.GetProcessById(rs2ClientID);
+						rsWindow = FindWindowEx(clientProcess.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
+						ClientSettings.jagOpenGL = rsWindow != IntPtr.Zero ? rsWindow : _dockedHandle;
+					}
+					catch (Exception)
+					{
+						ClientSettings.jagOpenGL = _dockedHandle;
+					}
+
+					Console.WriteLine($"[Orbit] Obtained RuneScape window handle 0x{_dockedHandle.ToInt64():X} after {stopwatch.ElapsedMilliseconds}ms.");
+					break;
 				}
+
+				await Task.Delay(WindowHandlePollInterval).ConfigureAwait(false);
 			}
 
-			// dock the client to the panel
+			if (_dockedHandle == IntPtr.Zero)
+			{
+				var message = $"[Orbit] Timed out waiting for RuneScape window handle after {WindowHandleTimeout.TotalSeconds:N1}s.";
+				Console.WriteLine(message);
+				var timeoutException = new TimeoutException(message);
+				processReadyTcs.TrySetException(timeoutException);
+				throw timeoutException;
+			}
+
+			try
+			{
+				// Best-effort: ensure the process has finished creating its input queue.
+				pDocked?.WaitForInputIdle(500);
+			}
+			catch (InvalidOperationException)
+			{
+				// Ignore if the process doesn't have a message loop yet.
+			}
+
+			await WaitForInjectionGateAsync().ConfigureAwait(false);
+
 			IntPtr dockedHandle = IntPtr.Zero;
-			panel_DockPanel.Invoke((MethodInvoker)delegate
+			try
 			{
-				var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
-				if (hWndOriginalParent == IntPtr.Zero)
+				panel_DockPanel.Invoke((MethodInvoker)delegate
 				{
-					hWndOriginalParent = previousParent;
-				}
-				hWndParent = panel_DockPanel.Handle;
-					// ClientSettings.cameraHandle = panel1.Handle;
+					var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
+					if (hWndOriginalParent == IntPtr.Zero)
+					{
+						hWndOriginalParent = previousParent;
+					}
+					hWndParent = panel_DockPanel.Handle;
 					DockedRSHwnd = _dockedHandle;
 					dockedHandleCache = _dockedHandle;
 					dockedHandle = _dockedHandle;
 
-				// Ensure correct child window styles and refresh frame
-				const int GWL_STYLE = -16;
-				const uint WS_CHILD = 0x40000000;
-				const uint WS_VISIBLE = 0x10000000;
-				const uint WS_CLIPSIBLINGS = 0x04000000;
-				const uint WS_CLIPCHILDREN = 0x02000000;
-				const uint WS_POPUP = 0x80000000; // <- now valid as uint
-				uint curStyle = (uint)GetWindowLong(_dockedHandle, GWL_STYLE);
-				if (!originalWindowStyle.HasValue)
-				{
-					originalWindowStyle = curStyle;
-				}
-				uint newStyle = (curStyle & ~WS_POPUP) |
-								WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-				SetWindowLong(_dockedHandle, GWL_STYLE, (uint)(int)newStyle);
-				dockedStylesApplied = true;
-				isCurrentlyDocked = true;
+					const int GWL_STYLE = -16;
+					const uint WS_CHILD = 0x40000000;
+					const uint WS_VISIBLE = 0x10000000;
+					const uint WS_CLIPSIBLINGS = 0x04000000;
+					const uint WS_CLIPCHILDREN = 0x02000000;
+					const uint WS_POPUP = 0x80000000;
 
-				// Apply style change without moving or resizing yet
-				const int SWP_NOSIZE = 0x0001;
-				const int SWP_NOMOVE = 0x0002;
-				const int SWP_NOACTIVATE = 0x0010;
-				const int SWP_FRAMECHANGED = 0x0020;
-				SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-			});
+					uint curStyle = (uint)GetWindowLong(_dockedHandle, GWL_STYLE);
+					if (!originalWindowStyle.HasValue)
+					{
+						originalWindowStyle = curStyle;
+					}
+
+					uint newStyle = (curStyle & ~WS_POPUP) | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+					SetWindowLong(_dockedHandle, GWL_STYLE, (uint)(int)newStyle);
+					dockedStylesApplied = true;
+					isCurrentlyDocked = true;
+
+					const int SWP_NOSIZE = 0x0001;
+					const int SWP_NOMOVE = 0x0002;
+					const int SWP_NOACTIVATE = 0x0010;
+					const int SWP_FRAMECHANGED = 0x0020;
+					SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+				});
+			}
+			catch (ObjectDisposedException)
+			{
+				Console.WriteLine("[Orbit] Dock panel disposed before docking could complete.");
+				throw;
+			}
 
 			if (dockedHandle != IntPtr.Zero)
 			{
@@ -512,6 +639,38 @@ namespace Orbit
 				await ResizeWindow();
 				Console.WriteLine("Game client docked successfully");
 			}
+		}
+
+		private async Task WaitForInjectionGateAsync()
+		{
+			if (!WaitForInjectionBeforeDock)
+			{
+				Console.WriteLine("[Orbit] Injection-before-dock disabled; proceeding to dock immediately.");
+				return;
+			}
+
+			if (injectionReadyTcs.Task.IsCompleted)
+			{
+				Console.WriteLine("[Orbit] Injection already signalled ready prior to docking.");
+				return;
+			}
+
+			// Only defer docking if the injection pipeline has actually started.
+			if (!injectionStartedTcs.Task.IsCompleted)
+			{
+				Console.WriteLine("[Orbit] Injection has not started yet; docking immediately to avoid idle wait.");
+				return;
+			}
+
+			Console.WriteLine($"[Orbit] Injection started; waiting up to {InjectionWaitTimeout.TotalSeconds:N1}s before docking...");
+			var injectionCompleted = await Task.WhenAny(injectionReadyTcs.Task, Task.Delay(InjectionWaitTimeout)).ConfigureAwait(false);
+			if (injectionCompleted == injectionReadyTcs.Task)
+			{
+				Console.WriteLine("[Orbit] Injection completed before docking.");
+				return;
+			}
+
+			Console.WriteLine("[Orbit] Injection still running after grace window; docking now and allowing injection to finish in the background.");
 		}
 
 		#endregion

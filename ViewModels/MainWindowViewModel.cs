@@ -22,6 +22,8 @@ using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using MahApps.Metro.IconPacks;
+using MahApps.Metro.Controls.Dialogs;
+using MahApps.Metro.Controls;
 using FlowDirection = System.Windows.FlowDirection;
 
 namespace Orbit.ViewModels
@@ -45,6 +47,7 @@ namespace Orbit.ViewModels
 	private readonly AccountService accountService;
 	private readonly AutoLoginService autoLoginService;
 	private readonly SessionCollectionService sessionCollectionService;
+	private readonly OrbitLayoutStateService orbitLayoutState;
 	private readonly ConsoleLogService consoleLogService;
 	private readonly IToolRegistry toolRegistry;
 	private readonly InterTabClient interTabClient;
@@ -77,6 +80,7 @@ namespace Orbit.ViewModels
 		AccountService accountService,
 		AutoLoginService autoLoginService,
 		SessionCollectionService sessionCollectionService,
+		OrbitLayoutStateService orbitLayoutStateService,
 		ConsoleLogService consoleLogService,
 		InterTabClient interTabClient,
 		IToolRegistry toolRegistry)
@@ -88,6 +92,7 @@ namespace Orbit.ViewModels
 		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
 		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+		this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
 		this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
 		this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
 		this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
@@ -98,6 +103,7 @@ namespace Orbit.ViewModels
 
 		Sessions = this.sessionCollectionService.Sessions;
 		Tabs = new ObservableCollection<object>();
+		Tabs.CollectionChanged += OnTabsCollectionChanged;
 		Sessions.CollectionChanged += OnSessionsCollectionChanged;
 		foreach (var session in Sessions)
 		{
@@ -115,6 +121,8 @@ namespace Orbit.ViewModels
 		ShowSessionsCommand = new RelayCommand(_ => ShowSessions(), _ => Sessions.Count > 0);
 		OpenSessionGalleryCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGallery"));
 		OpenSessionGridCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGrid"));
+		OpenOrbitViewCommand = new RelayCommand(_ => TryOpenToolByKey("OrbitView"));
+		MoveTabToOrbitCommand = new RelayCommand(MoveTabToOrbit, CanMoveTabToOrbit);
 		OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 		OpenScriptManagerCommand = new RelayCommand(_ => OpenScriptManager());
 		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager(), _ => this.toolRegistry.Find(AccountManagerToolKey) != null);
@@ -165,6 +173,8 @@ namespace Orbit.ViewModels
 	public ICommand ShowSessionsCommand { get; }
 	public ICommand OpenSessionGalleryCommand { get; }
 	public ICommand OpenSessionGridCommand { get; }
+	public ICommand OpenOrbitViewCommand { get; }
+	public ICommand MoveTabToOrbitCommand { get; }
 	public ICommand OpenThemeManagerCommand { get; }
 	public ICommand OpenScriptManagerCommand { get; }
 	public ICommand ToggleConsoleCommand { get; }
@@ -354,10 +364,36 @@ namespace Orbit.ViewModels
 				RequireInjectionBeforeDock = AutoInjectOnReady
 			};
 
+			// Always add to Sessions collection
 			Sessions.Add(session);
-			Tabs.Add(session);
-			SelectedSession = session;
-			SelectedTab = session; // Auto-focus the new tab
+
+			// Check launch behavior setting
+			var launchBehavior = Settings.Default.SessionLaunchBehavior;
+
+			if (launchBehavior == "OrbitView")
+			{
+				// Don't add to Tabs - Orbit View will pick it up automatically via Sessions collection
+				SelectedSession = session;
+				// If Orbit View isn't open, open it
+				if (!Tabs.Any(t => t is FrameworkElement fe && fe.GetType().Name.Contains("OrbitGridLayoutView")))
+				{
+					OpenOrbitViewCommand?.Execute(null);
+				}
+			}
+			else if (launchBehavior == "Ask")
+			{
+				// TODO: Show dialog asking user where to dock
+				// For now, default to individual tabs
+				Tabs.Add(session);
+				SelectedSession = session;
+				SelectedTab = session;
+			}
+			else // IndividualTabs or default
+			{
+				Tabs.Add(session);
+				SelectedSession = session;
+				SelectedTab = session; // Auto-focus the new tab
+			}
 
 		try
 		{
@@ -705,6 +741,13 @@ namespace Orbit.ViewModels
             }
         }
 
+        if (TryAdoptToolFromOtherWindow(key, out var adoptedTool))
+        {
+	        Tabs.Add(adoptedTool);
+	        SelectedTab = adoptedTool;
+	        return;
+        }
+
         var ctrl = controlFactory();
         if (ctrl.DataContext == null)
         {
@@ -715,6 +758,110 @@ namespace Orbit.ViewModels
         Tabs.Add(newTool);
         SelectedTab = newTool;
     }
+
+	private bool TryAdoptToolFromOtherWindow(string key, out Models.ToolTabItem? adopted)
+	{
+		adopted = null;
+
+		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
+		foreach (var window in windows)
+		{
+			if (window.DataContext is not MainWindowViewModel otherVm || ReferenceEquals(otherVm, this))
+			{
+				continue;
+			}
+
+			var existingTool = otherVm.Tabs.OfType<Models.ToolTabItem>()
+				.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.Ordinal));
+			if (existingTool == null)
+			{
+				continue;
+			}
+
+			otherVm.Tabs.Remove(existingTool);
+			if (ReferenceEquals(otherVm.SelectedTab, existingTool))
+			{
+				otherVm.SelectedTab = otherVm.Tabs.FirstOrDefault();
+			}
+
+			if (existingTool.HostControl != null && ReferenceEquals(existingTool.HostControl.DataContext, otherVm))
+			{
+				existingTool.HostControl.DataContext = this;
+			}
+
+			adopted = existingTool;
+			return true;
+		}
+
+		return false;
+	}
+
+	private bool CanMoveTabToOrbit(object parameter)
+	{
+		var target = parameter ?? SelectedTab;
+		if (target is SessionModel session)
+		{
+			return session != null;
+		}
+
+		if (target is Models.ToolTabItem tool)
+		{
+			if (string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal))
+			{
+				return false;
+			}
+
+			return !orbitLayoutState.Items.Contains(tool);
+		}
+
+		return false;
+	}
+
+	private void MoveTabToOrbit(object parameter)
+	{
+		var target = parameter ?? SelectedTab;
+		if (target == null)
+		{
+			return;
+		}
+
+		if (target is SessionModel session)
+		{
+			if (Tabs.Contains(session))
+			{
+				Tabs.Remove(session);
+				HandleTabRemoval(session);
+			}
+
+			orbitLayoutState.AddItem(session);
+			SelectedSession = session;
+		}
+		else if (target is Models.ToolTabItem tool)
+		{
+			if (Tabs.Contains(tool))
+			{
+				Tabs.Remove(tool);
+				HandleTabRemoval(tool);
+			}
+
+			if (tool.HostControl != null && !ReferenceEquals(tool.HostControl.DataContext, this))
+			{
+				tool.HostControl.DataContext = this;
+			}
+
+			orbitLayoutState.AddItem(tool);
+		}
+
+		TryOpenToolByKey("OrbitView");
+		var orbitTab = Tabs.OfType<Models.ToolTabItem>()
+			.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
+		if (orbitTab != null)
+		{
+			SelectedTab = orbitTab;
+		}
+
+		CommandManager.InvalidateRequerySuggested();
+	}
 
 	#endregion
 
@@ -1201,6 +1348,17 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowMenuOrbitView
+	{
+		get => Settings.Default.ShowMenuOrbitView;
+		set
+		{
+			if (Settings.Default.ShowMenuOrbitView == value) return;
+			Settings.Default.ShowMenuOrbitView = value;
+			OnPropertyChanged(nameof(ShowMenuOrbitView));
+		}
+	}
+
 	public bool ShowFloatingMenuOnHome
 	{
 		get => Settings.Default.ShowFloatingMenuOnHome;
@@ -1669,6 +1827,9 @@ namespace Orbit.ViewModels
 			}
 		}
 
+		public Task ShutdownTrackedProcessesAsync(CancellationToken cancellationToken = default)
+			=> sessionManager.ShutdownManagedProcessesAsync(cancellationToken);
+
 		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = true)
 		{
 			if (session == null)
@@ -1676,15 +1837,10 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			if (!skipConfirmation && ShouldConfirmSessionClose(session))
+			if (!skipConfirmation)
 			{
-				var result = MessageBox.Show(
-					$"Session '{session.Name}' is active. Are you sure you want to close it?",
-					"Close Active Session",
-					MessageBoxButton.YesNo,
-					MessageBoxImage.Warning);
-
-				if (result != MessageBoxResult.Yes)
+				var confirmed = await ConfirmSessionCloseAsync(session).ConfigureAwait(true);
+				if (!confirmed)
 				{
 					return;
 				}
@@ -1736,10 +1892,92 @@ namespace Orbit.ViewModels
 				   session.InjectionState == InjectionState.Injected;
 		}
 
-		private void HandleTabRemoval(object removedItem)
+		private async Task<bool> ConfirmSessionCloseAsync(SessionModel session)
+		{
+			if (!ShouldConfirmSessionClose(session))
+			{
+				return true;
+			}
+
+			async Task<bool> ShowDialogOnUiAsync()
+			{
+				if (Application.Current?.MainWindow is MetroWindow metroWindow)
+				{
+					var dialogSettings = new MetroDialogSettings
+					{
+						AffirmativeButtonText = "Close Session",
+						NegativeButtonText = "Cancel",
+						DialogMessageFontSize = 15,
+						DialogButtonFontSize = 13,
+						AnimateShow = true,
+						AnimateHide = true,
+						ColorScheme = MetroDialogColorScheme.Accented
+					};
+
+					var result = await metroWindow.ShowMessageAsync(
+						"Close Active Session",
+						$"Session '{session.Name}' is currently active.\nClosing it will terminate the embedded RuneScape client.",
+						MessageDialogStyle.AffirmativeAndNegative,
+						dialogSettings).ConfigureAwait(true);
+
+					return result == MessageDialogResult.Affirmative;
+				}
+
+				var fallback = MessageBox.Show(
+					$"Session '{session.Name}' is active. Are you sure you want to close it?",
+					"Close Active Session",
+					MessageBoxButton.YesNo,
+					MessageBoxImage.Warning);
+
+				return fallback == MessageBoxResult.Yes;
+			}
+
+			var dispatcher = Application.Current?.Dispatcher;
+			if (dispatcher == null)
+			{
+				return await ShowDialogOnUiAsync().ConfigureAwait(true);
+			}
+
+			if (dispatcher.CheckAccess())
+			{
+				return await ShowDialogOnUiAsync().ConfigureAwait(true);
+			}
+
+			return await dispatcher.InvokeAsync(ShowDialogOnUiAsync).Task.Unwrap().ConfigureAwait(true);
+		}
+
+	private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+	{
+		if (e == null)
+		{
+			UpdateFloatingMenuVisibilityForCurrentTab();
+			return;
+		}
+
+		if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Reset)
 		{
 			if (Tabs.Count == 0)
 			{
+				SelectedTab = null;
+				SelectedSession = null;
+			}
+			else if (SelectedTab == null || (e.OldItems != null && e.OldItems.Contains(SelectedTab)))
+			{
+				SelectedTab = Tabs.FirstOrDefault();
+			}
+		}
+		else if (e.Action == NotifyCollectionChangedAction.Replace && e.OldItems != null && e.OldItems.Contains(SelectedTab))
+		{
+			SelectedTab = e.NewItems?.Cast<object>().FirstOrDefault() ?? Tabs.FirstOrDefault();
+		}
+
+		UpdateFloatingMenuVisibilityForCurrentTab();
+	}
+
+	private void HandleTabRemoval(object removedItem)
+	{
+		if (Tabs.Count == 0)
+		{
 				SelectedTab = null;
 				SelectedSession = null;
 				UpdateFloatingMenuVisibilityForCurrentTab();

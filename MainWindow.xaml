@@ -273,6 +273,14 @@
                             Margin="4,4,4,0"
                             Padding="12,8,12,10"
                             CornerRadius="8,8,0,0">
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}">
+                                    <MenuItem
+                                        Header="Dock in Orbit View"
+                                        Command="{Binding MoveTabToOrbitCommand}"
+                                        CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <!--  Default inactive tab state  -->
@@ -1255,6 +1263,13 @@
                                     ToolTip="Session Grid Layout"
                                     Visibility="{Binding ShowMenuSessionGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="GridLarge" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenOrbitViewCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="Orbit View"
+                                    Visibility="{Binding ShowMenuOrbitView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="ViewGrid" />
                                 </Button>
                                 <Button
                                     Command="{Binding OpenAccountManagerCommand}"

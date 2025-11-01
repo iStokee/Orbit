@@ -57,6 +57,7 @@ public partial class App : Application
 		services.AddSingleton<ConsolePipeServer>();
 
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
+		services.AddSingleton<OrbitLayoutStateService>();
 		services.AddSingleton<ScriptIntegrationService>();
 		services.AddSingleton<SessionManagerService>();
 		services.AddSingleton<SessionGridManager>();
@@ -89,6 +90,9 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool, AccountManagerTool>();
 		services.AddSingleton<IOrbitTool>(sp => new SessionGalleryTool(sp.GetRequiredService<SessionCollectionService>()));
 		services.AddSingleton<IOrbitTool>(sp => new SessionGridTool(sp.GetRequiredService<SessionCollectionService>(), sp.GetRequiredService<SessionGridManager>()));
+		services.AddSingleton<IOrbitTool>(sp => new OrbitViewTool(
+			sp.GetRequiredService<SessionCollectionService>(),
+			sp.GetRequiredService<OrbitLayoutStateService>()));
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ApiDocumentationTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();

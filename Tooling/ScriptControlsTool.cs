@@ -23,6 +23,9 @@ public sealed class ScriptControlsTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return serviceProvider.GetRequiredService<ScriptControlsView>();
+        var view = serviceProvider.GetRequiredService<ScriptControlsView>();
+        // Set DataContext to MainWindowViewModel so bindings work
+        view.DataContext = context;
+        return view;
     }
 }

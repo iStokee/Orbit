@@ -2,9 +2,11 @@
 using Orbit.Models;
 using Orbit.Views;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +25,22 @@ namespace Orbit.Services
 		private const uint SWP_HIDEWINDOW = 0x0080;
 		private static readonly nint HWND_TOP = nint.Zero;
 		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(3);
+
+		private enum ProcessRole
+		{
+			Client,
+			Launcher
+		}
+
+		private readonly ConcurrentDictionary<int, ManagedProcessRecord> _managedProcesses = new();
+
+		private record struct ManagedProcessRecord(
+			int ProcessId,
+			DateTime? StartTime,
+			ProcessRole Role,
+			string SessionName,
+			nint FallbackHandle,
+			int? ParentProcessId);
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool PostMessage(nint hWnd, uint msg, nint wParam, nint lParam);
@@ -47,17 +65,18 @@ namespace Orbit.Services
 				{
 					session.ExternalHandle = args.Handle;
 					session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
-					try { clientView.FocusEmbeddedClient(); } catch { }
-
-					if (session.InjectionState != InjectionState.Injected)
-					{
-						rsForm.Docked -= dockedHandler;
-						return;
-					}
-
-					// Re-apply input passthrough after docking to ensure keyboard focus is restored.
 					if (session.RSProcess != null)
 					{
+						UpdateProcessFallbackHandle(session.RSProcess.Id, session.ExternalHandle);
+					}
+					try { clientView.FocusEmbeddedClient(); } catch { }
+
+					// IMPROVED: Always try to re-apply commands if injected, even if injection completed earlier
+					// Window re-parenting (SetParent) can reset hooks, so we re-apply to restore state
+					if (session.InjectionState == InjectionState.Injected && session.RSProcess != null)
+					{
+						Console.WriteLine($"[Orbit] Re-applying MESharp commands after docking for session '{session.Name}'...");
+
 						var applied = await OrbitCommandClient
 							.SendInputModeWithRetryAsync(1, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
 							.ConfigureAwait(false);
@@ -73,7 +92,14 @@ namespace Orbit.Services
 						{
 							Console.WriteLine("[Orbit] Warning: Unable to persist MemoryError focus spoof state after docking.");
 						}
+
+						Console.WriteLine($"[Orbit] Post-dock command re-application complete for session '{session.Name}'.");
 					}
+					else if (session.InjectionState != InjectionState.Injected)
+					{
+						Console.WriteLine($"[Orbit] Docked event fired for '{session.Name}' but injection state is {session.InjectionState}. Skipping command re-application.");
+					}
+
 					rsForm.Docked -= dockedHandler;
 				};
 				rsForm.Docked += dockedHandler;
@@ -83,6 +109,7 @@ namespace Orbit.Services
 				session.ParentProcessId = rsForm?.ParentProcessId;
 				session.ExternalHandle = rsForm.DockedClientHandle;
 				session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
+				RegisterSessionProcesses(session);
 				if (session.RSProcess != null)
 				{
 					var parentInfo = session.ParentProcessId.HasValue ? session.ParentProcessId.Value.ToString() : "n/a";
@@ -127,6 +154,7 @@ namespace Orbit.Services
 
             try
 			{
+				session.RSForm?.SignalInjectionStarting();
 				Console.WriteLine($"[Orbit] Injecting '{dllPath}' into PID {process.Id}...");
 				var injected = await Task.Run(() => Orbit.ME.DllInjector.Inject(process.Id, dllPath));
 				Console.WriteLine(injected
@@ -225,24 +253,22 @@ namespace Orbit.Services
 			// Detach embedded host to release Win32 parenting
 			if (session.HostControl is ChildClientView childHost)
 			{
-				childHost.DetachSession();
+				childHost.DetachSession(restoreParent: false);
 			}
-
-			var rsForm = session.RSForm;
-			if (rsForm != null)
+			else if (session.RSForm is RSForm standaloneForm)
 			{
 				try
 				{
-					rsForm.Undock();
-					if (rsForm.InvokeRequired)
+					standaloneForm.Undock(restoreParent: false, restoreStyles: false);
+					if (standaloneForm.InvokeRequired)
 					{
-						rsForm.Invoke(new Action(() =>
+						standaloneForm.Invoke(new Action(() =>
 						{
 							try
 							{
-								if (!rsForm.IsDisposed)
+								if (!standaloneForm.IsDisposed)
 								{
-									rsForm.Close();
+									standaloneForm.Close();
 								}
 							}
 							catch
@@ -251,14 +277,14 @@ namespace Orbit.Services
 							}
 						}));
 					}
-					else if (!rsForm.IsDisposed)
+					else if (!standaloneForm.IsDisposed)
 					{
-						rsForm.Close();
+						standaloneForm.Close();
 					}
 
-					if (!rsForm.IsDisposed)
+					if (!standaloneForm.IsDisposed)
 					{
-						rsForm.Dispose();
+						standaloneForm.Dispose();
 					}
 				}
 				catch
@@ -283,11 +309,22 @@ namespace Orbit.Services
 				}
 			}
 
-			await TryShutdownProcessAsync(process, externalHandle, "client", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+			var processId = process?.Id;
+			var parentProcessIdValue = parentProcess?.Id;
+
+			var clientExited = await TryShutdownProcessAsync(process, externalHandle, "client", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+			if (processId.HasValue && clientExited)
+			{
+				TryUnregisterProcess(processId.Value);
+			}
 
 			if (parentProcess != null)
 			{
-				await TryShutdownProcessAsync(parentProcess, nint.Zero, "launcher", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+				var parentExited = await TryShutdownProcessAsync(parentProcess, nint.Zero, "launcher", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+				if (parentProcessIdValue.HasValue && parentExited)
+				{
+					TryUnregisterProcess(parentProcessIdValue.Value);
+				}
 			}
 
 			session.RSForm = null;
@@ -296,6 +333,175 @@ namespace Orbit.Services
 			session.ExternalHandle = nint.Zero;
 			session.RenderSurfaceHandle = nint.Zero;
 			session.UpdateState(SessionState.Closed, clearError: false);
+		}
+
+		public async Task ShutdownManagedProcessesAsync(CancellationToken cancellationToken = default)
+		{
+			var tracked = _managedProcesses.Values.ToList();
+			if (tracked.Count == 0)
+			{
+				return;
+			}
+
+			foreach (var record in tracked)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+
+				Process process;
+				try
+				{
+					process = Process.GetProcessById(record.ProcessId);
+				}
+				catch (ArgumentException)
+				{
+					TryUnregisterProcess(record.ProcessId);
+					continue;
+				}
+				catch (InvalidOperationException)
+				{
+					TryUnregisterProcess(record.ProcessId);
+					continue;
+				}
+
+				if (process.HasExited)
+				{
+					TryUnregisterProcess(record.ProcessId);
+					process.Dispose();
+					continue;
+				}
+
+				if (record.StartTime.HasValue)
+				{
+					var currentStart = TryGetProcessStartTime(process);
+					if (currentStart.HasValue && Math.Abs((currentStart.Value - record.StartTime.Value).TotalSeconds) > 1)
+					{
+						// PID has been reused for a different process; skip to avoid touching unrelated instances.
+						process.Dispose();
+						TryUnregisterProcess(record.ProcessId);
+						continue;
+					}
+				}
+
+				var label = record.Role == ProcessRole.Client ? "client" : "launcher";
+				try
+				{
+					await TryShutdownProcessAsync(
+						process,
+						record.FallbackHandle,
+						label,
+						record.SessionName,
+						DefaultShutdownTimeout,
+						cancellationToken,
+						forceKillOnTimeout: false).ConfigureAwait(true);
+				}
+				catch (OperationCanceledException)
+				{
+					throw;
+				}
+				catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
+				{
+					Console.WriteLine($"[Orbit] Failed to gracefully close tracked {label} PID {record.ProcessId}: {ex.Message}");
+				}
+				finally
+				{
+					TryUnregisterProcess(record.ProcessId);
+				}
+			}
+		}
+
+		private void RegisterSessionProcesses(SessionModel session)
+		{
+			if (session == null)
+				return;
+
+			if (session.RSProcess != null)
+			{
+				RegisterManagedProcess(
+					session.RSProcess,
+					ProcessRole.Client,
+					session.Name ?? $"Session {session.Id}",
+					session.ExternalHandle,
+					session.ParentProcessId);
+			}
+
+			if (session.ParentProcessId is int parentPid && session.RSProcess?.Id != parentPid)
+			{
+				try
+				{
+					var parentProcess = Process.GetProcessById(parentPid);
+					RegisterManagedProcess(
+						parentProcess,
+						ProcessRole.Launcher,
+						session.Name ?? $"Session {session.Id}",
+						nint.Zero,
+						null);
+					if (!ReferenceEquals(parentProcess, session.RSProcess))
+					{
+						parentProcess.Dispose();
+					}
+				}
+				catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+				{
+					// Parent process may have already exited; nothing to track.
+				}
+			}
+		}
+
+		private void RegisterManagedProcess(Process process, ProcessRole role, string sessionName, nint fallbackHandle, int? parentProcessId)
+		{
+			if (process == null)
+				return;
+
+			try
+			{
+				var record = new ManagedProcessRecord(
+					process.Id,
+					TryGetProcessStartTime(process),
+					role,
+					sessionName,
+					fallbackHandle,
+					parentProcessId);
+
+				_managedProcesses[process.Id] = record;
+			}
+			catch (InvalidOperationException)
+			{
+				// Process exited between creation and tracking; ignore.
+			}
+		}
+
+		private void UpdateProcessFallbackHandle(int processId, nint fallbackHandle)
+		{
+			if (processId <= 0)
+				return;
+
+			if (_managedProcesses.TryGetValue(processId, out var record))
+			{
+				_managedProcesses[processId] = record with { FallbackHandle = fallbackHandle };
+			}
+		}
+
+		private void TryUnregisterProcess(int processId)
+		{
+			if (processId <= 0)
+				return;
+
+			_managedProcesses.TryRemove(processId, out _);
+		}
+
+		private static DateTime? TryGetProcessStartTime(Process process)
+		{
+			if (process == null)
+				return null;
+
+			try
+			{
+				return process.StartTime;
+			}
+			catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
+			{
+				return null;
+			}
 		}
 
 		private async Task<bool> TryShutdownProcessAsync(Process process, nint fallbackHandle, string processLabel, string sessionName, TimeSpan timeout, CancellationToken cancellationToken, bool forceKillOnTimeout)

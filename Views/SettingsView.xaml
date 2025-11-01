@@ -74,6 +74,247 @@
                 </Grid>
             </Border>
 
+            <!-- Update Panel -->
+            <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,16,0,16">
+                <StackPanel>
+                    <!-- Header -->
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <Border
+                            Width="32"
+                            Height="32"
+                            Margin="0,0,12,0"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="16"
+                            Opacity="0.8">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Kind="Download" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Software Updates" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.75"
+                                Text="Keep Orbit up to date with the latest features and fixes." />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Version Info -->
+                    <Border
+                        Margin="0,16,0,0"
+                        Padding="12"
+                        Background="{DynamicResource MahApps.Brushes.Gray9}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Current Version -->
+                            <iconPacks:PackIconMaterial
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                Kind="InformationOutline" />
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}">
+                                <Run Text="Current Version:" FontWeight="SemiBold" />
+                                <Run Text="{Binding CurrentVersion, Mode=OneWay}" />
+                            </TextBlock>
+
+                            <!-- Update Status -->
+                            <iconPacks:PackIconMaterial
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Width="16"
+                                Height="16"
+                                Margin="0,8,8,0"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                Kind="{Binding UpdateStatusIcon, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Margin="0,8,0,0"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="{Binding UpdateStatusText, Mode=OneWay}" />
+
+                            <!-- Last Checked -->
+                            <iconPacks:PackIconMaterial
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Width="16"
+                                Height="16"
+                                Margin="0,8,8,0"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                Kind="ClockOutline" />
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Margin="0,8,0,0"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray5}">
+                                <Run Text="Last checked:" />
+                                <Run Text="{Binding LastCheckedDisplay, Mode=OneWay}" />
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+
+                    <!-- Update Available Panel -->
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="12"
+                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Accent3}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}">
+                                <iconPacks:PackIconMaterial
+                                    Width="16"
+                                    Height="16"
+                                    Kind="NewBox" />
+                                <Run Text="Update Available!" />
+                            </TextBlock>
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Opacity="0.9"
+                                TextWrapping="Wrap">
+                                <Run Text="Version" />
+                                <Run FontWeight="SemiBold" Text="{Binding AvailableVersion, Mode=OneWay}" />
+                                <Run Text="is now available for download." />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Download Progress -->
+                    <StackPanel
+                        Margin="0,12,0,0"
+                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock
+                            Margin="0,0,0,4"
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.75"
+                            Text="Downloading update..." />
+                        <Controls:MetroProgressBar
+                            Height="4"
+                            IsIndeterminate="{Binding IsDownloadIndeterminate}"
+                            Value="{Binding DownloadProgress, Mode=OneWay}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                            HorizontalAlignment="Right">
+                            <Run Text="{Binding DownloadProgress, Mode=OneWay, StringFormat=N0}" />
+                            <Run Text="%" />
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Action Buttons -->
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Check for Updates Button -->
+                        <Button
+                            Grid.Column="0"
+                            Padding="16,8"
+                            Command="{Binding CheckForUpdatesCommand}"
+                            IsEnabled="{Binding IsCheckingForUpdates, Converter={StaticResource InverseBooleanConverter}}"
+                            Style="{DynamicResource MahApps.Styles.Button.Square}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Kind="Refresh" />
+                                <TextBlock VerticalAlignment="Center" Text="Check for Updates" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Install Update Button -->
+                        <Button
+                            Grid.Column="2"
+                            Padding="16,8"
+                            Command="{Binding InstallUpdateCommand}"
+                            IsEnabled="{Binding CanInstallUpdate}"
+                            Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
+                            Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Kind="Download" />
+                                <TextBlock VerticalAlignment="Center" Text="Install Update" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Error Message -->
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="12"
+                        Background="{DynamicResource MahApps.Brushes.Validation5}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Validation3}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Visibility="{Binding HasUpdateError, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Top"
+                                Foreground="{DynamicResource MahApps.Brushes.ValidationText5}"
+                                Kind="AlertCircleOutline" />
+                            <TextBlock
+                                Foreground="{DynamicResource MahApps.Brushes.ValidationText5}"
+                                Text="{Binding UpdateErrorMessage, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -656,6 +897,229 @@
                             Header="Tools Management"
                             IsOn="{Binding ShowMenuToolsOverview, Mode=TwoWay}" />
                     </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Orbit View Settings -->
+            <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,16,0,0">
+                <StackPanel>
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <Border
+                            Width="32"
+                            Height="32"
+                            Margin="0,0,12,0"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="16"
+                            Opacity="0.8">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Kind="ViewGrid" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Orbit View" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.7"
+                                Text="Customize session grid layout and UI density" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Session Launch Behavior -->
+                    <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Session Launch Behavior" />
+                        <TextBlock
+                            Margin="0,4,0,8"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Where should new sessions dock when launched?" />
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            SelectedValue="{Binding SessionLaunchBehavior, Mode=TwoWay}"
+                            SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Individual Tabs" Tag="IndividualTabs" />
+                            <ComboBoxItem Content="Orbit View" Tag="OrbitView" />
+                            <ComboBoxItem Content="Ask Each Time" Tag="Ask" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Grid Density -->
+                    <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Grid Density" />
+                        <TextBlock
+                            Margin="0,4,0,8"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Default number of grid cells (1x1, 2x2, or 3x3)" />
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            SelectedValue="{Binding OrbitViewGridDensity, Mode=TwoWay}"
+                            SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Fullscreen (1x1)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">1</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Standard (2x2)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">2</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Dense (3x3)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">3</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- UI Compactness -->
+                    <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="UI Spacing" />
+                        <TextBlock
+                            Margin="0,4,0,8"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Control margin/padding density to reclaim vertical space" />
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            SelectedValue="{Binding OrbitViewCompactness, Mode=TwoWay}"
+                            SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Minimal (1pt margins)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">0</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Moderate (5pt margins)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">1</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Maximum (10pt margins)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">2</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Tab Header Size -->
+                    <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Tab Header Size" />
+                        <TextBlock
+                            Margin="0,4,0,8"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Height of session tab headers" />
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            SelectedValue="{Binding OrbitViewTabHeaderSize, Mode=TwoWay}"
+                            SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Compact (24px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">0</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Standard (32px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">1</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Comfortable (40px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">2</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Border Thickness -->
+                    <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Cell Border Thickness" />
+                        <TextBlock
+                            Margin="0,4,0,8"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Thickness of borders around grid cells" />
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            SelectedValue="{Binding OrbitViewBorderThickness, Mode=TwoWay}"
+                            SelectedValuePath="Tag">
+                            <ComboBoxItem Content="None (0px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">0</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Minimal (1px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">1</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Standard (2px)">
+                                <ComboBoxItem.Tag>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">2</sys:Int32>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Auto-Open on Startup -->
+                    <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                    <StackPanel>
+                        <Controls:ToggleSwitch
+                            Header="Auto-open Orbit View on Startup"
+                            IsOn="{Binding AutoOpenOrbitViewOnStartup, Mode=TwoWay}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.7"
+                            Text="Automatically open Orbit View when Orbit launches (preserves home screen)" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

@@ -105,7 +105,7 @@
             <ItemsControl ItemsSource="{Binding Plugins}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                        <Border Background="{DynamicResource MahApps.Brushes.Gray10}"
                                BorderBrush="{DynamicResource MahApps.Brushes.Accent4}"
                                BorderThickness="1"
                                CornerRadius="4"

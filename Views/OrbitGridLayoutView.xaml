@@ -1,0 +1,176 @@
+<UserControl
+    x:Class="Orbit.Views.OrbitGridLayoutView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+    xmlns:dockablz="http://dragablz.net/winfx/xaml/dockablz"
+    xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:local="clr-namespace:Orbit"
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!--  Header with controls  -->
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Width="35"
+                        Height="35"
+                        Margin="10,10,0,0"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="ViewGrid" />
+                </Border>
+
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Orbit View" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.85"
+                        Text="Live session grid - Drag to edges to split" />
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="2"
+                    Margin="0,0,12,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <!--  Grid Layout Buttons  -->
+                    <Button
+                        Height="36"
+                        Margin="8,0,4,0"
+                        Padding="12,0"
+                        Command="{Binding CreateGrid2x2Command}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Create 2x2 Grid">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="GridLarge" />
+                            <TextBlock FontWeight="SemiBold" Text="2x2" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button
+                        Height="36"
+                        Margin="4,0"
+                        Padding="12,0"
+                        Command="{Binding CreateGrid3x3Command}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Create 3x3 Grid">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="Grid" />
+                            <TextBlock FontWeight="SemiBold" Text="3x3" />
+                        </StackPanel>
+                    </Button>
+
+                    <!--  Reset Button  -->
+                    <Button
+                        Height="36"
+                        Margin="4,0,0,0"
+                        Padding="12,0"
+                        Command="{Binding ResetLayoutCommand}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Reset to Single View">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="WindowRestore" />
+                            <TextBlock FontWeight="SemiBold" Text="Reset" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Main Layout Area using Dragablz Layout  -->
+        <Border
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            Background="{DynamicResource MahApps.Brushes.Gray9}"
+            BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+            BorderThickness="1"
+            CornerRadius="6">
+
+            <!--  Dragablz Layout Control - Native branching/splitting  -->
+            <dockablz:Layout
+                x:Name="SessionLayout"
+                Partition="OrbitMainShell">
+
+                <!--  BranchTemplate: Defines how each branch (tab control) looks  -->
+                <!--  NOTE: Do NOT bind ItemsSource here - Dragablz manages items internally when branching  -->
+                <dockablz:Layout.BranchTemplate>
+                    <DataTemplate>
+                        <dragablz:TabablzControl
+                            Margin="4"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                            BorderThickness="2"
+                            ContentTemplate="{StaticResource SessionContentTemplate}"
+                            ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
+                            ShowDefaultAddButton="False"
+                            ShowDefaultCloseButton="True"
+                            ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}">
+
+                            <dragablz:TabablzControl.InterTabController>
+                        <dragablz:InterTabController
+                            InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Partition="OrbitMainShell" />
+                            </dragablz:TabablzControl.InterTabController>
+                        </dragablz:TabablzControl>
+                    </DataTemplate>
+                </dockablz:Layout.BranchTemplate>
+
+                <!--  Initial content: Single TabablzControl showing all sessions  -->
+                <dragablz:TabablzControl
+                    Margin="4"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                    BorderThickness="2"
+                    ContentTemplate="{StaticResource SessionContentTemplate}"
+                    ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
+                    ItemsSource="{Binding Items}"
+                    ShowDefaultAddButton="False"
+                    ShowDefaultCloseButton="True"
+                    ClosingItemCallback="{Binding TabClosingHandler}">
+
+                    <dragablz:TabablzControl.InterTabController>
+                    <dragablz:InterTabController
+                        InterTabClient="{Binding InterTabClient}"
+                        Partition="OrbitMainShell" />
+                    </dragablz:TabablzControl.InterTabController>
+                </dragablz:TabablzControl>
+
+            </dockablz:Layout>
+
+        </Border>
+    </Grid>
+</UserControl>

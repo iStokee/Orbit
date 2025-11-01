@@ -83,6 +83,9 @@
   <Setting Name="ShowMenuSessionGrid" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuOrbitView" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowFloatingMenuOnSessionTabs" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -133,6 +136,36 @@
   </Setting>
   <Setting Name="ShowThemeManagerWelcomeMessage" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="SessionGridDropZonePadding" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">8</Value>
+  </Setting>
+  <Setting Name="SessionGridDropZoneOpacity" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">0.45</Value>
+  </Setting>
+  <Setting Name="SessionGridShowAllZonesOnDrag" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
+  <Setting Name="OrbitViewGridDensity" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">2</Value>
+  </Setting>
+  <Setting Name="DefaultSessionView" Type="System.String" Scope="User">
+    <Value Profile="(Default)">OrbitView</Value>
+  </Setting>
+  <Setting Name="SessionLaunchBehavior" Type="System.String" Scope="User">
+    <Value Profile="(Default)">OrbitView</Value>
+  </Setting>
+  <Setting Name="OrbitViewCompactness" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">1</Value>
+  </Setting>
+  <Setting Name="OrbitViewTabHeaderSize" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">1</Value>
+  </Setting>
+  <Setting Name="OrbitViewBorderThickness" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">2</Value>
+  </Setting>
+  <Setting Name="AutoOpenOrbitViewOnStartup" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
   </Setting>
 </Settings>
 </SettingsFile>

@@ -350,6 +350,18 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuOrbitView {
+            get {
+                return ((bool)(this["ShowMenuOrbitView"]));
+            }
+            set {
+                this["ShowMenuOrbitView"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowFloatingMenuOnSessionTabs {
             get {
                 return ((bool)(this["ShowFloatingMenuOnSessionTabs"]));
@@ -548,6 +560,126 @@ namespace Orbit {
 			}
 			set {
 				this["ShowThemeManagerWelcomeMessage"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("8")]
+		public double SessionGridDropZonePadding {
+			get {
+				return ((double)(this["SessionGridDropZonePadding"]));
+			}
+			set {
+				this["SessionGridDropZonePadding"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0.45")]
+		public double SessionGridDropZoneOpacity {
+			get {
+				return ((double)(this["SessionGridDropZoneOpacity"]));
+			}
+			set {
+				this["SessionGridDropZoneOpacity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("True")]
+		public bool SessionGridShowAllZonesOnDrag {
+			get {
+				return ((bool)(this["SessionGridShowAllZonesOnDrag"]));
+			}
+			set {
+				this["SessionGridShowAllZonesOnDrag"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("2")]
+		public int OrbitViewGridDensity {
+			get {
+				return ((int)(this["OrbitViewGridDensity"]));
+			}
+			set {
+				this["OrbitViewGridDensity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
+		public string DefaultSessionView {
+			get {
+				return ((string)(this["DefaultSessionView"]));
+			}
+			set {
+				this["DefaultSessionView"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
+		public string SessionLaunchBehavior {
+			get {
+				return ((string)(this["SessionLaunchBehavior"]));
+			}
+			set {
+				this["SessionLaunchBehavior"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("1")]
+		public int OrbitViewCompactness {
+			get {
+				return ((int)(this["OrbitViewCompactness"]));
+			}
+			set {
+				this["OrbitViewCompactness"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("1")]
+		public int OrbitViewTabHeaderSize {
+			get {
+				return ((int)(this["OrbitViewTabHeaderSize"]));
+			}
+			set {
+				this["OrbitViewTabHeaderSize"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("2")]
+		public int OrbitViewBorderThickness {
+			get {
+				return ((int)(this["OrbitViewBorderThickness"]));
+			}
+			set {
+				this["OrbitViewBorderThickness"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("False")]
+		public bool AutoOpenOrbitViewOnStartup {
+			get {
+				return ((bool)(this["AutoOpenOrbitViewOnStartup"]));
+			}
+			set {
+				this["AutoOpenOrbitViewOnStartup"] = value;
 			}
 		}
 	}

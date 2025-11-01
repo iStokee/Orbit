@@ -8,6 +8,7 @@ using UserControl = System.Windows.Controls.UserControl;
 using Size = System.Windows.Size;
 using WF = System.Windows.Forms;
 using Drawing = System.Drawing;
+using System.Windows.Threading;
 
 namespace Orbit.Views
 {
@@ -32,8 +33,9 @@ namespace Orbit.Views
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
         #endregion
 
-        internal RSForm rsForm;
+		internal RSForm rsForm;
         internal bool hasStarted = false;
+		private bool loadRequested;
 		private readonly TaskCompletionSource<RSForm> sessionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private readonly SessionParkingHost parkingHost = new();
 		private Size lastViewportSize = new Size(800, 600);
@@ -41,7 +43,8 @@ namespace Orbit.Views
         public ChildClientView()
         {
             InitializeComponent();
-            _ = LoadNewSession();
+            // FIXED: Don't call LoadNewSession() until visual tree is ready
+            // This was causing race conditions with WindowsFormsHost initialization
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
             IsVisibleChanged += OnIsVisibleChanged;
@@ -72,6 +75,10 @@ namespace Orbit.Views
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
 			RestoreSessionFromParking();
+
+			// FIXED: Start session loading AFTER visual tree is ready
+			// Only load if we haven't started yet (avoid re-loading on tab switch)
+			EnsureSessionLoading();
 
             if (Parent is TabItem parentTab && parentTab.Parent is TabablzControl tabControl)
             {
@@ -142,9 +149,41 @@ namespace Orbit.Views
 			return new Size(ActualWidth, ActualHeight);
 		}
 
-		public Task<RSForm> WaitForSessionAsync() => sessionReadyTcs.Task;
+		public Task<RSForm> WaitForSessionAsync()
+		{
+			EnsureSessionLoading();
+			return sessionReadyTcs.Task;
+		}
 
-        public async Task LoadNewSession()
+		private void EnsureSessionLoading()
+		{
+			if (hasStarted || loadRequested)
+			{
+				return;
+			}
+
+			loadRequested = true;
+
+			if (!Dispatcher.CheckAccess())
+			{
+				_ = Dispatcher.InvokeAsync(() =>
+				{
+					if (!hasStarted)
+					{
+						_ = LoadNewSession();
+					}
+				}, DispatcherPriority.Loaded);
+			}
+			else
+			{
+				if (!hasStarted)
+				{
+					_ = LoadNewSession();
+				}
+			}
+		}
+
+		public async Task LoadNewSession()
         {
             // If the session has already started, just return
             if (hasStarted)
@@ -185,6 +224,7 @@ namespace Orbit.Views
                 // Log the full exception details
                 Console.WriteLine(ex.ToString());
 				sessionReadyTcs.TrySetException(ex);
+				loadRequested = false;
             }
         }
 
@@ -307,7 +347,7 @@ namespace Orbit.Views
 			parkingHost.Park(rsForm, lastViewportSize);
 		}
 
-		internal void DetachSession()
+		internal void DetachSession(bool restoreParent = true)
 		{
 			try
 			{
@@ -357,7 +397,7 @@ namespace Orbit.Views
 			{
 				if (rsForm != null && !rsForm.IsDisposed)
 				{
-					rsForm.Undock();
+					rsForm.Undock(restoreParent, restoreStyles: restoreParent);
 					rsForm.Close();
 					rsForm.Dispose();
 				}
@@ -368,6 +408,7 @@ namespace Orbit.Views
 			}
 
 			hasStarted = false;
+			loadRequested = false;
 			rsForm = null;
 			parkingHost.Dispose();
 			IsVisibleChanged -= OnIsVisibleChanged;
