@@ -15,6 +15,7 @@ namespace Orbit.Services
 
 		private readonly ObservableCollection<SessionModel> _sessions = new();
 		private SessionModel _globalSelectedSession;
+		private SessionModel _globalHotReloadTargetSession;
 
 		private SessionCollectionService()
 		{
@@ -37,6 +38,22 @@ namespace Orbit.Services
 				{
 					_globalSelectedSession = value;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(GlobalSelectedSession)));
+				}
+			}
+		}
+
+		/// <summary>
+		/// Shared hot-reload target session. Script tooling can bind to this to keep the load target consistent.
+		/// </summary>
+		public SessionModel GlobalHotReloadTargetSession
+		{
+			get => _globalHotReloadTargetSession;
+			set
+			{
+				if (_globalHotReloadTargetSession != value)
+				{
+					_globalHotReloadTargetSession = value;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(GlobalHotReloadTargetSession)));
 				}
 			}
 		}

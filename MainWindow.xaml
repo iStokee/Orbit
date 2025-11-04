@@ -1086,6 +1086,50 @@
                     PreviewMouseLeftButtonDown="FloatingMenuHandle_PreviewMouseLeftButtonDown"
                     PreviewMouseLeftButtonUp="FloatingMenuHandle_PreviewMouseLeftButtonUp"
                     PreviewMouseMove="FloatingMenuHandle_PreviewMouseMove">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Effect" Value="{x:Null}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFloatingMenuWelcomeVisible, Mode=OneWay}" Value="True">
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect
+                                                BlurRadius="20"
+                                                Color="{DynamicResource MahApps.Colors.Accent}"
+                                                Direction="0"
+                                                Opacity="0.65"
+                                                ShadowDepth="0" />
+                                        </Setter.Value>
+                                    </Setter>
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="FloatingMenuHighlightPulse">
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                                    From="1"
+                                                    To="1.08"
+                                                    Duration="0:0:0.8" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                                    From="1"
+                                                    To="1.08"
+                                                    Duration="0:0:0.8" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="FloatingMenuHighlightPulse" />
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Border.Background>
                         <LinearGradientBrush Opacity="0.94" StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
@@ -1258,13 +1302,6 @@
                                     <iconPacks:PackIconMaterial Kind="ViewModule" />
                                 </Button>
                                 <Button
-                                    Command="{Binding OpenSessionGridCommand}"
-                                    Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="Session Grid Layout"
-                                    Visibility="{Binding ShowMenuSessionGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="GridLarge" />
-                                </Button>
-                                <Button
                                     Command="{Binding OpenOrbitViewCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
                                     ToolTip="Orbit View"
@@ -1300,10 +1337,10 @@
                                     <iconPacks:PackIconMaterial Kind="Console" />
                                 </Button>
                                 <Button
-                                    Command="{Binding OpenApiDocumentationCommand}"
+                                    Command="{Binding OpenGuideCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="API Documentation"
-                                    Visibility="{Binding ShowMenuApiDocumentation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    ToolTip="Guide"
+                                    Visibility="{Binding ShowMenuGuide, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" />
                                 </Button>
                                 <Button
@@ -1322,6 +1359,76 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
+                    </Border>
+                </Popup>
+                <Popup
+                    x:Name="FloatingMenuWelcomePopup"
+                    AllowsTransparency="True"
+                    IsOpen="{Binding IsFloatingMenuWelcomeVisible, Mode=OneWay}"
+                    PlacementTarget="{Binding ElementName=FloatingMenuHandle}"
+                    PopupAnimation="Fade"
+                    StaysOpen="False">
+                    <Popup.Style>
+                        <Style TargetType="Popup">
+                            <Setter Property="Placement" Value="Top" />
+                            <Setter Property="HorizontalOffset" Value="0" />
+                            <Setter Property="VerticalOffset" Value="-24" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Down}">
+                                    <Setter Property="Placement" Value="Bottom" />
+                                    <Setter Property="VerticalOffset" Value="24" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Left}">
+                                    <Setter Property="Placement" Value="Left" />
+                                    <Setter Property="HorizontalOffset" Value="-24" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding FloatingMenuExpansionDirection}" Value="{x:Static models:FloatingMenuDirection.Right}">
+                                    <Setter Property="Placement" Value="Right" />
+                                    <Setter Property="HorizontalOffset" Value="24" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Popup.Style>
+                    <Border
+                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        CornerRadius="18"
+                        Padding="12"
+                        Opacity="0.95">
+                        <Border.Effect>
+                            <DropShadowEffect
+                                BlurRadius="16"
+                                Color="{DynamicResource MahApps.Colors.Accent}"
+                                Direction="270"
+                                Opacity="0.4"
+                                ShadowDepth="4" />
+                        </Border.Effect>
+                        <Button
+                            Command="{Binding FloatingMenuWelcomeCommand}"
+                            Background="Transparent"
+                            BorderBrush="{x:Null}"
+                            Cursor="Hand"
+                            FocusVisualStyle="{x:Null}"
+                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                            Padding="0">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="20"
+                                    Height="20"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Kind="HandPointingRight" />
+                                <StackPanel Margin="10,0,0,0">
+                                    <TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="Welcome!" />
+                                    <TextBlock
+                                        FontSize="12"
+                                        Opacity="0.85"
+                                        Text="Click to open the Orbit menu" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                     </Border>
                 </Popup>
             </Grid>

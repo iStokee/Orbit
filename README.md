@@ -107,35 +107,33 @@ Secure credential storage:
 - **Account Switching**: Change accounts without restarting
 - **Security**: Encrypted storage (implementation TBD)
 
-### 6. 📚 API Documentation Browser
+### 6. 📘 Orbiters Guide Hub
 
-Built-in interactive documentation for the MESharp API:
+An in-app handbook styled like a well-loved field guide. It curates:
 
-**Features**:
-- 🔍 **Live Search**: Real-time filtering of classes, methods, and properties
-- 📖 **Complete Docs**: View summaries, parameters, return types, examples
-- 🎨 **Syntax Highlighting**: Keyword highlighting for C# code examples
-- 🖱️ **Interactive Navigation**: Click any class to explore its members
-- 📋 **Copy Signatures**: One-click copy of method signatures
-- 🎨 **Theme Integration**: Matches Orbit's dark/light theme
+- 🚀 **Flight School**: Install, configure, and operate Orbit day-to-day
+- 🛠️ **Contributor Manual**: Environment setup, coding standards, review flow
+- 🧭 **API Reference**: Script APIs, Orbit services, plugin contracts
+- 🧱 **Systems Primer**: Architectural overviews with links to deep dives
+- 🗃️ **Quick Links**: Launch external docs and open the docs folder directly
+
+The guide renders Markdown with Orbit's theme, includes quick status hints, and embraces the "Don't panic" Hitchhiker tone without sacrificing usability.
 
 **How to Access**:
 1. Click the **book icon** (📖) in Orbit's floating menu
-2. Or go to Menu Settings → Enable/disable "API Documentation" button
+2. Or go to Menu Settings → Enable/disable the "Guide" button
 
 **Architecture**:
-- Powered by `csharp_interop`'s self-contained `ApiDocumentationBrowser` WPF UserControl
-- Uses reflection to discover API classes at runtime
-- Reads XML documentation from `csharp_interop.xml`
-- No external dependencies - works offline
+- Markdown-first renderer backed by [`Markdig`](https://github.com/xoofx/markdig) + [`Markdig.Wpf`](https://github.com/xoofx/markdig)
+- Loads source content from `docs/OrbitersGuide` (packaged with Orbit builds)
+- Auto-detects local repo clones to support live editing during development
+- Status footer highlights load issues (missing files, parse errors)
 
 **Use Cases**:
-- Quick reference while developing scripts
-- Discover available API methods and properties
-- Learn parameter requirements without leaving Orbit
-- Copy method signatures directly into your script
-
-See [csharp_interop README](../../C%23/csharp_interop/README.md#-interactive-api-documentation-browser) for technical details.
+- Give operators a friendly "Don't panic" landing experience
+- Onboard contributors with a single linkable handbook
+- Surface API docs alongside architectural context and historical research
+- Provide quick actions for refreshing or opening the docs folder for edits
 
 ### 7. 🔧 Extensible Tool System
 
@@ -168,7 +166,7 @@ services.AddSingleton<IOrbitTool, MyCustomTool>();
 - **Sessions Overview**: Session monitoring and control
 - **Script Manager**: Script library and hot reload
 - **Account Manager**: Account credentials management
-- **API Documentation**: Interactive API browser
+- **Guide**: Orbiters Guide documentation hub
 
 **Tool Registry**:
 ```csharp
@@ -240,7 +238,7 @@ Orbit/
 │       ├── SessionsOverviewTool.cs
 │       ├── ScriptManagerTool.cs
 │       ├── AccountManagerTool.cs
-│       └── ApiDocumentationTool.cs      # API browser wrapper
+│       └── GuideTool.cs                 # Orbiters Guide wrapper
 ├── Classes/                 # Utilities
 │   ├── Win32.cs                         # Win32 API interop
 │   ├── SessionState.cs                  # Enums for session states
@@ -692,6 +690,12 @@ Win32.SetWindowLong(childHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE);
        NewService = new NewService(dependency1, dependency2);
    }
    ```
+
+### Release Automation
+
+- Run `Orbit/tools/OrbitRelease.ps1` to bump versions, publish binaries, and build Velopack packages.
+- Option **6** executes the full pipeline and regenerates `orbit-win-x64.zip` for the built-in updater.
+- GitHub Actions workflow `.github/workflows/orbit-release.yml` mirrors the script when tags such as `orbit/v1.2.3` are pushed or via manual dispatch.
 
 ## Relationship with csharp_interop
 

@@ -6,10 +6,12 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Dragablz;
 using Dragablz.Dockablz;
 using Orbit.Models;
 using Orbit.Services;
+using Application = System.Windows.Application;
 using Orientation = System.Windows.Controls.Orientation;
 
 namespace Orbit.ViewModels
@@ -112,53 +114,57 @@ namespace Orbit.ViewModels
 
 			try
 			{
-				// First, reset to single view if we're already branched
-				if (GetAllTabControls(_sessionLayout).Count() > 1)
-				{
-					ResetLayout();
-				}
+				var controlCount = GetAllTabControls(_sessionLayout).Take(2).Count();
+				var rootTabControl = controlCount > 1
+					? ResetLayout()
+					: GetFirstTabControl(_sessionLayout) ?? ResetLayout();
 
-				// Get the root TabablzControl - this is our starting point
-				var rootTabControl = GetFirstTabControl(_sessionLayout);
 				if (rootTabControl == null)
 					return;
 
-				// Collect all sessions from root control to redistribute later
-				var allSessions = new System.Collections.Generic.List<object>();
-				foreach (var item in rootTabControl.Items.Cast<object>().ToList())
+				if (rootTabControl.Items.Count > 0 && rootTabControl.SelectedItem == null)
 				{
-					allSessions.Add(item);
+					rootTabControl.SelectedIndex = 0;
 				}
+
+				var allSessions = rootTabControl.Items.Cast<object>().ToList();
 				rootTabControl.Items.Clear();
 
-				// Step 1: Create vertical splits to make rows (horizontal lines)
-				// We use a simpler approach: create all row splits from the root control
+				var knownControls = new System.Collections.Generic.HashSet<TabablzControl> { rootTabControl };
 				var rowControls = new System.Collections.Generic.List<TabablzControl> { rootTabControl };
+
+				TabablzControl? CaptureNewControl()
+				{
+					foreach (var control in GetAllTabControls(_sessionLayout))
+					{
+						if (knownControls.Add(control))
+						{
+							return control;
+						}
+					}
+
+					return null;
+				}
 
 				for (int row = 1; row < rows; row++)
 				{
-					// Branch from the LAST created row control
 					var sourceControl = rowControls[rowControls.Count - 1];
 					Layout.Branch(
 						sourceControl,
-						Orientation.Vertical,      // Creates horizontal split line
-						false,                      // false = add below, true = add above
-						0.5);                       // 50/50 split - Dragablz will adjust proportions
+						Orientation.Vertical,
+						false,
+						0.5);
 
-					// The newly created control is always added after branching
-					// Find it by getting all controls and taking the one we don't have yet
-					var allControls = GetAllTabControls(_sessionLayout).ToList();
-					var newControl = allControls.FirstOrDefault(c => !rowControls.Contains(c));
+					var newControl = CaptureNewControl();
 					if (newControl != null)
 					{
 						rowControls.Add(newControl);
 					}
 				}
 
-				// Step 2: For each row, create horizontal splits to make columns (vertical lines)
 				var allCellControls = new System.Collections.Generic.List<TabablzControl>();
 
-				foreach (var rowControl in rowControls.ToList()) // ToList() to avoid modification during iteration
+				foreach (var rowControl in rowControls.ToList())
 				{
 					var cellsInRow = new System.Collections.Generic.List<TabablzControl> { rowControl };
 
@@ -167,13 +173,11 @@ namespace Orbit.ViewModels
 						var sourceControl = cellsInRow[cellsInRow.Count - 1];
 						Layout.Branch(
 							sourceControl,
-							Orientation.Horizontal,    // Creates vertical split line
-							false,                      // false = add to right, true = add to left
-							0.5);                       // 50/50 split
+							Orientation.Horizontal,
+							false,
+							0.5);
 
-						// Find the newly created control
-						var allControls = GetAllTabControls(_sessionLayout).ToList();
-						var newControl = allControls.FirstOrDefault(c => !allCellControls.Contains(c) && !cellsInRow.Contains(c));
+						var newControl = CaptureNewControl();
 						if (newControl != null)
 						{
 							cellsInRow.Add(newControl);
@@ -183,16 +187,41 @@ namespace Orbit.ViewModels
 					allCellControls.AddRange(cellsInRow);
 				}
 
-				// Step 3: Distribute sessions evenly across all cells
 				if (allSessions.Count > 0 && allCellControls.Count > 0)
 				{
 					int cellIndex = 0;
 					foreach (var session in allSessions)
 					{
-						// Round-robin distribution
-						allCellControls[cellIndex % allCellControls.Count].Items.Add(session);
+						var targetControl = allCellControls[cellIndex % allCellControls.Count];
+						targetControl.Items.Add(session);
+						if (targetControl.SelectedItem == null)
+						{
+							targetControl.SelectedItem = session;
+						}
+
 						cellIndex++;
 					}
+				}
+
+				foreach (var control in allCellControls)
+				{
+					if (control.Items.Count > 0 && control.SelectedItem == null)
+					{
+						control.SelectedIndex = 0;
+					}
+				}
+
+				foreach (var session in allSessions.OfType<SessionModel>())
+				{
+					var host = session.HostControl;
+					if (host == null)
+						continue;
+
+					var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
+					dispatcher?.InvokeAsync(() =>
+					{
+						host.EnsureActiveAfterLayout();
+					}, DispatcherPriority.Background);
 				}
 			}
 			catch (Exception ex)
@@ -207,36 +236,40 @@ namespace Orbit.ViewModels
 		/// Resets the layout to a single TabablzControl by moving all items to the first control
 		/// FIXED: Now properly collapses branch structure instead of leaving empty branches
 		/// </summary>
-		private void ResetLayout()
+		private TabablzControl? ResetLayout()
 		{
 			if (_sessionLayout == null)
-				return;
+				return null;
 
 			try
 			{
-				// Get all TabablzControls in the layout
 				var allControls = GetAllTabControls(_sessionLayout).ToList();
 				if (allControls.Count <= 1)
-					return; // Already in single view
+				{
+					var existing = allControls.FirstOrDefault();
+					if (existing != null && existing.Items.Count > 0 && existing.SelectedItem == null)
+					{
+						existing.SelectedIndex = 0;
+					}
 
-				// Collect all items from all controls (sessions)
+					return existing;
+				}
+
 				var allItems = new System.Collections.Generic.List<object>();
 				foreach (var control in allControls)
 				{
-					if (control.Items != null)
+					if (control.Items == null)
+						continue;
+
+					foreach (var item in control.Items.Cast<object>().ToList())
 					{
-						foreach (var item in control.Items.Cast<object>().ToList())
+						if (!allItems.Contains(item))
 						{
-							if (!allItems.Contains(item))
-							{
-								allItems.Add(item);
-							}
+							allItems.Add(item);
 						}
 					}
 				}
 
-				// CRITICAL FIX: Replace the entire Layout.Content with a fresh TabablzControl
-				// This is the proper way to collapse all branches - recreate the root control
 				var newRootControl = new TabablzControl
 				{
 					Margin = new System.Windows.Thickness(4),
@@ -248,32 +281,35 @@ namespace Orbit.ViewModels
 					ClosingItemCallback = TabClosingHandler
 				};
 
-				// Set templates from resources
 				newRootControl.ContentTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["SessionContentTemplate"];
 				newRootControl.ItemTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["OrbitSessionHeaderTemplate"];
 
-				// Configure InterTabController
 				newRootControl.InterTabController = new Dragablz.InterTabController
 				{
 					InterTabClient = InterTabClient,
 					Partition = "OrbitMainShell"
 				};
 
-				// Add all collected items to the new control
 				foreach (var item in allItems)
 				{
 					newRootControl.Items.Add(item);
 				}
 
-				// Replace the Layout's content - this collapses all branches
+				if (newRootControl.Items.Count > 0)
+				{
+					newRootControl.SelectedIndex = 0;
+				}
+
 				_sessionLayout.Content = newRootControl;
 
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Layout reset complete. Restored {allItems.Count} sessions to single view.");
+				return newRootControl;
 			}
 			catch (Exception ex)
 			{
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Failed to reset layout: {ex.Message}");
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Stack trace: {ex.StackTrace}");
+				return null;
 			}
 		}
 
@@ -283,7 +319,7 @@ namespace Orbit.ViewModels
 				return false;
 
 			// Can reset if we have more than one TabablzControl (i.e., branches exist)
-			var controlCount = GetAllTabControls(_sessionLayout).Count();
+			var controlCount = GetAllTabControls(_sessionLayout).Take(2).Count();
 			return controlCount > 1;
 		}
 
@@ -355,10 +391,26 @@ namespace Orbit.ViewModels
 			if (args == null)
 				return;
 
-			if (args.DragablzItem?.DataContext is SessionModel session)
+			var item = args.DragablzItem?.DataContext;
+			if (item == null)
+				return;
+
+			// Handle session close
+			if (item is SessionModel session)
 			{
 				args.Cancel();
 				_closeSession(session);
+				return;
+			}
+
+			// Handle tool/other tab close - remove from Items collection
+			// This prevents empty tab shells from being left behind
+			if (Items.Contains(item))
+			{
+				Application.Current.Dispatcher.BeginInvoke(() =>
+				{
+					Items.Remove(item);
+				}, DispatcherPriority.Background);
 			}
 		}
 

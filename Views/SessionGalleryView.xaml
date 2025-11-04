@@ -4,9 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
     xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SessionGalleryViewModel,
+                                     IsDesignTimeCreatable=False}"
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+    mc:Ignorable="d">
 
     <UserControl.Resources>
         <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
@@ -144,7 +149,7 @@
                         Content="Custom Size:"
                         Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                         IsChecked="{Binding UseCustomThumbnailSize}" />
-                    <mah:NumericUpDown
+                    <Controls:NumericUpDown
                         Width="100"
                         Margin="8,0,0,0"
                         VerticalAlignment="Center"
@@ -158,6 +163,7 @@
                 <StackPanel
                     Grid.Row="0"
                     Grid.Column="2"
+                    HorizontalAlignment="Right"
                     Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock
@@ -295,7 +301,10 @@
                                         </Grid>
 
                                         <!--  Overlay with session info  -->
-                                        <Border VerticalAlignment="Bottom" Background="#AA000000">
+                                        <Border VerticalAlignment="Bottom">
+                                            <Border.Background>
+                                                <SolidColorBrush Opacity="0.85" Color="{DynamicResource MahApps.Colors.ThemeBackground}" />
+                                            </Border.Background>
                                             <Grid Margin="8">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
@@ -327,7 +336,7 @@
                                                         FontSize="10"
                                                         Foreground="White"
                                                         Opacity="0.8"
-                                                        Text="{Binding State}" />
+                                                        Text="{Binding State, FallbackValue='Unknown'}" />
                                                 </StackPanel>
                                             </Grid>
                                         </Border>

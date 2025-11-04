@@ -330,10 +330,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
         {
             "Sessions" => Settings.Default.ShowMenuSessions,
             "SessionGallery" => Settings.Default.ShowMenuSessionGallery,
-            "SessionGrid" => Settings.Default.ShowMenuSessionGrid,
             "OrbitView" => Settings.Default.ShowMenuOrbitView,
             "AccountManager" => Settings.Default.ShowMenuAccountManager,
-            "ScriptControls" => Settings.Default.ShowMenuScriptControls,
             "ThemeManager" => Settings.Default.ShowMenuThemeManager,
             "Console" => Settings.Default.ShowMenuConsole,
             "ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
@@ -356,17 +354,11 @@ public class ToolCardViewModel : INotifyPropertyChanged
                     case "SessionGallery":
                         _mainWindowViewModel.ShowMenuSessionGallery = value;
                         break;
-                    case "SessionGrid":
-                        _mainWindowViewModel.ShowMenuSessionGrid = value;
-                        break;
                     case "OrbitView":
                         _mainWindowViewModel.ShowMenuOrbitView = value;
                         break;
                     case "AccountManager":
                         _mainWindowViewModel.ShowMenuAccountManager = value;
-                        break;
-                    case "ScriptControls":
-                        _mainWindowViewModel.ShowMenuScriptControls = value;
                         break;
                     case "ThemeManager":
                         _mainWindowViewModel.ShowMenuThemeManager = value;
@@ -375,7 +367,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
                         _mainWindowViewModel.ShowMenuConsole = value;
                         break;
                     case "ApiDocumentation":
-                        _mainWindowViewModel.ShowMenuApiDocumentation = value;
+                        _mainWindowViewModel.ShowMenuGuide = value;
                         break;
                     case "Settings":
                         _mainWindowViewModel.ShowMenuSettings = value;
@@ -395,17 +387,11 @@ public class ToolCardViewModel : INotifyPropertyChanged
             case "SessionGallery":
                 Settings.Default.ShowMenuSessionGallery = value;
                 break;
-            case "SessionGrid":
-                Settings.Default.ShowMenuSessionGrid = value;
-                break;
             case "OrbitView":
                 Settings.Default.ShowMenuOrbitView = value;
                 break;
             case "AccountManager":
                 Settings.Default.ShowMenuAccountManager = value;
-                break;
-            case "ScriptControls":
-                Settings.Default.ShowMenuScriptControls = value;
                 break;
             case "ThemeManager":
                 Settings.Default.ShowMenuThemeManager = value;
@@ -444,7 +430,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ThemeManager" => "Customize themes, accents, and appearance",
             "ScriptManager" => "Browse and manage script library",
             "Console" => "View unified logs from Orbit, ME, and scripts",
-            "ApiDocumentation" => "Browse interactive MESharp API documentation",
+            "ApiDocumentation" => "Open the Orbiters Guide documentation hub",
             "ToolsOverview" => "Manage registered tools and their visibility",
             "PluginManager" => "Load and manage dynamic plugin tools",
             "Settings" => "Configure Orbit application settings",

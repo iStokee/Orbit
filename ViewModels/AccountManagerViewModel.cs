@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Runtime.InteropServices;
+using System.Security;
 
 namespace Orbit.ViewModels
 {
@@ -18,10 +20,10 @@ namespace Orbit.ViewModels
 		private readonly SessionCollectionService _sessionCollectionService;
 		private readonly AutoLoginService _autoLoginService;
 		private CancellationTokenSource? _loginCts;
-		private string _searchText = string.Empty;
-		private string _newUsername = string.Empty;
-		private string _newPassword = string.Empty;
-		private string _newNickname = string.Empty;
+	private string _searchText = string.Empty;
+	private string _newUsername = string.Empty;
+	private SecureString _newPassword = new();
+	private string _newNickname = string.Empty;
 		private int _newPreferredWorld = 1;
 		private AccountModel? _selectedAccount;
 		private SessionModel? _selectedSession;
@@ -60,39 +62,36 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public string NewPassword
+	public string NewNickname
+	{
+		get => _newNickname;
+		set
 		{
-			get => _newPassword;
-			set
-			{
-				if (_newPassword == value) return;
-				_newPassword = value;
-				OnPropertyChanged();
-				OnPropertyChanged(nameof(CanAddAccount));
-			}
-		}
-
-		public string NewNickname
-		{
-			get => _newNickname;
-			set
-			{
 				if (_newNickname == value) return;
 				_newNickname = value;
 				OnPropertyChanged();
 			}
 		}
 
-		public int NewPreferredWorld
+	public int NewPreferredWorld
+	{
+		get => _newPreferredWorld;
+		set
 		{
-			get => _newPreferredWorld;
-			set
-			{
-				if (_newPreferredWorld == value) return;
-				_newPreferredWorld = value;
-				OnPropertyChanged();
-			}
+			if (_newPreferredWorld == value) return;
+			_newPreferredWorld = value;
+			OnPropertyChanged();
 		}
+	}
+
+	public void UpdateNewPassword(SecureString? password)
+	{
+		var newPassword = password != null ? password.Copy() : new SecureString();
+		_newPassword?.Dispose();
+		_newPassword = newPassword;
+		OnPropertyChanged(nameof(CanAddAccount));
+		CommandManager.InvalidateRequerySuggested();
+	}
 
 		public AccountModel? SelectedAccount
 		{
@@ -144,10 +143,10 @@ namespace Orbit.ViewModels
 
 		public bool IsLoginAvailable => !IsLoggingIn && SelectedAccount != null && SelectedSession != null;
 
-		public bool CanAddAccount =>
-			!string.IsNullOrWhiteSpace(NewUsername) &&
-			!string.IsNullOrWhiteSpace(NewPassword) &&
-			NewPassword.Length >= 5;
+	public bool CanAddAccount =>
+		!string.IsNullOrWhiteSpace(NewUsername) &&
+		_newPassword != null &&
+		_newPassword.Length >= 5;
 
 		public ICommand AddAccountCommand { get; }
 		public ICommand DeleteAccountCommand { get; }
@@ -294,19 +293,21 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			var account = new AccountModel
-			{
-				Username = NewUsername.Trim(),
-				Password = NewPassword,
-				Nickname = string.IsNullOrWhiteSpace(NewNickname) ? string.Empty : NewNickname.Trim(),
-				PreferredWorld = NewPreferredWorld,
-				LastUsed = DateTime.MinValue,
-				AutoLogin = false
-			};
+		var password = ExtractPassword();
 
-			_accountService.AddAccount(account);
-			ClearForm();
-		}
+		var account = new AccountModel
+		{
+			Username = NewUsername.Trim(),
+			Password = password,
+			Nickname = string.IsNullOrWhiteSpace(NewNickname) ? string.Empty : NewNickname.Trim(),
+			PreferredWorld = NewPreferredWorld,
+			LastUsed = DateTime.MinValue,
+			AutoLogin = false
+		};
+
+		_accountService.AddAccount(account);
+		ClearForm();
+	}
 
 		private void DeleteAccount(object? parameter)
 		{
@@ -316,13 +317,22 @@ namespace Orbit.ViewModels
 			SelectedAccount = null;
 		}
 
-		private void ClearForm()
-		{
-			NewUsername = string.Empty;
-			NewPassword = string.Empty;
-			NewNickname = string.Empty;
-			NewPreferredWorld = 1;
-		}
+	private void ResetNewPassword()
+	{
+		_newPassword?.Dispose();
+		_newPassword = new SecureString();
+		OnPropertyChanged(nameof(CanAddAccount));
+		CommandManager.InvalidateRequerySuggested();
+		PasswordReset?.Invoke(this, EventArgs.Empty);
+	}
+
+	private void ClearForm()
+	{
+		NewUsername = string.Empty;
+		ResetNewPassword();
+		NewNickname = string.Empty;
+		NewPreferredWorld = 1;
+	}
 
 		private void UpdateFilteredAccounts()
 		{
@@ -344,7 +354,29 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public event PropertyChangedEventHandler? PropertyChanged;
+	private string ExtractPassword()
+	{
+		if (_newPassword == null || _newPassword.Length == 0)
+			return string.Empty;
+
+		IntPtr ptr = IntPtr.Zero;
+		try
+		{
+			ptr = Marshal.SecureStringToBSTR(_newPassword);
+			return Marshal.PtrToStringBSTR(ptr) ?? string.Empty;
+		}
+		finally
+		{
+			if (ptr != IntPtr.Zero)
+			{
+				Marshal.ZeroFreeBSTR(ptr);
+			}
+		}
+	}
+
+	public event EventHandler? PasswordReset;
+
+	public event PropertyChangedEventHandler? PropertyChanged;
 
 		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
 		{

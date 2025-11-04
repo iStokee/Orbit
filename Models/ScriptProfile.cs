@@ -11,6 +11,7 @@ public class ScriptProfile : INotifyPropertyChanged
 	private string _filePath = string.Empty;
 	private DateTime _lastUsed;
 	private bool _isFavorite;
+	private bool _hideFromRecents;
 
 	public string Name
 	{
@@ -67,6 +68,17 @@ public class ScriptProfile : INotifyPropertyChanged
 			if (_isFavorite == value) return;
 			_isFavorite = value;
 			OnPropertyChanged(nameof(IsFavorite));
+		}
+	}
+
+	public bool HideFromRecents
+	{
+		get => _hideFromRecents;
+		set
+		{
+			if (_hideFromRecents == value) return;
+			_hideFromRecents = value;
+			OnPropertyChanged(nameof(HideFromRecents));
 		}
 	}
 

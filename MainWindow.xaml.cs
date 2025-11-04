@@ -224,6 +224,12 @@ namespace Orbit
 					continue;
 				}
 
+				if (!clientView.IsVisible)
+				{
+					// Hidden clients get re-synced when their tab is reactivated.
+					continue;
+				}
+
 				var viewportSize = clientView.GetHostViewportSize();
 				var width = Math.Max(0, (int)Math.Round(viewportSize.Width));
 				var height = Math.Max(0, (int)Math.Round(viewportSize.Height));
@@ -233,7 +239,13 @@ namespace Orbit
 					continue;
 				}
 
-				if (session.ExternalHandle != 0)
+				var lastApplied = clientView.LastAppliedViewportSize;
+				var hasAppliedSize = lastApplied.Width > 0 && lastApplied.Height > 0;
+				var viewportMatchesApplied = hasAppliedSize &&
+					Math.Abs(lastApplied.Width - width) < 1 &&
+					Math.Abs(lastApplied.Height - height) < 1;
+
+				if (session.ExternalHandle != 0 && !viewportMatchesApplied)
 				{
 					var adjustedWidth = width + 16;
 					var adjustedHeight = height + 40;
@@ -370,8 +382,12 @@ namespace Orbit
 
 		private void ScriptControlButton_Click(object sender, RoutedEventArgs e)
 		{
-			// Open Script Controls as a tab within the main shell
-			viewModel?.OpenScriptControlsTab();
+			// Surface the combined script manager/controls tool
+			if (viewModel?.OpenScriptManagerCommand?.CanExecute(null) == true)
+			{
+				viewModel.OpenScriptManagerCommand.Execute(null);
+			}
+
 			ResetFloatingMenuInactivityTimer();
 		}
 
@@ -598,7 +614,11 @@ namespace Orbit
 				return;
 			}
 
-			if (!viewModel.ShowFloatingMenu())
+			if (viewModel.IsFloatingMenuVisible)
+			{
+				viewModel.ShowFloatingMenu(force: true);
+			}
+			else if (!viewModel.ShowFloatingMenu())
 			{
 				floatingMenuInactivityTimer.Stop();
 				return;

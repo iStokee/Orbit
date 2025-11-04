@@ -11,6 +11,7 @@ using MediaColor = System.Windows.Media.Color;
 using MediaColors = System.Windows.Media.Colors;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using Application = System.Windows.Application;
+using Orbit.Logging;
 
 
 namespace Orbit.ViewModels
@@ -186,10 +187,20 @@ namespace Orbit.ViewModels
 						{
 							SelectedCustomColor = color;
 						}
+						else
+						{
+							ConsoleLogService.Instance.Append(
+								$"[ThemeManager] Invalid accent color '{selectedCustomTheme.AccentHex}' in theme '{selectedCustomTheme.Name}'. Color parsing returned null.",
+								ConsoleLogSource.Orbit,
+								ConsoleLogLevel.Warning);
+						}
 					}
-					catch
+					catch (Exception ex)
 					{
-						// Ignore malformed colors and keep current picker selection.
+						ConsoleLogService.Instance.Append(
+							$"[ThemeManager] Failed to parse accent color in theme '{selectedCustomTheme.Name}': {ex.Message}",
+							ConsoleLogSource.Orbit,
+							ConsoleLogLevel.Warning);
 					}
 
 					if (selectedCustomTheme.OverrideForeground && !string.IsNullOrWhiteSpace(selectedCustomTheme.ForegroundHex))
@@ -201,10 +212,20 @@ namespace Orbit.ViewModels
 							{
 								SelectedCustomForeground = foregroundColor;
 							}
+							else
+							{
+								ConsoleLogService.Instance.Append(
+									$"[ThemeManager] Invalid foreground color '{selectedCustomTheme.ForegroundHex}' in theme '{selectedCustomTheme.Name}'. Color parsing returned null.",
+									ConsoleLogSource.Orbit,
+									ConsoleLogLevel.Warning);
+							}
 						}
-						catch
+						catch (Exception ex)
 						{
-							// Ignore parse failures and fall back below.
+							ConsoleLogService.Instance.Append(
+								$"[ThemeManager] Failed to parse foreground color in theme '{selectedCustomTheme.Name}': {ex.Message}",
+								ConsoleLogSource.Orbit,
+								ConsoleLogLevel.Warning);
 						}
 						UseCustomForeground = true;
 					}

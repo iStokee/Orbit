@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Orbit.Views;
 
@@ -27,6 +28,8 @@ namespace Orbit.Models
 		private nint _renderSurfaceHandle;
 		private bool _gallerySizeOverrideEnabled;
 		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
+		private bool _isCloseConfirmationVisible;
+		private TaskCompletionSource<bool>? closeConfirmationTcs;
 
 		public SessionModel()
 		{
@@ -306,6 +309,41 @@ namespace Orbit.Models
 			{
 				SetForegroundWindow(ExternalHandle);
 			}
+		}
+
+		public bool IsCloseConfirmationVisible
+		{
+			get => _isCloseConfirmationVisible;
+			private set
+			{
+				if (_isCloseConfirmationVisible == value)
+					return;
+				_isCloseConfirmationVisible = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public void ShowCloseConfirmation(TaskCompletionSource<bool> completionSource)
+		{
+			if (completionSource == null)
+			{
+				throw new ArgumentNullException(nameof(completionSource));
+			}
+
+			if (IsCloseConfirmationVisible)
+			{
+				ResolveCloseConfirmation(false);
+			}
+
+			closeConfirmationTcs = completionSource;
+			IsCloseConfirmationVisible = true;
+		}
+
+		public void ResolveCloseConfirmation(bool confirmed)
+		{
+			IsCloseConfirmationVisible = false;
+			closeConfirmationTcs?.TrySetResult(confirmed);
+			closeConfirmationTcs = null;
 		}
 
 		/// <summary>

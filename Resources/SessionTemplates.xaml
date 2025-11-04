@@ -1,12 +1,18 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
-                    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-                    xmlns:models="clr-namespace:Orbit.Models"
-                    xmlns:selectors="clr-namespace:Orbit.Selectors"
-                    xmlns:converters="clr-namespace:Orbit.Converters">
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:models="clr-namespace:Orbit.Models"
+    xmlns:selectors="clr-namespace:Orbit.Selectors">
 
-    <!-- Session Content Template - Shows the embedded RS window -->
+    <!--  Converters needed for session templates  -->
+    <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
+    <converters:InjectionStateToColorConverter x:Key="InjectionStateToColorConverter" />
+    <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
+
+    <!--  Session Content Template - Shows the embedded RS window  -->
     <DataTemplate x:Key="SessionContentTemplate">
         <ContentControl
             HorizontalAlignment="Stretch"
@@ -14,9 +20,12 @@
             Content="{Binding HostControl}" />
     </DataTemplate>
 
-    <!-- Compact header used by Orbit Grid layout tabs -->
-    <DataTemplate x:Key="OrbitSessionHeaderTemplate">
-        <StackPanel Margin="8,4" Orientation="Horizontal">
+    <!--  Compact header used by Orbit Grid layout tabs  -->
+    <DataTemplate x:Key="OrbitSessionHeaderTemplate" xmlns:local="clr-namespace:Orbit">
+        <StackPanel
+            Margin="8,4"
+            Orientation="Horizontal"
+            MinHeight="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewTabHeaderSize, Converter={StaticResource TabHeaderSizeConverter}}">
             <Ellipse
                 Width="10"
                 Height="10"
@@ -36,7 +45,7 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- Session Header Item Template (Unified across MainWindow and Orbit View) -->
+    <!--  Session Header Item Template (Unified across MainWindow and Orbit View)  -->
     <DataTemplate x:Key="SessionHeaderItemTemplate">
         <Border
             Margin="4,4,4,0"
@@ -351,7 +360,7 @@
                         Command="{Binding DataContext.BeginSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                         CommandParameter="{Binding}">
                         <Button.Style>
-                            <Style TargetType="Button">
+                            <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                 <Setter Property="ToolTip" Value="Rename session" />
                                 <Setter Property="Visibility" Value="Visible" />
                                 <Setter Property="Opacity" Value="0.75" />
@@ -395,7 +404,7 @@
                             Command="{Binding DataContext.CommitSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                             CommandParameter="{Binding}">
                             <Button.Style>
-                                <Style TargetType="Button">
+                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                     <Setter Property="ToolTip" Value="Save name" />
                                 </Style>
                             </Button.Style>
@@ -413,7 +422,7 @@
                             Command="{Binding DataContext.CancelSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                             CommandParameter="{Binding}">
                             <Button.Style>
-                                <Style TargetType="Button">
+                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
                                     <Setter Property="ToolTip" Value="Cancel rename" />
                                 </Style>
                             </Button.Style>
@@ -429,7 +438,7 @@
         </Border>
     </DataTemplate>
 
-    <!-- Tool Header Template (for non-session tabs) -->
+    <!--  Tool Header Template (for non-session tabs)  -->
     <DataTemplate x:Key="ToolHeaderItemTemplate">
         <StackPanel
             x:Name="ToolHeader"
@@ -502,7 +511,7 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- HeaderItemTemplateSelector - Chooses between Session and Tool headers -->
+    <!--  HeaderItemTemplateSelector - Chooses between Session and Tool headers  -->
     <selectors:HeaderItemTemplateSelector
         x:Key="TabHeaderTemplateSelector"
         SessionHeaderTemplate="{StaticResource SessionHeaderItemTemplate}"

@@ -74,6 +74,8 @@ namespace Orbit.Services
 				HostControl = hostControl
 			};
 
+			hostControl.DataContext = session;
+
 			// Set initial states using public methods
 			session.UpdateState(SessionState.ClientReady);
 			session.UpdateInjectionState(InjectionState.NotReady); // Scripts don't need injection

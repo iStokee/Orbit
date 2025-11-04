@@ -686,7 +686,7 @@ namespace Orbit
 					const int SWP_SHOWWINDOW = 0x0040;
 					const int SWP_FRAMECHANGED = 0x0020;
 					SetWindowPos(handle, IntPtr.Zero, -8, -32, width + 16, height + 40, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
-					Console.WriteLine("Resized RSForm window");
+					Debug.WriteLine("Resized RSForm window");
 				});
 			}
 			catch (Exception ex)

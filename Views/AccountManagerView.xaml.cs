@@ -8,18 +8,28 @@ namespace Orbit.Views
 {
 	public partial class AccountManagerView : UserControl
 	{
-		public AccountManagerView(AccountManagerViewModel viewModel)
-		{
-			InitializeComponent();
-			DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-		}
+	public AccountManagerView(AccountManagerViewModel viewModel)
+	{
+		InitializeComponent();
+		DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
-		private void NewPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+		viewModel.PasswordReset += OnPasswordReset;
+		Unloaded += (_, _) => viewModel.PasswordReset -= OnPasswordReset;
+	}
+
+	private void NewPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+	{
+		if (sender is PasswordBox passwordBox && DataContext is AccountManagerViewModel vm)
 		{
-			if (sender is PasswordBox passwordBox && DataContext is AccountManagerViewModel vm)
-			{
-				vm.NewPassword = passwordBox.Password;
-			}
+			vm.UpdateNewPassword(passwordBox.SecurePassword);
 		}
+	}
+
+	private void OnPasswordReset(object? sender, EventArgs e)
+	{
+		NewPasswordBox.PasswordChanged -= NewPasswordBox_PasswordChanged;
+		NewPasswordBox.Clear();
+		NewPasswordBox.PasswordChanged += NewPasswordBox_PasswordChanged;
+	}
 	}
 }

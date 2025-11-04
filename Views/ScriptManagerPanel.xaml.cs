@@ -1,3 +1,5 @@
+using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Orbit.Models;
@@ -29,6 +31,14 @@ public partial class ScriptManagerPanel : UserControl
         if (DataContext is ScriptManagerViewModel vm && vm.LoadScriptCommand.CanExecute(profile))
         {
             vm.LoadScriptCommand.Execute(profile);
+        }
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is IDisposable disposable)
+        {
+            disposable.Dispose();
         }
     }
 }

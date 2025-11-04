@@ -60,14 +60,12 @@ public partial class App : Application
 		services.AddSingleton<OrbitLayoutStateService>();
 		services.AddSingleton<ScriptIntegrationService>();
 		services.AddSingleton<SessionManagerService>();
-		services.AddSingleton<SessionGridManager>();
 		services.AddSingleton<ThemeService>();
 		services.AddSingleton<ScriptManagerService>();
 		services.AddSingleton<AccountService>();
 		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<InterTabClient>();
 
-		services.AddTransient<ScriptControlsView>();
 		services.AddTransient<SettingsView>();
 		services.AddTransient<ConsoleView>();
 		services.AddTransient<ThemeManagerViewModel>();
@@ -81,7 +79,6 @@ public partial class App : Application
 			sp.GetRequiredService<AutoLoginService>()));
 		services.AddTransient<AccountManagerView>();
 
-		services.AddSingleton<IOrbitTool, ScriptControlsTool>();
 		services.AddSingleton<IOrbitTool, SettingsTool>();
 		services.AddSingleton<IOrbitTool, ConsoleTool>();
 		services.AddSingleton<IOrbitTool, ThemeManagerTool>();
@@ -89,11 +86,10 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool, ScriptManagerTool>();
 		services.AddSingleton<IOrbitTool, AccountManagerTool>();
 		services.AddSingleton<IOrbitTool>(sp => new SessionGalleryTool(sp.GetRequiredService<SessionCollectionService>()));
-		services.AddSingleton<IOrbitTool>(sp => new SessionGridTool(sp.GetRequiredService<SessionCollectionService>(), sp.GetRequiredService<SessionGridManager>()));
 		services.AddSingleton<IOrbitTool>(sp => new OrbitViewTool(
 			sp.GetRequiredService<SessionCollectionService>(),
 			sp.GetRequiredService<OrbitLayoutStateService>()));
-		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ApiDocumentationTool>();
+		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.PluginManagerTool>();

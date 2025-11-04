@@ -23,20 +23,22 @@
 
                         <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                             <iconPacks:PackIconMaterial Kind="Tools"
-                                                       Width="28"
-                                                       Height="28"
-                                                       Foreground="White" />
+                                                       Margin="10,10,0,0"
+                                                       Width="35"
+                                                       Height="35"
+                                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Tools Management"
-                                      FontSize="26"
+                                      FontSize="22"
                                       FontWeight="Bold"
-                                      Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                                      Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
                             <TextBlock Text="Manage Orbit tools and their visibility in the floating menu"
-                                      FontSize="13"
-                                      Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                                      Margin="0,4,0,0" />
+                                      FontSize="12"
+                                      Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                      Opacity="0.85"
+                                      Margin="0,6,0,0" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -47,12 +49,13 @@
                         <TextBlock Text="Registered Tools"
                                   FontSize="18"
                                   FontWeight="SemiBold"
-                                  Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                  Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                                   Margin="0,0,0,16" />
 
                         <TextBlock Text="Control which tools appear in the floating menu. All tools remain accessible via direct navigation."
                                   FontSize="12"
-                                  Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                  Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                  Opacity="0.75"
                                   TextWrapping="Wrap"
                                   Margin="0,0,0,20" />
 
@@ -86,7 +89,7 @@
                                                                            Margin="0,2,0,0"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"
-                                                                           Foreground="White" />
+                                                                           Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" />
                                             </Border>
 
                                             <!-- Tool Info -->
@@ -94,14 +97,16 @@
                                                 <TextBlock Text="{Binding DisplayName, Mode=OneWay}"
                                                           FontSize="16"
                                                           FontWeight="SemiBold"
-                                                          Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
                                                 <TextBlock Text="{Binding Description, Mode=OneWay}"
                                                           FontSize="12"
-                                                          Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                          Opacity="0.75"
                                                           TextWrapping="Wrap"
                                                           Margin="0,4,0,0" />
                                                 <TextBlock FontSize="11"
-                                                          Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                          Opacity="0.6"
                                                           Margin="0,6,0,0">
                                                     <Run Text="Key:" />
                                                     <Run Text="{Binding Key, Mode=OneWay}" FontFamily="Consolas" />
@@ -133,17 +138,17 @@
                             <iconPacks:PackIconMaterial Kind="InformationOutline"
                                                        Width="20"
                                                        Height="20"
-                                                       Foreground="White"
+                                                       Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                                        VerticalAlignment="Center" />
                             <TextBlock Text="About Tools"
                                       FontSize="16"
                                       FontWeight="SemiBold"
-                                      Foreground="White"
+                                      Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                       Margin="12,0,0,0"
                                       VerticalAlignment="Center" />
                         </StackPanel>
 
-                        <TextBlock Foreground="White"
+                        <TextBlock Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                   FontSize="13"
                                   TextWrapping="Wrap"
                                   Opacity="0.95">
@@ -151,7 +156,7 @@
                             <LineBreak /><LineBreak />
                             <Run Text="• " FontWeight="Bold" />
                             <Run Text="Built-in" FontWeight="SemiBold" />
-                            <Run Text=" - Core functionality like Session Management, Theme Manager, and API Documentation" />
+                            <Run Text=" - Core functionality like Session Management, Theme Manager, and the Orbiters Guide" />
                             <LineBreak />
                             <Run Text="• " FontWeight="Bold" />
                             <Run Text="External" FontWeight="SemiBold" />

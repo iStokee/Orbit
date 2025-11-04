@@ -65,6 +65,8 @@ public sealed class ConsoleViewModel : INotifyPropertyChanged
 
 	private void UpdateSourceStatistics(object? sender, NotifyCollectionChangedEventArgs? e)
 	{
+		if (ConsoleLog?.Entries == null) return;
+
 		foreach (var sourceInfo in _sources)
 		{
 			var entries = ConsoleLog.Entries.Where(entry => entry.Source == sourceInfo.Source).ToList();

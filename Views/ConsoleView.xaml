@@ -110,15 +110,17 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock
                             VerticalAlignment="Center"
-                            FontSize="20"
+                            FontSize="22"
                             FontWeight="Bold"
                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                             Text="Console Output" />
                         <Border
                             Margin="12,2,0,0"
                             Padding="6,2"
-                            Background="#24FFFFFF"
                             CornerRadius="8">
+                            <Border.Background>
+                                <SolidColorBrush Color="{DynamicResource MahApps.Colors.IdealForeground}" Opacity="0.15" />
+                            </Border.Background>
                             <TextBlock
                                 FontSize="11"
                                 FontWeight="SemiBold"
@@ -323,16 +325,22 @@
                                                             Text="{Binding Count, StringFormat='{}{0} logs'}" />
                                                     </Border>
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
-                                                        <Border Padding="4,2" Background="#44FF5722" CornerRadius="3" Margin="0,0,4,0">
+                                                        <Border Padding="4,2" CornerRadius="3" Margin="0,0,4,0">
+                                                            <Border.Background>
+                                                                <SolidColorBrush Color="{DynamicResource MahApps.Colors.Validation5}" Opacity="0.25" />
+                                                            </Border.Background>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <iconPacks:PackIconMaterial Kind="AlertCircle" Width="10" Height="10" Margin="0,0,3,0" Foreground="#FF5722" />
-                                                                <TextBlock FontSize="10" Foreground="#FF5722" Text="{Binding ErrorCount}" />
+                                                                <iconPacks:PackIconMaterial Kind="AlertCircle" Width="10" Height="10" Margin="0,0,3,0" Foreground="{DynamicResource MahApps.Brushes.Validation5}" />
+                                                                <TextBlock FontSize="10" Foreground="{DynamicResource MahApps.Brushes.Validation5}" Text="{Binding ErrorCount}" />
                                                             </StackPanel>
                                                         </Border>
-                                                        <Border Padding="4,2" Background="#44FFC107" CornerRadius="3">
+                                                        <Border Padding="4,2" CornerRadius="3">
+                                                            <Border.Background>
+                                                                <SolidColorBrush Color="{DynamicResource MahApps.Colors.Accent3}" Opacity="0.25" />
+                                                            </Border.Background>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <iconPacks:PackIconMaterial Kind="Alert" Width="10" Height="10" Margin="0,0,3,0" Foreground="#FFC107" />
-                                                                <TextBlock FontSize="10" Foreground="#FFC107" Text="{Binding WarningCount}" />
+                                                                <iconPacks:PackIconMaterial Kind="Alert" Width="10" Height="10" Margin="0,0,3,0" Foreground="{DynamicResource MahApps.Brushes.Accent3}" />
+                                                                <TextBlock FontSize="10" Foreground="{DynamicResource MahApps.Brushes.Accent3}" Text="{Binding WarningCount}" />
                                                             </StackPanel>
                                                         </Border>
                                                     </StackPanel>

@@ -16,6 +16,7 @@ namespace Orbit.Services.Updates
 		// TODO: Update these with your actual GitHub owner/repo
 		private const string Owner = "iStokee";
 		private const string Repo = "Orbit";
+		public const string DefaultAssetName = "orbit-win-x64.zip";
 
 		public sealed class GitHubRelease
 		{
@@ -53,11 +54,11 @@ namespace Orbit.Services.Updates
 		/// <param name="expectedAssetName">The asset name to look for (e.g., "orbit-win-x64.zip")</param>
 		/// <param name="expectedAuthor">Optional - only accept releases from this GitHub user</param>
 		/// <param name="includePrereleases">Whether to include pre-release versions</param>
-		public async Task<UpdateInfo> CheckAsync(string expectedAssetName = "orbit-win-x64.zip",
+		public async Task<UpdateInfo> CheckAsync(string expectedAssetName = DefaultAssetName,
 												 string expectedAuthor = null,
 												 bool includePrereleases = false)
 		{
-			var currentVersion = Assembly.GetEntryAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0);
+			var currentVersion = GetCurrentVersion();
 
 			try
 			{
@@ -112,7 +113,7 @@ namespace Orbit.Services.Updates
 
 				// tag_name -> "v1.2.3"
 				var remoteVersionString = release.tag_name?.TrimStart('v', 'V');
-				if (!Version.TryParse(remoteVersionString, out var remoteVersion))
+				if (!TryParseVersion(remoteVersionString, out var remoteVersion))
 				{
 					// bad tag? just bail
 					return new UpdateInfo
@@ -137,20 +138,43 @@ namespace Orbit.Services.Updates
 						}
 					}
 				}
+				else
+				{
+					return new UpdateInfo
+					{
+						HasUpdate = false,
+						CurrentVersion = currentVersion,
+						RemoteVersion = remoteVersion,
+						ReleaseAuthor = release.author?.login,
+						ErrorMessage = "Release contains no assets"
+					};
+				}
 
-				var hasUpdate = remoteVersion > currentVersion && asset != null;
+				var hasUpdate = remoteVersion > currentVersion;
+
+				if (asset == null)
+				{
+					return new UpdateInfo
+					{
+						HasUpdate = false,
+						CurrentVersion = currentVersion,
+						RemoteVersion = remoteVersion,
+						ReleaseAuthor = release.author?.login,
+						ErrorMessage = $"Asset '{expectedAssetName}' not found in release"
+					};
+				}
 
 				return new UpdateInfo
 				{
 					HasUpdate = hasUpdate,
 					CurrentVersion = currentVersion,
 					RemoteVersion = remoteVersion,
-					DownloadUrl = asset?.browser_download_url,
-					AssetName = asset?.name,
-					ReleaseAuthor = release.author?.login,
-					ErrorMessage = asset == null ? $"Asset '{expectedAssetName}' not found in release" : null
+					DownloadUrl = asset.browser_download_url,
+					AssetName = asset.name,
+					ReleaseAuthor = release.author?.login
 				};
 			}
+
 			catch (Exception ex)
 			{
 				return new UpdateInfo
@@ -161,6 +185,42 @@ namespace Orbit.Services.Updates
 					ErrorMessage = $"Failed to check for updates: {ex.Message}"
 				};
 			}
+		}
+
+		private static Version GetCurrentVersion()
+		{
+			var entry = Assembly.GetEntryAssembly();
+			if (entry == null)
+				return new Version(0, 0, 0, 0);
+
+			var informational = entry.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+			if (TryParseVersion(informational, out var parsed))
+				return parsed;
+
+			var fileVersion = entry.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+			if (TryParseVersion(fileVersion, out parsed))
+				return parsed;
+
+			return entry.GetName()?.Version ?? new Version(0, 0, 0, 0);
+		}
+
+		private static bool TryParseVersion(string input, out Version version)
+		{
+			version = null;
+			if (string.IsNullOrWhiteSpace(input))
+				return false;
+
+			// Strip metadata/prerelease suffixes (e.g., "1.2.3-beta+4")
+			var sanitized = input;
+			var dashIndex = sanitized.IndexOf('-');
+			if (dashIndex >= 0)
+				sanitized = sanitized.Substring(0, dashIndex);
+
+			var plusIndex = sanitized.IndexOf('+');
+			if (plusIndex >= 0)
+				sanitized = sanitized.Substring(0, plusIndex);
+
+			return Version.TryParse(sanitized, out version);
 		}
 	}
 }

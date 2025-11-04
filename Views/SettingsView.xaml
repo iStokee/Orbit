@@ -37,44 +37,68 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16">
-            <Border Style="{StaticResource Orbit.ToolHeader}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-                    <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                        <iconPacks:PackIconMaterial
-                            Margin="10,10,0,0"
-                            Width="35"
-                            Height="35"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Kind="Tune" />
-                    </Border>
+        <!-- Header -->
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <StackPanel
-                        Grid.Column="1"
-                        Margin="12,0,0,0"
-                        VerticalAlignment="Center">
-                        <TextBlock
-                            FontSize="22"
-                            FontWeight="Bold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Text="Orbit Control Surface" />
-                        <TextBlock
-                            Margin="0,6,0,0"
-                            FontSize="12"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Opacity="0.85"
-                            Text="Shape the floating launcher and decide which quick actions stay within reach." />
-                    </StackPanel>
-                </Grid>
-            </Border>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Margin="10,10,0,0"
+                        Width="35"
+                        Height="35"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="Tune" />
+                </Border>
 
-            <!-- Update Panel -->
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Settings" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.85"
+                        Text="Configure Orbit's behavior, appearance, and functionality" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Tabbed Content -->
+        <Controls:MetroTabControl Grid.Row="1" Margin="0,16,0,0">
+            <!-- General Tab -->
+            <Controls:MetroTabItem Header="General">
+                <Controls:MetroTabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Kind="CogOutline" />
+                            <TextBlock VerticalAlignment="Center" Text="General" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:MetroTabItem.HeaderTemplate>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <!-- Update Panel -->
             <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,16,0,16">
                 <StackPanel>
                     <!-- Header -->
@@ -315,6 +339,80 @@
                 </StackPanel>
             </Border>
 
+            <!-- Automation and Welcome Messages -->
+            <Border Style="{StaticResource Orbit.ToolCard}">
+                <StackPanel>
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <Border
+                            Width="32"
+                            Height="32"
+                            Margin="0,0,12,0"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="16"
+                            Opacity="0.8">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Kind="ChartTimelineVariant" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Automation" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.75"
+                                Text="Configure automatic behaviors and welcome messages" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Controls:ToggleSwitch
+                        Margin="0,16,0,0"
+                        Header="Auto-inject when session is ready"
+                        IsOn="{Binding AutoInjectOnReady, Mode=TwoWay}" />
+
+                    <Separator Margin="0,20,0,12" Opacity="0.35" />
+
+                    <TextBlock
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Welcome messages" />
+
+                    <Controls:ToggleSwitch
+                        Margin="0,12,0,0"
+                        Header="Show floating menu welcome hint"
+                        IsOn="{Binding ShowThemeManagerWelcomeMessage, Mode=TwoWay}" />
+                </StackPanel>
+            </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Controls:MetroTabItem>
+
+            <!-- Floating Menu Tab -->
+            <Controls:MetroTabItem Header="Floating Menu">
+                <Controls:MetroTabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Kind="MenuOpen" />
+                            <TextBlock VerticalAlignment="Center" Text="Floating Menu" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:MetroTabItem.HeaderTemplate>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -555,6 +653,7 @@
                 </StackPanel>
             </Border>
 
+            <!-- Floating Menu Behavior -->
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -579,7 +678,7 @@
                                 FontSize="16"
                                 FontWeight="SemiBold"
                                 Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Text="Floating menu behavior" />
+                                Text="Behavior" />
                             <TextBlock
                                 Margin="0,2,0,0"
                                 FontSize="12"
@@ -813,12 +912,13 @@
                     <StackPanel Margin="0,4,0,0">
                         <Controls:ToggleSwitch
                             Margin="0,4"
-                            Header="Show Theme Manager welcome popup"
+                            Header="Show floating menu welcome hint"
                             IsOn="{Binding ShowThemeManagerWelcomeMessage, Mode=TwoWay}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
+            <!-- Menu Buttons -->
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -852,54 +952,56 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <UniformGrid
-                        Margin="0,18,0,0"
-                        HorizontalAlignment="Stretch"
-                        Columns="2">
-                        <Controls:ToggleSwitch
-                            Margin="0,4,12,4"
-                            Header="Add Session"
-                            IsOn="{Binding ShowMenuAddSession, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="12,4,0,4"
-                            Header="Inject"
-                            IsOn="{Binding ShowMenuInject, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="0,4,12,4"
-                            Header="Manage Sessions"
-                            IsOn="{Binding ShowMenuSessions, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="12,4,0,4"
-                            Header="Account Manager"
-                            IsOn="{Binding ShowMenuAccountManager, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="0,4,12,4"
-                            Header="Script Controls"
-                            IsOn="{Binding ShowMenuScriptControls, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="12,4,0,4"
-                            Header="Theme Manager"
-                            IsOn="{Binding ShowMenuThemeManager, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="0,4,12,4"
-                            Header="Console"
-                            IsOn="{Binding ShowMenuConsole, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="12,4,0,4"
-                            Header="API Documentation"
-                            IsOn="{Binding ShowMenuApiDocumentation, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="0,4,12,4"
-                            Header="Settings"
-                            IsOn="{Binding ShowMenuSettings, Mode=TwoWay}" />
-                        <Controls:ToggleSwitch
-                            Margin="12,4,0,4"
-                            Header="Tools Management"
-                            IsOn="{Binding ShowMenuToolsOverview, Mode=TwoWay}" />
-                    </UniformGrid>
+                    <StackPanel Margin="0,18,0,0">
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.75"
+                            Text="Manage which tools appear in the floating launcher from the unified dashboard. Built-in utilities and plugins share a single visibility surface there." />
+                        <Button
+                            Margin="0,16,0,0"
+                            Padding="16,8"
+                            HorizontalAlignment="Left"
+                            Command="{Binding OpenToolsOverviewCommand}"
+                            Content="Open Tools Dashboard"
+                            Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
+                                            Width="16"
+                                            Height="16"
+                                            Margin="0,0,8,0"
+                                            Kind="ViewDashboard" />
+                                        <TextBlock Text="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Controls:MetroTabItem>
 
+            <!-- Orbit View Tab -->
+            <Controls:MetroTabItem Header="Orbit View">
+                <Controls:MetroTabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Kind="ViewGridOutline" />
+                            <TextBlock VerticalAlignment="Center" Text="Orbit View" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:MetroTabItem.HeaderTemplate>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
             <!-- Orbit View Settings -->
             <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,16,0,0">
                 <StackPanel>
@@ -1122,7 +1224,28 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Controls:MetroTabItem>
 
+            <!-- Advanced Tab -->
+            <Controls:MetroTabItem Header="Advanced">
+                <Controls:MetroTabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Kind="CodeTags" />
+                            <TextBlock VerticalAlignment="Center" Text="Advanced" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:MetroTabItem.HeaderTemplate>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+            <!-- Theme Debug Logging -->
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -1146,25 +1269,18 @@
                                 FontSize="16"
                                 FontWeight="SemiBold"
                                 Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Text="Automation and diagnostics" />
+                                Text="Theme Diagnostics" />
                             <TextBlock
                                 Margin="0,2,0,0"
                                 FontSize="12"
                                 Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                                 Opacity="0.75"
-                                Text="Let Orbit get you into game faster and surface theme insights when you need them." />
+                                Text="Surface theme insights when you need them." />
                         </StackPanel>
                     </StackPanel>
 
                     <Controls:ToggleSwitch
                         Margin="0,16,0,0"
-                        Header="Auto-inject when session is ready"
-                        IsOn="{Binding AutoInjectOnReady, Mode=TwoWay}" />
-
-                    <Separator Margin="0,20,0,12" Opacity="0.35" />
-
-                    <Controls:ToggleSwitch
-                        Margin="0,4"
                         Header="Enable theme debug logging"
                         IsOn="{Binding IsThemeLoggingEnabled, Mode=TwoWay}" />
 
@@ -1203,6 +1319,9 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-        </StackPanel>
-    </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </Controls:MetroTabItem>
+        </Controls:MetroTabControl>
+    </Grid>
 </UserControl>

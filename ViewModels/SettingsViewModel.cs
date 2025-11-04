@@ -5,11 +5,15 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.IO;
 using MahApps.Metro.IconPacks;
 using Orbit.Logging;
 using Orbit.Services;
 using Orbit.Services.Updates;
 using Orbit.Utilities;
+using Orbit.Models;
+using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Orbit.ViewModels
 {
@@ -48,9 +52,15 @@ namespace Orbit.ViewModels
 			var version = Assembly.GetEntryAssembly()?.GetName()?.Version;
 			CurrentVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "Unknown";
 
+			FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
+			FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
+
 			// Commands
 			CheckForUpdatesCommand = new RelayCommand(async _ => await CheckForUpdatesAsync());
 			InstallUpdateCommand = new RelayCommand(async _ => await InstallUpdateAsync(), _ => CanInstallUpdate);
+			OpenThemeLogCommand = new RelayCommand(_ => OpenThemeLog());
+			ClearThemeLogCommand = new RelayCommand(_ => ClearThemeLog());
+			OpenToolsOverviewCommand = new RelayCommand(_ => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
 
 			// Check for updates on startup (silently)
 			_ = CheckForUpdatesAsync(silent: true);
@@ -194,6 +204,9 @@ namespace Orbit.ViewModels
 
 		public ICommand CheckForUpdatesCommand { get; }
 		public ICommand InstallUpdateCommand { get; }
+		public ICommand OpenThemeLogCommand { get; }
+		public ICommand ClearThemeLogCommand { get; }
+		public ICommand OpenToolsOverviewCommand { get; }
 
 		#endregion
 
@@ -249,6 +262,7 @@ namespace Orbit.ViewModels
 						HasUpdateError = true;
 						UpdateErrorMessage = updateInfo.ErrorMessage;
 					}
+					CanInstallUpdate = false;
 					return;
 				}
 
@@ -263,6 +277,7 @@ namespace Orbit.ViewModels
 					AvailableVersion = $"{updateInfo.RemoteVersion.Major}.{updateInfo.RemoteVersion.Minor}.{updateInfo.RemoteVersion.Build}";
 					UpdateStatusText = $"Update available: v{AvailableVersion}";
 					UpdateStatusIcon = PackIconMaterialKind.Update;
+					CanInstallUpdate = true;
 
 					ConsoleLogService.Instance.Append(
 						$"[Update] ✓ New version available: v{AvailableVersion} (Current: v{CurrentVersion})",
@@ -280,6 +295,7 @@ namespace Orbit.ViewModels
 				else
 				{
 					HasUpdate = false;
+					CanInstallUpdate = false;
 					UpdateStatusText = "You're up to date!";
 					UpdateStatusIcon = PackIconMaterialKind.CheckCircleOutline;
 
@@ -311,6 +327,7 @@ namespace Orbit.ViewModels
 					HasUpdateError = true;
 					UpdateErrorMessage = $"Failed to check for updates: {ex.Message}";
 				}
+				CanInstallUpdate = false;
 			}
 			finally
 			{
@@ -563,9 +580,437 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		#endregion
+	#endregion
 
-		#region Orbit View Settings
+	#region Session Settings
+
+	public bool AutoInjectOnReady
+	{
+		get => Settings.Default.AutoInjectOnReady;
+		set
+		{
+			if (Settings.Default.AutoInjectOnReady == value) return;
+			if (!TryApplyToMain(vm => vm.AutoInjectOnReady = value))
+			{
+				Settings.Default.AutoInjectOnReady = value;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	#endregion
+
+	#region Floating Menu Settings
+
+	public Array FloatingMenuDirectionOptions { get; }
+	public Array FloatingMenuQuickToggleModes { get; }
+
+	public bool ShowFloatingMenuAutoShow
+	{
+		get => Settings.Default.ShowFloatingMenuAutoShow;
+		set
+		{
+			if (Settings.Default.ShowFloatingMenuAutoShow == value) return;
+			Settings.Default.ShowFloatingMenuAutoShow = value;
+			Settings.Default.Save();
+			OnPropertyChanged();
+		}
+	}
+
+	public bool ShowFloatingMenuOnHome
+	{
+		get => Settings.Default.ShowFloatingMenuOnHome;
+		set
+		{
+			if (Settings.Default.ShowFloatingMenuOnHome == value) return;
+			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnHome = value))
+			{
+				Settings.Default.ShowFloatingMenuOnHome = value;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public bool ShowFloatingMenuOnSessionTabs
+	{
+		get => Settings.Default.ShowFloatingMenuOnSessionTabs;
+		set
+		{
+			if (Settings.Default.ShowFloatingMenuOnSessionTabs == value) return;
+			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnSessionTabs = value))
+			{
+				Settings.Default.ShowFloatingMenuOnSessionTabs = value;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public bool ShowFloatingMenuOnToolTabs
+	{
+		get => Settings.Default.ShowFloatingMenuOnToolTabs;
+		set
+		{
+			if (Settings.Default.ShowFloatingMenuOnToolTabs == value) return;
+			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnToolTabs = value))
+			{
+				Settings.Default.ShowFloatingMenuOnToolTabs = value;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuOpacity
+	{
+		get
+		{
+			var stored = Settings.Default.FloatingMenuOpacity;
+			return stored <= 0 ? 0.95 : stored;
+		}
+		set
+		{
+			var normalized = Math.Clamp(value, 0.3, 1);
+			if (Math.Abs(FloatingMenuOpacity - normalized) < 0.01)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuOpacity = normalized))
+			{
+				Settings.Default.FloatingMenuOpacity = normalized;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuBackgroundOpacity
+	{
+		get
+		{
+			var stored = Settings.Default.FloatingMenuBackgroundOpacity;
+			return stored <= 0 ? 0.9 : stored;
+		}
+		set
+		{
+			var normalized = Math.Clamp(value, 0.2, 1);
+			if (Math.Abs(FloatingMenuBackgroundOpacity - normalized) < 0.01)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuBackgroundOpacity = normalized))
+			{
+				Settings.Default.FloatingMenuBackgroundOpacity = normalized;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuInactivitySeconds
+	{
+		get
+		{
+			var stored = Settings.Default.FloatingMenuInactivitySeconds;
+			return stored <= 0 ? 2 : stored;
+		}
+		set
+		{
+			var normalized = Math.Clamp(value, 0.5, 8);
+			if (Math.Abs(FloatingMenuInactivitySeconds - normalized) < 0.05)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuInactivitySeconds = normalized))
+			{
+				Settings.Default.FloatingMenuInactivitySeconds = normalized;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public bool FloatingMenuAutoDirection
+	{
+		get => Settings.Default.FloatingMenuAutoDirection;
+		set
+		{
+			if (Settings.Default.FloatingMenuAutoDirection == value) return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuAutoDirection = value))
+			{
+				Settings.Default.FloatingMenuAutoDirection = value;
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public FloatingMenuDirection FloatingMenuDirection
+	{
+		get
+		{
+			var stored = Settings.Default.FloatingMenuDirection;
+			return Enum.TryParse(stored, out FloatingMenuDirection parsed)
+				? parsed
+				: FloatingMenuDirection.Right;
+		}
+		set
+		{
+			if (FloatingMenuDirection == value) return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDirection = value))
+			{
+				Settings.Default.FloatingMenuDirection = value.ToString();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuDockEdgeThreshold
+	{
+		get => Settings.Default.FloatingMenuDockEdgeThreshold;
+		set
+		{
+			var normalized = Math.Clamp(value, 40, 200);
+			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeThreshold - normalized) < 0.1)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockEdgeThreshold = normalized))
+			{
+				Settings.Default.FloatingMenuDockEdgeThreshold = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuDockCornerThreshold
+	{
+		get => Settings.Default.FloatingMenuDockCornerThreshold;
+		set
+		{
+			var normalized = Math.Clamp(value, 60, 250);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerThreshold - normalized) < 0.1)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerThreshold = normalized))
+			{
+				Settings.Default.FloatingMenuDockCornerThreshold = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockCornerHeight
+	{
+		get => Settings.Default.FloatingMenuDockCornerHeight;
+		set
+		{
+			var normalized = Math.Clamp(value, 60, 250);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerHeight - normalized) < 0.1)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerHeight = normalized))
+			{
+				Settings.Default.FloatingMenuDockCornerHeight = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockCornerRoundness
+	{
+		get => Settings.Default.FloatingMenuDockCornerRoundness;
+		set
+		{
+			var normalized = Math.Clamp(value, 0d, 1d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockCornerRoundness - normalized) < 0.01)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerRoundness = normalized))
+			{
+				Settings.Default.FloatingMenuDockCornerRoundness = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+		}
+	}
+
+	public double FloatingMenuDockEdgeCoverage
+	{
+		get => Settings.Default.FloatingMenuDockEdgeCoverage;
+		set
+		{
+			var normalized = Math.Clamp(value, 0.05d, 0.95d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeCoverage - normalized) < 0.005)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockEdgeCoverage = normalized))
+			{
+				Settings.Default.FloatingMenuDockEdgeCoverage = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public double FloatingMenuDockZoneOpacity
+	{
+		get => Settings.Default.FloatingMenuDockZoneOpacity;
+		set
+		{
+			var normalized = Math.Clamp(value, 0.05d, 0.9d);
+			if (Math.Abs(Settings.Default.FloatingMenuDockZoneOpacity - normalized) < 0.005)
+				return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuDockZoneOpacity = normalized))
+			{
+				Settings.Default.FloatingMenuDockZoneOpacity = normalized;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public FloatingMenuQuickToggleMode FloatingMenuQuickToggleMode
+	{
+		get => ParseFloatingMenuQuickToggleMode(Settings.Default.FloatingMenuQuickToggle);
+		set
+		{
+			if (FloatingMenuQuickToggleMode == value) return;
+			if (!TryApplyToMain(vm => vm.FloatingMenuQuickToggleMode = value))
+			{
+				Settings.Default.FloatingMenuQuickToggle = value.ToString();
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public bool ShowAllSnapZonesOnClip
+	{
+		get => Settings.Default.FloatingMenuShowAllSnapZonesOnClip;
+		set
+		{
+			if (Settings.Default.FloatingMenuShowAllSnapZonesOnClip == value) return;
+			if (!TryApplyToMain(vm => vm.ShowAllSnapZonesOnClip = value))
+			{
+				Settings.Default.FloatingMenuShowAllSnapZonesOnClip = value;
+				Settings.Default.Save();
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	public CornerRadius FloatingMenuDockCornerRadius
+	{
+		get
+		{
+			var cornerWidth = Math.Clamp(Settings.Default.FloatingMenuDockCornerThreshold, 60d, 250d);
+			var cornerHeight = Math.Clamp(Settings.Default.FloatingMenuDockCornerHeight, 60d, 250d);
+			var extent = Math.Min(cornerWidth, cornerHeight);
+			var roundness = Math.Clamp(Settings.Default.FloatingMenuDockCornerRoundness, 0d, 1d);
+			var radius = Math.Max(0d, extent * roundness);
+			return new CornerRadius(radius);
+		}
+	}
+
+	#endregion
+
+	#region Theme & Logging Settings
+
+	public bool IsThemeLoggingEnabled
+	{
+		get => ThemeLogger.IsEnabled;
+		set
+		{
+			if (ThemeLogger.IsEnabled == value) return;
+			ThemeLogger.IsEnabled = value;
+			OnPropertyChanged();
+		}
+	}
+
+	public string ThemeLogFilePath => ThemeLogger.LogFilePath;
+
+	public bool ShowThemeManagerWelcomeMessage
+	{
+		get => Settings.Default.ShowThemeManagerWelcomeMessage;
+		set
+		{
+			if (Settings.Default.ShowThemeManagerWelcomeMessage == value) return;
+			Settings.Default.ShowThemeManagerWelcomeMessage = value;
+			TryApplyToMain(vm => vm.UpdateFloatingMenuWelcomeHint(value));
+			Settings.Default.Save();
+			OnPropertyChanged();
+		}
+	}
+
+	#endregion
+
+	#region Helpers
+
+	private static bool TryApplyToMain(Action<MainWindowViewModel> action)
+	{
+		var app = Application.Current;
+		if (app == null)
+			return false;
+
+		var handled = false;
+
+		void Execute()
+		{
+			if (app.MainWindow?.DataContext is MainWindowViewModel vm)
+			{
+				action(vm);
+				handled = true;
+			}
+		}
+
+		var dispatcher = app.Dispatcher;
+		if (dispatcher?.CheckAccess() == true)
+		{
+			Execute();
+		}
+		else
+		{
+			dispatcher?.Invoke((Action)Execute);
+		}
+
+		return handled;
+	}
+
+	private static FloatingMenuQuickToggleMode ParseFloatingMenuQuickToggleMode(string value)
+	{
+		if (!string.IsNullOrWhiteSpace(value) && Enum.TryParse(value, out FloatingMenuQuickToggleMode mode))
+		{
+			return mode;
+		}
+
+		return FloatingMenuQuickToggleMode.MiddleMouse;
+	}
+
+	private void OpenThemeLog()
+	{
+		try
+		{
+			if (File.Exists(ThemeLogger.LogFilePath))
+			{
+				System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+				{
+					FileName = ThemeLogger.LogFilePath,
+					UseShellExecute = true
+				});
+			}
+			else
+			{
+				MessageBox.Show("Log file does not exist yet. Enable logging and apply a theme first.",
+					"Log File Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+			}
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show($"Failed to open log file: {ex.Message}",
+				"Error", MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+	}
+
+	private void ClearThemeLog()
+	{
+		ThemeLogger.ClearLog();
+		MessageBox.Show("Theme log cleared successfully.",
+			"Log Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+		OnPropertyChanged(nameof(ThemeLogFilePath));
+	}
+
+	#endregion
+
+	#region Orbit View Settings
 
 		/// <summary>
 		/// Where new sessions should dock when launched

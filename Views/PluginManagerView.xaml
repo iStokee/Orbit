@@ -1,253 +1,346 @@
-<UserControl x:Class="Orbit.Views.PluginManagerView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-             mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="800"
-             Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
-    <Grid>
+<UserControl
+    x:Class="Orbit.Views.PluginManagerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:PluginManagerViewModel, IsDesignTimeCreatable=False}"
+    d:DesignHeight="600"
+    d:DesignWidth="800"
+    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+    </UserControl.Resources>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header and Toolbar -->
-        <Border Grid.Row="0"
-                Background="{DynamicResource MahApps.Brushes.Accent}"
-                Padding="16,12">
+        <!--  Header  -->
+        <Border
+            Grid.Row="0"
+            Margin="0,0,0,24"
+            Style="{StaticResource Orbit.ToolHeader}">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="Puzzle"
-                                               Width="24"
-                                               Height="24"
-                                               VerticalAlignment="Center"
-                                               Foreground="White"
-                                               Margin="0,0,12,0"/>
-                    <TextBlock Text="Plugin Manager"
-                              FontSize="18"
-                              FontWeight="SemiBold"
-                              Foreground="White"
-                              VerticalAlignment="Center"/>
-                </StackPanel>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial
+                        Width="35"
+                        Height="35"
+                        Margin="10,10,0,0"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Kind="Puzzle" />
+                </Border>
 
-                <StackPanel Grid.Row="1"
-                           Orientation="Horizontal"
-                           Margin="0,12,0,0">
-                    <Button Content="Load Plugin"
-                           Command="{Binding LoadPluginCommand}"
-                           Style="{DynamicResource MahApps.Styles.Button.Flat}"
-                           Margin="0,0,8,0"
-                           Padding="12,6">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial Kind="FolderOpen"
-                                                               Width="16"
-                                                               Height="16"
-                                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding}"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
-
-                    <Button Content="Auto-Load All"
-                           Command="{Binding AutoLoadAllCommand}"
-                           Style="{DynamicResource MahApps.Styles.Button.Flat}"
-                           Margin="0,0,8,0"
-                           Padding="12,6">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial Kind="PlaylistPlay"
-                                                               Width="16"
-                                                               Height="16"
-                                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding}"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
-
-                    <Button Content="Refresh"
-                           Command="{Binding RefreshCommand}"
-                           Style="{DynamicResource MahApps.Styles.Button.Flat}"
-                           Padding="12,6">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial Kind="Refresh"
-                                                               Width="16"
-                                                               Height="16"
-                                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding}"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Plugin Manager" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.85"
+                        Text="Load, reload, and manage Orbit plugins with hot reload support" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Plugin List -->
-        <ScrollViewer Grid.Row="1"
-                     VerticalScrollBarVisibility="Auto"
-                     Padding="16">
-            <ItemsControl ItemsSource="{Binding Plugins}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="{DynamicResource MahApps.Brushes.Gray10}"
-                               BorderBrush="{DynamicResource MahApps.Brushes.Accent4}"
-                               BorderThickness="1"
-                               CornerRadius="4"
-                               Margin="0,0,0,12"
-                               Padding="16">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Plugin Name and Version -->
-                                <StackPanel Grid.Row="0" Grid.Column="0">
-                                    <TextBlock Text="{Binding DisplayName}"
-                                              FontSize="16"
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource MahApps.Brushes.Text}"/>
-                                    <TextBlock Margin="0,4,0,0">
-                                        <Run Text="v"
-                                             Foreground="{DynamicResource MahApps.Brushes.Gray}"/>
-                                        <Run Text="{Binding Version}"
-                                             Foreground="{DynamicResource MahApps.Brushes.Gray}"/>
-                                        <Run Text=" by "
-                                             Foreground="{DynamicResource MahApps.Brushes.Gray}"/>
-                                        <Run Text="{Binding Author}"
-                                             Foreground="{DynamicResource MahApps.Brushes.Accent}"/>
-                                    </TextBlock>
-                                </StackPanel>
-
-                                <!-- Action Buttons -->
-                                <StackPanel Grid.Row="0"
-                                           Grid.Column="1"
-                                           Orientation="Horizontal"
-                                           VerticalAlignment="Top">
-                                    <Button Content="Hot Reload"
-                                           Command="{Binding ReloadCommand}"
-                                           Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
-                                           Margin="0,0,8,0"
-                                           Padding="8,4"
-                                           FontSize="12">
-                                        <Button.ContentTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <iconPacks:PackIconMaterial Kind="Reload"
-                                                                               Width="14"
-                                                                               Height="14"
-                                                                               Margin="0,0,4,0"/>
-                                                    <TextBlock Text="{Binding}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </Button.ContentTemplate>
-                                    </Button>
-
-                                    <Button Content="Unload"
-                                           Command="{Binding UnloadCommand}"
-                                           Style="{DynamicResource MahApps.Styles.Button.Square}"
-                                           Padding="8,4"
-                                           FontSize="12">
-                                        <Button.ContentTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <iconPacks:PackIconMaterial Kind="Close"
-                                                                               Width="14"
-                                                                               Height="14"
-                                                                               Margin="0,0,4,0"/>
-                                                    <TextBlock Text="{Binding}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </Button.ContentTemplate>
-                                    </Button>
-                                </StackPanel>
-
-                                <!-- Description -->
-                                <TextBlock Grid.Row="1"
-                                          Grid.Column="0"
-                                          Grid.ColumnSpan="2"
-                                          Text="{Binding Description}"
-                                          TextWrapping="Wrap"
-                                          Margin="0,8,0,0"
-                                          Foreground="{DynamicResource MahApps.Brushes.Gray}"/>
-
-                                <!-- Metadata -->
-                                <StackPanel Grid.Row="2"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="2"
-                                           Margin="0,8,0,0">
-                                    <TextBlock FontSize="11"
-                                              Foreground="{DynamicResource MahApps.Brushes.Gray}">
-                                        <Run Text="Key:"/>
-                                        <Run Text="{Binding Key}"
-                                             FontFamily="Consolas"/>
-                                    </TextBlock>
-                                    <TextBlock FontSize="11"
-                                              Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                              Margin="0,2,0,0">
-                                        <Run Text="Loaded:"/>
-                                        <Run Text="{Binding LoadedAt}"/>
-                                    </TextBlock>
-                                </StackPanel>
-
-                                <!-- Path (Expandable) -->
-                                <Expander Grid.Row="3"
-                                         Grid.Column="0"
-                                         Grid.ColumnSpan="2"
-                                         Header="File Path"
-                                         Margin="0,8,0,0"
-                                         IsExpanded="False">
-                                    <TextBlock Text="{Binding PluginPath}"
-                                              TextWrapping="Wrap"
-                                              FontFamily="Consolas"
-                                              FontSize="11"
-                                              Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                              Margin="0,4,0,0"/>
-                                </Expander>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-
-        <!-- Status Bar -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource MahApps.Brushes.Gray10}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
-                BorderThickness="0,1,0,0"
-                Padding="16,8">
+        <!--  Toolbar  -->
+        <Border Grid.Row="1">
             <Grid>
-                <TextBlock Text="{Binding StatusMessage}"
-                          VerticalAlignment="Center"
-                          Foreground="{DynamicResource MahApps.Brushes.Text}"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <mah:ProgressRing IsActive="{Binding IsLoading}"
-                                 Width="20"
-                                 Height="20"
-                                 HorizontalAlignment="Right"/>
+                <StackPanel
+                    Grid.Row="0"
+                    Margin="0,0,0,16"
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        Padding="12,6"
+                        Command="{Binding LoadPluginCommand}"
+                        Content="Load Plugin"
+                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,6,0"
+                                        Kind="FolderOpen" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+
+                    <Button
+                        Margin="0,0,8,0"
+                        Padding="12,6"
+                        Command="{Binding AutoLoadAllCommand}"
+                        Content="Auto-Load All"
+                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,6,0"
+                                        Kind="PlaylistPlay" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+
+                    <Button
+                        Padding="12,6"
+                        Command="{Binding RefreshCommand}"
+                        Content="Refresh"
+                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,6,0"
+                                        Kind="Refresh" />
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                </StackPanel>
+
+                <!--  Plugin List  -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Plugins}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,12"
+                                    Padding="20"
+                                    Background="{DynamicResource MahApps.Brushes.Gray9}"
+                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!--  Plugin Name and Version  -->
+                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Text="{Binding DisplayName}" />
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Opacity="0.75">
+                                                <Run Text="v" />
+                                                <Run Text="{Binding Version}" />
+                                                <Run Text=" by " />
+                                                <Run Foreground="{DynamicResource MahApps.Brushes.Accent}" Text="{Binding Author}" />
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!--  Action Buttons  -->
+                                        <StackPanel
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Top"
+                                            Orientation="Horizontal">
+                                            <Button
+                                                Margin="0,0,8,0"
+                                                Padding="8,4"
+                                                Command="{Binding ReloadCommand}"
+                                                Content="Hot Reload"
+                                                FontSize="12"
+                                                Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                                                <Button.ContentTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <iconPacks:PackIconMaterial
+                                                                Width="14"
+                                                                Height="14"
+                                                                Margin="0,0,4,0"
+                                                                Kind="Reload" />
+                                                            <TextBlock Text="{Binding}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </Button.ContentTemplate>
+                                            </Button>
+
+                                            <Button
+                                                Padding="8,4"
+                                                Command="{Binding UnloadCommand}"
+                                                Content="Unload"
+                                                FontSize="12"
+                                                Style="{DynamicResource MahApps.Styles.Button.Square}">
+                                                <Button.ContentTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <iconPacks:PackIconMaterial
+                                                                Width="14"
+                                                                Height="14"
+                                                                Margin="0,0,4,0"
+                                                                Kind="Close" />
+                                                            <TextBlock Text="{Binding}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </Button.ContentTemplate>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <!--  Description  -->
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,8,0,0"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Opacity="0.75"
+                                            Text="{Binding Description}"
+                                            TextWrapping="Wrap" />
+
+                                        <!--  Metadata  -->
+                                        <StackPanel
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,8,0,0">
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Opacity="0.6">
+                                                <Run Text="Key:" />
+                                                <Run FontFamily="Consolas" Text="{Binding Key}" />
+                                            </TextBlock>
+                                            <TextBlock
+                                                Margin="0,2,0,0"
+                                                FontSize="11"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Opacity="0.6">
+                                                <Run Text="Loaded:" />
+                                                <Run Text="{Binding LoadedAt}" />
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!--  Path (Expandable)  -->
+                                        <Expander
+                                            Grid.Row="3"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,8,0,0"
+                                            Header="File Path"
+                                            IsExpanded="False">
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                FontFamily="Consolas"
+                                                FontSize="11"
+                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Opacity="0.6"
+                                                Text="{Binding PluginPath}"
+                                                TextWrapping="Wrap" />
+                                        </Expander>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Border
+                    Grid.Row="1"
+                    Margin="0"
+                    Padding="32"
+                    Panel.ZIndex="1"
+                    Background="{DynamicResource MahApps.Brushes.Gray9}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Visibility="{Binding Plugins.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=Zero}">
+                    <StackPanel
+                        MaxWidth="360"
+                        Margin="0"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial
+                            Width="36"
+                            Height="36"
+                            HorizontalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                            Kind="PuzzleRemove" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="No plugins loaded yet." />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.75"
+                            Text="Use 'Load Plugin' to add a new tool or 'Auto-Load All' to import plugins from your library."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!--  Status Bar  -->
+        <Border
+            Grid.Row="2"
+            Margin="0,16,0,0"
+            Padding="16,8"
+            Background="{DynamicResource MahApps.Brushes.Gray9}"
+            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+            BorderThickness="0,1,0,0">
+            <Grid>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Opacity="0.75"
+                    Text="{Binding StatusMessage}" />
+
+                <Controls:ProgressRing
+                    Width="20"
+                    Height="20"
+                    HorizontalAlignment="Right"
+                    IsActive="{Binding IsLoading}" />
             </Grid>
         </Border>
     </Grid>

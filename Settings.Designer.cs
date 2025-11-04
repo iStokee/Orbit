@@ -254,18 +254,6 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ShowMenuScriptControls {
-            get {
-                return ((bool)(this["ShowMenuScriptControls"]));
-            }
-            set {
-                this["ShowMenuScriptControls"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowMenuThemeManager {
             get {
                 return ((bool)(this["ShowMenuThemeManager"]));
@@ -332,18 +320,6 @@ namespace Orbit {
             }
             set {
                 this["ShowMenuSessionGallery"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ShowMenuSessionGrid {
-            get {
-                return ((bool)(this["ShowMenuSessionGrid"]));
-            }
-            set {
-                this["ShowMenuSessionGrid"] = value;
             }
         }
 
@@ -493,54 +469,6 @@ namespace Orbit {
 
 		[global::System.Configuration.UserScopedSettingAttribute()]
 		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int SessionGridOverflowPolicy {
-			get {
-				return ((int)(this["SessionGridOverflowPolicy"]));
-			}
-			set {
-				this["SessionGridOverflowPolicy"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int SessionGridConflictResolution {
-			get {
-				return ((int)(this["SessionGridConflictResolution"]));
-			}
-			set {
-				this["SessionGridConflictResolution"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("2")]
-		public int SessionGridMaxSplitsPerAxis {
-			get {
-				return ((int)(this["SessionGridMaxSplitsPerAxis"]));
-			}
-			set {
-				this["SessionGridMaxSplitsPerAxis"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("True")]
-		public bool SessionGridStickyLayout {
-			get {
-				return ((bool)(this["SessionGridStickyLayout"]));
-			}
-			set {
-				this["SessionGridStickyLayout"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
 		[global::System.Configuration.DefaultSettingValueAttribute("True")]
 		public bool ShowFloatingMenuAutoShow {
 			get {
@@ -560,42 +488,6 @@ namespace Orbit {
 			}
 			set {
 				this["ShowThemeManagerWelcomeMessage"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("8")]
-		public double SessionGridDropZonePadding {
-			get {
-				return ((double)(this["SessionGridDropZonePadding"]));
-			}
-			set {
-				this["SessionGridDropZonePadding"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0.45")]
-		public double SessionGridDropZoneOpacity {
-			get {
-				return ((double)(this["SessionGridDropZoneOpacity"]));
-			}
-			set {
-				this["SessionGridDropZoneOpacity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("True")]
-		public bool SessionGridShowAllZonesOnDrag {
-			get {
-				return ((bool)(this["SessionGridShowAllZonesOnDrag"]));
-			}
-			set {
-				this["SessionGridShowAllZonesOnDrag"] = value;
 			}
 		}
 

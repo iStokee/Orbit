@@ -106,7 +106,6 @@ namespace Orbit.ViewModels
 			{
 				"Sessions" => Settings.Default.ShowMenuSessions,
 				"AccountManager" => Settings.Default.ShowMenuAccountManager,
-				"ScriptControls" => Settings.Default.ShowMenuScriptControls,
 				"ThemeManager" => Settings.Default.ShowMenuThemeManager,
 				"Console" => Settings.Default.ShowMenuConsole,
 				"ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
@@ -130,17 +129,13 @@ namespace Orbit.ViewModels
 						case "AccountManager":
 							_mainWindowViewModel.ShowMenuAccountManager = value;
 							break;
-						case "ScriptControls":
-							_mainWindowViewModel.ShowMenuScriptControls = value;
-							break;
-						case "ThemeManager":
 							_mainWindowViewModel.ShowMenuThemeManager = value;
 							break;
 						case "Console":
 							_mainWindowViewModel.ShowMenuConsole = value;
 							break;
 						case "ApiDocumentation":
-							_mainWindowViewModel.ShowMenuApiDocumentation = value;
+							_mainWindowViewModel.ShowMenuGuide = value;
 							break;
 						case "Settings":
 							_mainWindowViewModel.ShowMenuSettings = value;
@@ -170,10 +165,6 @@ namespace Orbit.ViewModels
 				case "AccountManager":
 					Settings.Default.ShowMenuAccountManager = value;
 					break;
-				case "ScriptControls":
-					Settings.Default.ShowMenuScriptControls = value;
-					break;
-				case "ThemeManager":
 					Settings.Default.ShowMenuThemeManager = value;
 					break;
 				case "Console":
@@ -201,7 +192,7 @@ namespace Orbit.ViewModels
 				"ThemeManager" => "Customize themes, accents, and appearance",
 				"ScriptManager" => "Browse and manage script library",
 				"Console" => "View unified logs from Orbit, ME, and scripts",
-				"ApiDocumentation" => "Browse interactive MESharp API documentation",
+				"ApiDocumentation" => "Open the Orbiters Guide documentation hub",
 				"ToolsOverview" => "Manage registered tools and their visibility",
 				"Settings" => "Configure Orbit application settings",
 				_ => "Custom tool - no description available"

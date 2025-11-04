@@ -5,12 +5,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:viewModels="clr-namespace:Orbit.ViewModels"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance viewModels:AccountManagerViewModel}">
+
+    <UserControl.Resources>
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+    </UserControl.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -40,7 +45,7 @@
 
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock
-                        FontSize="24"
+                        FontSize="22"
                         FontWeight="Bold"
                         Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                         Text="Account Manager" />
@@ -235,6 +240,45 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!--  Empty State  -->
+                <Border
+                    Grid.Row="1"
+                    Margin="0,12,0,0"
+                    Padding="48,32"
+                    Background="{DynamicResource MahApps.Brushes.Gray9}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Visibility="{Binding FilteredAccounts.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=Zero}">
+                    <StackPanel
+                        MaxWidth="360"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial
+                            Width="48"
+                            Height="48"
+                            HorizontalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                            Kind="AccountOff" />
+                        <TextBlock
+                            Margin="0,16,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="No accounts yet" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="13"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Opacity="0.75"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap"
+                            Text="Add your first RuneScape account to enable auto-login and quick session management." />
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 
@@ -256,12 +300,14 @@
                     Grid.Column="0"
                     Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}"
                     Controls:TextBoxHelper.Watermark="Username"
+                    MaxLength="50"
                     Margin="0,0,8,0" />
 
                 <TextBox
                     Grid.Column="1"
                     Text="{Binding NewNickname, UpdateSourceTrigger=PropertyChanged}"
                     Controls:TextBoxHelper.Watermark="Nickname (optional)"
+                    MaxLength="50"
                     Margin="0,0,8,0" />
 
                 <PasswordBox

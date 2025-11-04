@@ -28,16 +28,21 @@ using FlowDirection = System.Windows.FlowDirection;
 
 namespace Orbit.ViewModels
 {
-	public class MainWindowViewModel : INotifyPropertyChanged
+	/// <summary>
+	/// Primary coordinator for the Orbit shell window. Owns the session collection, orchestrates tool tabs,
+	/// and keeps global state (floating menu, hot reload targets, etc.) in sync across detached windows.
+	/// </summary>
+	public class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 	{
+		// Keys used to retrieve shared tool metadata from the registry. Keeping them here makes it easy to see
+		// which panels participate in the dynamic tool surface.
 	private const string AccountManagerToolKey = "AccountManager";
-	private const string ScriptControlsToolKey = "ScriptControls";
 	private const string SettingsToolKey = "Settings";
 	private const string ConsoleToolKey = "Console";
 	private const string ThemeManagerToolKey = "ThemeManager";
 	private const string SessionsOverviewToolKey = "SessionsOverview";
 	private const string ScriptManagerToolKey = "ScriptManager";
-	private const string ApiDocumentationToolKey = "ApiDocumentation";
+	private const string GuideToolKey = "ApiDocumentation";
 	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
 
 	private readonly SessionManagerService sessionManager;
@@ -61,10 +66,12 @@ namespace Orbit.ViewModels
 	private double floatingMenuBackgroundOpacity;
 	private bool isFloatingMenuVisible;
 	private bool isFloatingMenuExpanded;
+	private bool isFloatingMenuWelcomeVisible;
 	private FloatingMenuDirection floatingMenuDirection;
 	private FloatingMenuDirection autoActiveSide;
 	private double floatingMenuInactivitySeconds;
 	private bool floatingMenuAutoDirection;
+	// Floating menu docking overlay hints and viewport tracking
 	private bool isFloatingMenuDockOverlayVisible;
 	private FloatingMenuDockRegion floatingMenuDockCandidate = FloatingMenuDockRegion.None;
 	public double hostViewportWidth = 1200;
@@ -72,6 +79,10 @@ namespace Orbit.ViewModels
 	private bool autoInjectOnReady;
 	private bool isFloatingMenuClipping;
 
+	/// <summary>
+	/// Creates the main window view model. Most dependencies are long-lived services shared via DI;
+	/// the constructor wires them so detached windows can reuse the same singletons.
+	/// </summary>
 	public MainWindowViewModel(
 		SessionManagerService sessionManager,
 		ThemeService themeService,
@@ -120,13 +131,12 @@ namespace Orbit.ViewModels
 		InjectCommand = new RelayCommand(async _ => await InjectAsync(), _ => CanInject());
 		ShowSessionsCommand = new RelayCommand(_ => ShowSessions(), _ => Sessions.Count > 0);
 		OpenSessionGalleryCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGallery"));
-		OpenSessionGridCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGrid"));
 		OpenOrbitViewCommand = new RelayCommand(_ => TryOpenToolByKey("OrbitView"));
 		MoveTabToOrbitCommand = new RelayCommand(MoveTabToOrbit, CanMoveTabToOrbit);
 		OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
 		OpenScriptManagerCommand = new RelayCommand(_ => OpenScriptManager());
 		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager(), _ => this.toolRegistry.Find(AccountManagerToolKey) != null);
-		OpenApiDocumentationCommand = new RelayCommand(_ => OpenApiDocumentationTab());
+		OpenGuideCommand = new RelayCommand(_ => OpenGuideTab());
 		OpenSettingsCommand = new RelayCommand(_ => OpenSettingsTab());
 		OpenToolsOverviewCommand = new RelayCommand(_ => OpenToolsOverviewTab());
 		ToggleConsoleCommand = new RelayCommand(_ => ToggleConsole());
@@ -136,6 +146,7 @@ namespace Orbit.ViewModels
 		BeginSessionRenameCommand = new RelayCommand(param => BeginSessionRename(param), param => param is SessionModel);
 		CommitSessionRenameCommand = new RelayCommand(param => CommitSessionRename(param), param => param is SessionModel);
 		CancelSessionRenameCommand = new RelayCommand(param => CancelSessionRename(param), param => param is SessionModel);
+		FloatingMenuWelcomeCommand = new RelayCommand(_ => OnFloatingMenuWelcomeInvoked());
 
 		floatingMenuLeft = Settings.Default.FloatingMenuLeft;
 		floatingMenuTop = Settings.Default.FloatingMenuTop;
@@ -157,9 +168,13 @@ namespace Orbit.ViewModels
 
 		// initialize auto side from current position
 		ComputeAutoActiveSide();
-		HotReloadTargetSession = selectedSession ?? Sessions.FirstOrDefault();
+		var initialHotReloadTarget = this.sessionCollectionService.GlobalHotReloadTargetSession
+			?? selectedSession
+			?? Sessions.FirstOrDefault();
+		HotReloadTargetSession = initialHotReloadTarget;
 
 		ApplyThemeFromSettings();
+		UpdateFloatingMenuWelcomeHint(Settings.Default.ShowThemeManagerWelcomeMessage);
 	}
 
 	public ObservableCollection<SessionModel> Sessions { get; }
@@ -172,7 +187,6 @@ namespace Orbit.ViewModels
 	public ICommand InjectCommand { get; }
 	public ICommand ShowSessionsCommand { get; }
 	public ICommand OpenSessionGalleryCommand { get; }
-	public ICommand OpenSessionGridCommand { get; }
 	public ICommand OpenOrbitViewCommand { get; }
 	public ICommand MoveTabToOrbitCommand { get; }
 	public ICommand OpenThemeManagerCommand { get; }
@@ -184,10 +198,11 @@ namespace Orbit.ViewModels
 	public ICommand BeginSessionRenameCommand { get; }
 	public ICommand CommitSessionRenameCommand { get; }
 	public ICommand CancelSessionRenameCommand { get; }
+	public ICommand FloatingMenuWelcomeCommand { get; }
 	public ConsoleLogService ConsoleLog { get; }
 	public AccountService AccountService { get; }
 	public ICommand OpenAccountManagerCommand { get; }
-	public ICommand OpenApiDocumentationCommand { get; }
+	public ICommand OpenGuideCommand { get; }
 	public ICommand OpenSettingsCommand { get; }
 	public ICommand OpenToolsOverviewCommand { get; }
 	public Array FloatingMenuDirectionOptions { get; }
@@ -222,6 +237,11 @@ namespace Orbit.ViewModels
 
 		private object selectedTab;
 
+		/// <summary>
+		/// Currently selected tab in the shell. When a session tab is chosen we update <see cref="SelectedSession"/>
+		/// and focus the embedded client; when a tool tab is selected we keep the previous session targeted so that
+		/// script controls retain context.
+		/// </summary>
         public object SelectedTab
         {
             get => selectedTab;
@@ -250,6 +270,10 @@ namespace Orbit.ViewModels
             }
         }
 
+	/// <summary>
+	/// Session currently driving the shell. Updates global selection services and ensures the floating menu
+	/// targets the active client.
+	/// </summary>
 	public SessionModel SelectedSession
 	{
 		get => selectedSession;
@@ -348,21 +372,29 @@ namespace Orbit.ViewModels
 
 				hotReloadScriptPath = normalized;
 				Settings.Default.HotReloadScriptPath = hotReloadScriptPath;
-				OnPropertyChanged(nameof(HotReloadScriptPath));
-				CommandManager.InvalidateRequerySuggested();
-			}
+			OnPropertyChanged(nameof(HotReloadScriptPath));
+			CommandManager.InvalidateRequerySuggested();
 		}
+	}
 
+		/// <summary>
+		/// Creates and initializes a new RuneScape session. Depending on user preference the session is either
+		/// kept inside the Orbit view grid or materialized as its own tab.
+		/// </summary>
 		private async Task AddSessionAsync()
 		{
+			var hostControl = new ChildClientView();
+
 			var session = new SessionModel
 			{
 				Id = Guid.NewGuid(),
 				Name = $"RuneScape Session {Sessions.Count + 1}",
 				CreatedAt = DateTime.Now,
-				HostControl = new ChildClientView(),
+				HostControl = hostControl,
 				RequireInjectionBeforeDock = AutoInjectOnReady
 			};
+
+			hostControl.DataContext = session;
 
 			// Always add to Sessions collection
 			Sessions.Add(session);
@@ -469,7 +501,7 @@ namespace Orbit.ViewModels
 		OpenOrFocusToolTab(
 			key: ScriptManagerToolKey,
 			name: "Script Manager",
-			controlFactory: () => new Views.ScriptManagerPanel(new ScriptManagerViewModel(scriptManagerService)),
+			controlFactory: () => new Views.ScriptManagerPanel(new ScriptManagerViewModel(scriptManagerService, sessionCollectionService)),
 			icon: PackIconMaterialKind.CodeBraces);
 	}
 
@@ -503,11 +535,16 @@ namespace Orbit.ViewModels
 					return;
 
 				hotReloadTargetSession = value;
+				sessionCollectionService.GlobalHotReloadTargetSession = value;
 				OnPropertyChanged(nameof(HotReloadTargetSession));
 				CommandManager.InvalidateRequerySuggested();
 			}
 		}
 
+	/// <summary>
+	/// Dragablz callback invoked when a tab close button is pressed. Session tabs route through the full shutdown
+	/// pipeline while tool tabs simply disappear.
+	/// </summary>
 	public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
 	{
 		if (args.DragablzItem.DataContext is SessionModel session)
@@ -526,12 +563,18 @@ namespace Orbit.ViewModels
 
 	private SessionModel? ResolveHotReloadTarget()
 	{
+		var sharedTarget = sessionCollectionService.GlobalHotReloadTargetSession;
+		if (sharedTarget != null && Sessions.Contains(sharedTarget))
+		{
+			return sharedTarget;
+		}
+
 		if (hotReloadTargetSession != null && Sessions.Contains(hotReloadTargetSession))
 		{
 			return hotReloadTargetSession;
 		}
 
-	var fallback = SelectedSession ?? sessionCollectionService.GlobalSelectedSession;
+		var fallback = SelectedSession ?? sessionCollectionService.GlobalSelectedSession;
 		if (fallback != null && Sessions.Contains(fallback))
 		{
 			return fallback;
@@ -628,19 +671,6 @@ namespace Orbit.ViewModels
 
 	#region Tool Tabs
 
-	public void OpenScriptControlsTab()
-	{
-		if (!TryOpenToolByKey(ScriptControlsToolKey))
-		{
-			ConsoleLog.Append("[Orbit] Script Controls tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			OpenOrFocusToolTab(
-				key: ScriptControlsToolKey,
-				name: "Script Controls",
-				controlFactory: () => new Views.ScriptControlsView(),
-				icon: PackIconMaterialKind.ScriptText);
-		}
-	}
-
 	public void OpenAccountManagerTab()
 	{
 		if (!TryOpenToolByKey(AccountManagerToolKey))
@@ -701,11 +731,11 @@ namespace Orbit.ViewModels
         }
     }
 
-	public void OpenApiDocumentationTab()
+	public void OpenGuideTab()
 	{
-		if (!TryOpenToolByKey(ApiDocumentationToolKey))
+		if (!TryOpenToolByKey(GuideToolKey))
 		{
-			ConsoleLog.Append("[Orbit] API Documentation tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+			ConsoleLog.Append("[Orbit] Guide tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 		}
 	}
 
@@ -729,6 +759,10 @@ namespace Orbit.ViewModels
 		return true;
 	}
 
+	/// <summary>
+	/// Ensures the requested tool has a tab in the current window. If a tab already exists we focus it; otherwise
+	/// we create a new host control and wire the main view model as DataContext.
+	/// </summary>
 	private void OpenOrFocusToolTab(string key, string name, Func<System.Windows.FrameworkElement> controlFactory, PackIconMaterialKind icon = PackIconMaterialKind.Tools)
     {
         // Find existing
@@ -759,6 +793,10 @@ namespace Orbit.ViewModels
         SelectedTab = newTool;
     }
 
+	/// <summary>
+	/// Tries to reuse a tool tab that currently lives in another Orbit window instead of spinning up a duplicate
+	/// instance. This keeps singleton tooling (theme manager, console, etc.) consistent across tear-off windows.
+	/// </summary>
 	private bool TryAdoptToolFromOtherWindow(string key, out Models.ToolTabItem? adopted)
 	{
 		adopted = null;
@@ -918,6 +956,18 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool IsFloatingMenuWelcomeVisible
+	{
+		get => isFloatingMenuWelcomeVisible;
+		private set
+		{
+			if (isFloatingMenuWelcomeVisible == value)
+				return;
+			isFloatingMenuWelcomeVisible = value;
+			OnPropertyChanged(nameof(IsFloatingMenuWelcomeVisible));
+		}
+	}
+
 	public bool IsFloatingMenuExpanded
 	{
 		get => isFloatingMenuExpanded;
@@ -926,6 +976,10 @@ namespace Orbit.ViewModels
 			if (isFloatingMenuExpanded == value)
 				return;
 			isFloatingMenuExpanded = value;
+			if (value)
+			{
+				IsFloatingMenuWelcomeVisible = false;
+			}
 			OnPropertyChanged(nameof(IsFloatingMenuExpanded));
 		}
 	}
@@ -1260,17 +1314,6 @@ namespace Orbit.ViewModels
 		}
 	}
 
-	public bool ShowMenuScriptControls
-	{
-		get => Settings.Default.ShowMenuScriptControls;
-		set
-		{
-			if (Settings.Default.ShowMenuScriptControls == value) return;
-			Settings.Default.ShowMenuScriptControls = value;
-			OnPropertyChanged(nameof(ShowMenuScriptControls));
-		}
-	}
-
 	public bool ShowMenuThemeManager
 	{
 		get => Settings.Default.ShowMenuThemeManager;
@@ -1293,14 +1336,14 @@ namespace Orbit.ViewModels
 		}
 	}
 
-	public bool ShowMenuApiDocumentation
+	public bool ShowMenuGuide
 	{
 		get => Settings.Default.ShowMenuApiDocumentation;
 		set
 		{
 			if (Settings.Default.ShowMenuApiDocumentation == value) return;
 			Settings.Default.ShowMenuApiDocumentation = value;
-			OnPropertyChanged(nameof(ShowMenuApiDocumentation));
+			OnPropertyChanged(nameof(ShowMenuGuide));
 		}
 	}
 
@@ -1334,17 +1377,6 @@ namespace Orbit.ViewModels
 			if (Settings.Default.ShowMenuSessionGallery == value) return;
 			Settings.Default.ShowMenuSessionGallery = value;
 			OnPropertyChanged(nameof(ShowMenuSessionGallery));
-		}
-	}
-
-	public bool ShowMenuSessionGrid
-	{
-		get => Settings.Default.ShowMenuSessionGrid;
-		set
-		{
-			if (Settings.Default.ShowMenuSessionGrid == value) return;
-			Settings.Default.ShowMenuSessionGrid = value;
-			OnPropertyChanged(nameof(ShowMenuSessionGrid));
 		}
 	}
 
@@ -1395,6 +1427,18 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public void UpdateFloatingMenuWelcomeHint(bool enabled)
+	{
+		if (enabled && !IsFloatingMenuExpanded)
+		{
+			IsFloatingMenuWelcomeVisible = true;
+		}
+		else if (!enabled)
+		{
+			IsFloatingMenuWelcomeVisible = false;
+		}
+	}
+
 	private void UpdateFloatingMenuVisibilityForCurrentTab()
 	{
 		if (SelectedTab == null)
@@ -1429,7 +1473,16 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-	IsFloatingMenuVisible = true;
+		IsFloatingMenuVisible = true;
+	}
+
+	private void OnFloatingMenuWelcomeInvoked()
+	{
+		IsFloatingMenuWelcomeVisible = false;
+		if (!IsFloatingMenuExpanded)
+		{
+			IsFloatingMenuExpanded = true;
+		}
 	}
 
 	public void SetFloatingMenuClipping(bool clipped)
@@ -1785,13 +1838,26 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		private void OnGlobalSessionChanged(object sender, PropertyChangedEventArgs e)
+	private void OnGlobalSessionChanged(object sender, PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName == nameof(SessionCollectionService.GlobalHotReloadTargetSession))
 		{
-			if (e.PropertyName == nameof(SessionCollectionService.GlobalSelectedSession))
+			var sharedTarget = sessionCollectionService.GlobalHotReloadTargetSession;
+			if (!ReferenceEquals(hotReloadTargetSession, sharedTarget))
 			{
-				// If this window doesn't have a local selected session, use the global one
-				if (SelectedSession == null)
-				{
+				hotReloadTargetSession = sharedTarget;
+				OnPropertyChanged(nameof(HotReloadTargetSession));
+				CommandManager.InvalidateRequerySuggested();
+			}
+
+			return;
+		}
+
+		if (e.PropertyName == nameof(SessionCollectionService.GlobalSelectedSession))
+		{
+			// If this window doesn't have a local selected session, use the global one
+			if (SelectedSession == null)
+			{
 					CommandManager.InvalidateRequerySuggested();
 				}
 			}
@@ -1892,59 +1958,95 @@ namespace Orbit.ViewModels
 				   session.InjectionState == InjectionState.Injected;
 		}
 
-		private async Task<bool> ConfirmSessionCloseAsync(SessionModel session)
+	private async Task<bool> ConfirmSessionCloseAsync(SessionModel session)
+	{
+		if (!ShouldConfirmSessionClose(session))
 		{
-			if (!ShouldConfirmSessionClose(session))
-			{
-				return true;
-			}
+			return true;
+		}
 
-			async Task<bool> ShowDialogOnUiAsync()
+		if (session?.HostControl != null && Tabs.Contains(session))
+		{
+			var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+			void ShowOverlay()
 			{
-				if (Application.Current?.MainWindow is MetroWindow metroWindow)
+				if (!ReferenceEquals(SelectedTab, session))
 				{
-					var dialogSettings = new MetroDialogSettings
-					{
-						AffirmativeButtonText = "Close Session",
-						NegativeButtonText = "Cancel",
-						DialogMessageFontSize = 15,
-						DialogButtonFontSize = 13,
-						AnimateShow = true,
-						AnimateHide = true,
-						ColorScheme = MetroDialogColorScheme.Accented
-					};
-
-					var result = await metroWindow.ShowMessageAsync(
-						"Close Active Session",
-						$"Session '{session.Name}' is currently active.\nClosing it will terminate the embedded RuneScape client.",
-						MessageDialogStyle.AffirmativeAndNegative,
-						dialogSettings).ConfigureAwait(true);
-
-					return result == MessageDialogResult.Affirmative;
+					SelectedTab = session;
 				}
 
-				var fallback = MessageBox.Show(
-					$"Session '{session.Name}' is active. Are you sure you want to close it?",
-					"Close Active Session",
-					MessageBoxButton.YesNo,
-					MessageBoxImage.Warning);
-
-				return fallback == MessageBoxResult.Yes;
+				session.ShowCloseConfirmation(completionSource);
 			}
 
 			var dispatcher = Application.Current?.Dispatcher;
 			if (dispatcher == null)
 			{
-				return await ShowDialogOnUiAsync().ConfigureAwait(true);
+				ShowOverlay();
 			}
-
-			if (dispatcher.CheckAccess())
+			else if (dispatcher.CheckAccess())
 			{
-				return await ShowDialogOnUiAsync().ConfigureAwait(true);
+				ShowOverlay();
+			}
+			else
+			{
+				await dispatcher.InvokeAsync(ShowOverlay);
 			}
 
-			return await dispatcher.InvokeAsync(ShowDialogOnUiAsync).Task.Unwrap().ConfigureAwait(true);
+			return await completionSource.Task.ConfigureAwait(true);
 		}
+
+		return await ShowSessionCloseDialogAsync(session).ConfigureAwait(true);
+	}
+
+	private async Task<bool> ShowSessionCloseDialogAsync(SessionModel session)
+	{
+		async Task<bool> ShowDialogOnUiAsync()
+		{
+			if (Application.Current?.MainWindow is MetroWindow metroWindow)
+			{
+				var dialogSettings = new MetroDialogSettings
+				{
+					AffirmativeButtonText = "Close Session",
+					NegativeButtonText = "Cancel",
+					DialogMessageFontSize = 15,
+					DialogButtonFontSize = 13,
+					AnimateShow = true,
+					AnimateHide = true,
+					ColorScheme = MetroDialogColorScheme.Accented
+				};
+
+				var result = await metroWindow.ShowMessageAsync(
+					"Close Active Session",
+					$"Session '{session?.Name}' is currently active.\nClosing it will terminate the embedded RuneScape client.",
+					MessageDialogStyle.AffirmativeAndNegative,
+					dialogSettings).ConfigureAwait(true);
+
+				return result == MessageDialogResult.Affirmative;
+			}
+
+			var fallback = MessageBox.Show(
+				$"Session '{session?.Name}' is active. Are you sure you want to close it?",
+				"Close Active Session",
+				MessageBoxButton.YesNo,
+				MessageBoxImage.Warning);
+
+			return fallback == MessageBoxResult.Yes;
+		}
+
+		var dispatcher = Application.Current?.Dispatcher;
+		if (dispatcher == null)
+		{
+			return await ShowDialogOnUiAsync().ConfigureAwait(true);
+		}
+
+		if (dispatcher.CheckAccess())
+		{
+			return await ShowDialogOnUiAsync().ConfigureAwait(true);
+		}
+
+		return await dispatcher.InvokeAsync(ShowDialogOnUiAsync).Task.Unwrap().ConfigureAwait(true);
+	}
 
 	private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 	{
@@ -2025,6 +2127,56 @@ namespace Orbit.ViewModels
 		OnPropertyChanged(nameof(HasSessions));
 		CommandManager.InvalidateRequerySuggested();
 	}
+
+		#region IDisposable Implementation
+
+		private bool _disposed = false;
+
+		public void Dispose()
+		{
+			if (_disposed) return;
+			_disposed = true;
+
+			// Unsubscribe from collection events
+			try
+			{
+				Tabs.CollectionChanged -= OnTabsCollectionChanged;
+				Sessions.CollectionChanged -= OnSessionsCollectionChanged;
+				sessionCollectionService.PropertyChanged -= OnGlobalSessionChanged;
+			}
+			catch
+			{
+				// Ignore errors during cleanup
+			}
+
+			// Unsubscribe from all session events
+			foreach (var session in Sessions)
+			{
+				try
+				{
+					session.PropertyChanged -= OnSessionPropertyChanged;
+				}
+				catch
+				{
+					// Ignore errors during cleanup
+				}
+			}
+
+			// Unsubscribe from selected session
+			if (selectedSession != null)
+			{
+				try
+				{
+					selectedSession.PropertyChanged -= OnSelectedSessionChanged;
+				}
+				catch
+				{
+					// Ignore errors during cleanup
+				}
+			}
+		}
+
+		#endregion
 
 		protected virtual void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

@@ -7,7 +7,8 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     MinWidth="760"
     MinHeight="520"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+    Unloaded="OnUnloaded">
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
@@ -100,12 +101,12 @@
         </DataTemplate>
     </UserControl.Resources>
 
+    <!-- Main surface: header, toolbar, then three-column content (library / favorites / recents) -->
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--  Header  -->
@@ -136,54 +137,263 @@
                         FontSize="12"
                         Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                         Opacity="0.85"
-                        Text="Manage recent scripts and favorites. Double-click to load via hot-reload." />
+                        Text="Load, manage, and iterate on scripts with hot-reload - no file locking!" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <!--  Actions  -->
         <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
-            <StackPanel Orientation="Horizontal">
-                <Button
-                    Width="160"
-                    Height="40"
-                    Command="{Binding AddScriptCommand}"
-                    Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial
-                            Width="18"
-                            Height="18"
-                            Kind="FilePlus" />
-                        <TextBlock VerticalAlignment="Center" Text="Add Script" />
-                    </StackPanel>
-                </Button>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <Button
-                    Width="180"
-                    Height="40"
-                    Margin="12,0,0,0"
-                    Command="{Binding ClearMissingCommand}">
-                    <StackPanel Orientation="Horizontal">
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  Script Path ComboBox  -->
+                    <Border
+                        Grid.Column="0"
+                        Margin="0,0,12,0"
+                        Padding="2"
+                        Background="{DynamicResource MahApps.Brushes.Gray7}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                        <ComboBox
+                            Height="36"
+                            Padding="8,0"
+                            FontSize="12"
+                            IsEditable="True"
+                            ItemsSource="{Binding RecentScriptsView}"
+                            SelectedItem="{Binding SelectedScript}"
+                            Text="{Binding HotReloadScriptPath, UpdateSourceTrigger=PropertyChanged}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
+                                            Width="14"
+                                            Height="14"
+                                            Margin="0,0,8,0"
+                                            Kind="Star"
+                                            Foreground="#FFD700"
+                                            Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <TextBlock
+                                            Margin="0,0,10,0"
+                                            FontWeight="SemiBold"
+                                            Text="{Binding Name}" />
+                                        <TextBlock
+                                            FontSize="10"
+                                            Opacity="0.6"
+                                            Text="{Binding FileName}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Border>
+
+                    <!--  Load/Reload Button  -->
+                    <Button
+                        Grid.Column="1"
+                        Width="140"
+                        Height="40"
+                        Margin="0,0,8,0"
+                        Command="{Binding LoadScriptCommand}"
+                        Style="{StaticResource MahApps.Styles.Button.Square.Accent}"
+                        ToolTip="Load or reload script with hot-reload">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="Play" />
+                            <TextBlock Text="Load / Reload" />
+                        </StackPanel>
+                    </Button>
+
+                    <!--  Reload Button  -->
+                    <Button
+                        Grid.Column="2"
+                        Width="40"
+                        Height="40"
+                        Command="{Binding ReloadScriptCommand}"
+                        ToolTip="Quick reload"
+                        Style="{StaticResource MahApps.Styles.Button.Circle}">
                         <iconPacks:PackIconMaterial
                             Width="18"
                             Height="18"
-                            Kind="Broom" />
-                        <TextBlock VerticalAlignment="Center" Text="Remove Missing" />
+                            Kind="Refresh" />
+                    </Button>
+
+                    <!--  Target Session Selector  -->
+                    <StackPanel
+                        Grid.Column="3"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                        <Border
+                            Padding="8,4"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="6"
+                            Opacity="0.85">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Kind="CrosshairsGps" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Text="Target" />
+                            </StackPanel>
+                        </Border>
+                        <Grid Margin="10,0,0,0" VerticalAlignment="Center">
+                            <Border
+                                Padding="4"
+                                Background="{DynamicResource MahApps.Brushes.Gray7}"
+                                CornerRadius="6">
+                                <ComboBox
+                                    MinWidth="220"
+                                    Padding="6,2"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    IsEnabled="{Binding HasSessions}"
+                                    ItemsSource="{Binding Sessions}"
+                                    SelectedItem="{Binding TargetSession, Mode=TwoWay}"
+                                    ToolTip="Select which session receives script commands">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock
+                                                    FontWeight="SemiBold"
+                                                    Text="{Binding Name}" />
+                                                <TextBlock
+                                                    Margin="8,0,0,0"
+                                                    Opacity="0.6"
+                                                    Text="{Binding RSProcess.Id, StringFormat=PID {0}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Border>
+                            <TextBlock
+                                Margin="12,4,0,0"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                IsHitTestVisible="False"
+                                Text="No active session">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasSessions}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                     </StackPanel>
-                </Button>
-            </StackPanel>
+                </Grid>
+
+                <!--  Management Controls  -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button
+                        Width="140"
+                        Height="36"
+                        Command="{Binding AddScriptCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Kind="FilePlus" />
+                            <TextBlock VerticalAlignment="Center" Text="Add Script" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button
+                        Width="160"
+                        Height="36"
+                        Margin="8,0,0,0"
+                        Command="{Binding ClearMissingCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Kind="Broom" />
+                            <TextBlock VerticalAlignment="Center" Text="Remove Missing" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!--  Content  -->
         <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}">
             <Grid>
+                <!-- Column layout: file system library | pinned favorites | recent history -->
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="1.1*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!--  Favorites  -->
+                <!--  Script Library  -->
                 <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Text="Library" />
+                        <Border
+                            Padding="8,2"
+                            Background="{DynamicResource MahApps.Brushes.Gray8}"
+                            CornerRadius="12"
+                            Margin="12,0,0,0">
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Default folder" />
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontSize="11"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Text="{Binding LibraryDirectoryPath}"
+                        TextWrapping="Wrap" />
+
+                    <ListView
+                        Margin="0,12,0,0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemTemplate="{StaticResource ScriptItemTemplate}"
+                        ItemsSource="{Binding LibraryScripts}"
+                        MouseDoubleClick="OnScriptDoubleClick" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                        Text="Drop compiled scripts into the library folder to populate this list."
+                        Visibility="{Binding HasLibraryScripts, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}" />
+                </StackPanel>
+
+                <!--  Favorites  -->
+                <StackPanel Grid.Column="1" Margin="0,0,16,0">
                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                         <TextBlock
                             FontSize="18"
@@ -220,7 +430,7 @@
                 </StackPanel>
 
                 <!--  Recent Scripts  -->
-                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                <StackPanel Grid.Column="2">
                     <TextBlock
                         FontSize="18"
                         FontWeight="SemiBold"
@@ -231,18 +441,10 @@
                         Background="Transparent"
                         BorderThickness="0"
                         ItemTemplate="{StaticResource ScriptItemTemplate}"
-                        ItemsSource="{Binding RecentScripts}"
+                        ItemsSource="{Binding RecentScriptsView}"
                         MouseDoubleClick="OnScriptDoubleClick" />
                 </StackPanel>
             </Grid>
-        </Border>
-
-        <!--  Footer  -->
-        <Border Grid.Row="3" Style="{StaticResource Orbit.ToolCard}">
-            <TextBlock
-                FontSize="11"
-                Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                Text="Hot-reload friendly • Scripts run in the selected session from Orbit's Script Controls." />
         </Border>
     </Grid>
 </UserControl>

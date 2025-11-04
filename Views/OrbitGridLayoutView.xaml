@@ -3,13 +3,36 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+    xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:dockablz="http://dragablz.net/winfx/xaml/dockablz"
     xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
-    <Grid Margin="16">
+    <UserControl.Resources>
+        <converters:OrbitViewCompactnessToMarginConverter x:Key="CompactnessToMarginConverter" />
+        <converters:OrbitViewBorderThicknessConverter x:Key="BorderThicknessConverter" />
+        <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
+    </UserControl.Resources>
+
+    <UserControl.InputBindings>
+        <!--  Keyboard shortcuts for quick grid layout creation  -->
+        <KeyBinding
+            Key="D2"
+            Command="{Binding CreateGrid2x2Command}"
+            Modifiers="Ctrl+Shift" />
+        <KeyBinding
+            Key="D3"
+            Command="{Binding CreateGrid3x3Command}"
+            Modifiers="Ctrl+Shift" />
+        <KeyBinding
+            Key="R"
+            Command="{Binding ResetLayoutCommand}"
+            Modifiers="Ctrl+Shift" />
+    </UserControl.InputBindings>
+
+    <Grid Margin="16,16,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -17,7 +40,7 @@
 
         <!--  Header with controls  -->
         <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
-            <Grid>
+            <Grid Margin="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -62,7 +85,7 @@
                         Padding="12,0"
                         Command="{Binding CreateGrid2x2Command}"
                         Style="{StaticResource MahApps.Styles.Button}"
-                        ToolTip="Create 2x2 Grid">
+                        ToolTip="Create 2x2 Grid (Ctrl+Shift+2)">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="16"
@@ -79,7 +102,7 @@
                         Padding="12,0"
                         Command="{Binding CreateGrid3x3Command}"
                         Style="{StaticResource MahApps.Styles.Button}"
-                        ToolTip="Create 3x3 Grid">
+                        ToolTip="Create 3x3 Grid (Ctrl+Shift+3)">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="16"
@@ -97,7 +120,7 @@
                         Padding="12,0"
                         Command="{Binding ResetLayoutCommand}"
                         Style="{StaticResource MahApps.Styles.Button}"
-                        ToolTip="Reset to Single View">
+                        ToolTip="Reset to Single View (Ctrl+Shift+R)">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="16"
@@ -114,36 +137,32 @@
         <!--  Main Layout Area using Dragablz Layout  -->
         <Border
             Grid.Row="1"
-            Margin="0,12,0,0"
+            Margin="0,0,0,0"
             Background="{DynamicResource MahApps.Brushes.Gray9}"
             BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
             BorderThickness="1"
             CornerRadius="6">
 
             <!--  Dragablz Layout Control - Native branching/splitting  -->
-            <dockablz:Layout
-                x:Name="SessionLayout"
-                Partition="OrbitMainShell">
+            <dockablz:Layout x:Name="SessionLayout" Partition="OrbitMainShell">
 
                 <!--  BranchTemplate: Defines how each branch (tab control) looks  -->
                 <!--  NOTE: Do NOT bind ItemsSource here - Dragablz manages items internally when branching  -->
                 <dockablz:Layout.BranchTemplate>
                     <DataTemplate>
                         <dragablz:TabablzControl
-                            Margin="4"
+                            Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
                             Background="Transparent"
-                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                            BorderThickness="2"
+                            BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
+                            ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ContentTemplate="{StaticResource SessionContentTemplate}"
                             ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
                             ShowDefaultAddButton="False"
-                            ShowDefaultCloseButton="True"
-                            ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            ShowDefaultCloseButton="True">
 
                             <dragablz:TabablzControl.InterTabController>
-                        <dragablz:InterTabController
-                            InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            Partition="OrbitMainShell" />
+                                <dragablz:InterTabController InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=UserControl}}" Partition="OrbitMainShell" />
                             </dragablz:TabablzControl.InterTabController>
                         </dragablz:TabablzControl>
                     </DataTemplate>
@@ -151,21 +170,19 @@
 
                 <!--  Initial content: Single TabablzControl showing all sessions  -->
                 <dragablz:TabablzControl
-                    Margin="4"
+                    Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
                     Background="Transparent"
                     BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                    BorderThickness="2"
+                    BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
+                    ClosingItemCallback="{Binding TabClosingHandler}"
                     ContentTemplate="{StaticResource SessionContentTemplate}"
                     ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
                     ItemsSource="{Binding Items}"
                     ShowDefaultAddButton="False"
-                    ShowDefaultCloseButton="True"
-                    ClosingItemCallback="{Binding TabClosingHandler}">
+                    ShowDefaultCloseButton="True">
 
                     <dragablz:TabablzControl.InterTabController>
-                    <dragablz:InterTabController
-                        InterTabClient="{Binding InterTabClient}"
-                        Partition="OrbitMainShell" />
+                        <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" Partition="OrbitMainShell" />
                     </dragablz:TabablzControl.InterTabController>
                 </dragablz:TabablzControl>
 

@@ -59,9 +59,6 @@
   <Setting Name="ShowMenuAccountManager" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
-  <Setting Name="ShowMenuScriptControls" Type="System.Boolean" Scope="User">
-    <Value Profile="(Default)">True</Value>
-  </Setting>
   <Setting Name="ShowMenuThemeManager" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -78,9 +75,6 @@
     <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="ShowMenuSessionGallery" Type="System.Boolean" Scope="User">
-    <Value Profile="(Default)">True</Value>
-  </Setting>
-  <Setting Name="ShowMenuSessionGrid" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="ShowMenuOrbitView" Type="System.Boolean" Scope="User">
@@ -119,31 +113,10 @@
   <Setting Name="FloatingMenuShowAllSnapZonesOnClip" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
   </Setting>
-  <Setting Name="SessionGridOverflowPolicy" Type="System.Int32" Scope="User">
-    <Value Profile="(Default)">0</Value>
-  </Setting>
-  <Setting Name="SessionGridConflictResolution" Type="System.Int32" Scope="User">
-    <Value Profile="(Default)">0</Value>
-  </Setting>
-  <Setting Name="SessionGridMaxSplitsPerAxis" Type="System.Int32" Scope="User">
-    <Value Profile="(Default)">2</Value>
-  </Setting>
-  <Setting Name="SessionGridStickyLayout" Type="System.Boolean" Scope="User">
-    <Value Profile="(Default)">True</Value>
-  </Setting>
   <Setting Name="ShowFloatingMenuAutoShow" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="ShowThemeManagerWelcomeMessage" Type="System.Boolean" Scope="User">
-    <Value Profile="(Default)">True</Value>
-  </Setting>
-  <Setting Name="SessionGridDropZonePadding" Type="System.Double" Scope="User">
-    <Value Profile="(Default)">8</Value>
-  </Setting>
-  <Setting Name="SessionGridDropZoneOpacity" Type="System.Double" Scope="User">
-    <Value Profile="(Default)">0.45</Value>
-  </Setting>
-  <Setting Name="SessionGridShowAllZonesOnDrag" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="OrbitViewGridDensity" Type="System.Int32" Scope="User">
