@@ -1965,87 +1965,35 @@ namespace Orbit.ViewModels
 			return true;
 		}
 
-		if (session?.HostControl != null && Tabs.Contains(session))
-		{
-			var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-			void ShowOverlay()
-			{
-				if (!ReferenceEquals(SelectedTab, session))
-				{
-					SelectedTab = session;
-				}
-
-				session.ShowCloseConfirmation(completionSource);
-			}
-
-			var dispatcher = Application.Current?.Dispatcher;
-			if (dispatcher == null)
-			{
-				ShowOverlay();
-			}
-			else if (dispatcher.CheckAccess())
-			{
-				ShowOverlay();
-			}
-			else
-			{
-				await dispatcher.InvokeAsync(ShowOverlay);
-			}
-
-			return await completionSource.Task.ConfigureAwait(true);
-		}
-
 		return await ShowSessionCloseDialogAsync(session).ConfigureAwait(true);
 	}
 
 	private async Task<bool> ShowSessionCloseDialogAsync(SessionModel session)
 	{
-		async Task<bool> ShowDialogOnUiAsync()
+		bool ShowDialogOnUi()
 		{
-			if (Application.Current?.MainWindow is MetroWindow metroWindow)
+			var viewModel = new SessionCloseDialogViewModel(session);
+			var dialog = new Views.SessionCloseDialog(viewModel)
 			{
-				var dialogSettings = new MetroDialogSettings
-				{
-					AffirmativeButtonText = "Close Session",
-					NegativeButtonText = "Cancel",
-					DialogMessageFontSize = 15,
-					DialogButtonFontSize = 13,
-					AnimateShow = true,
-					AnimateHide = true,
-					ColorScheme = MetroDialogColorScheme.Accented
-				};
+				Owner = Application.Current?.MainWindow
+			};
 
-				var result = await metroWindow.ShowMessageAsync(
-					"Close Active Session",
-					$"Session '{session?.Name}' is currently active.\nClosing it will terminate the embedded RuneScape client.",
-					MessageDialogStyle.AffirmativeAndNegative,
-					dialogSettings).ConfigureAwait(true);
-
-				return result == MessageDialogResult.Affirmative;
-			}
-
-			var fallback = MessageBox.Show(
-				$"Session '{session?.Name}' is active. Are you sure you want to close it?",
-				"Close Active Session",
-				MessageBoxButton.YesNo,
-				MessageBoxImage.Warning);
-
-			return fallback == MessageBoxResult.Yes;
+			dialog.ShowDialog();
+			return dialog.DialogResult;
 		}
 
 		var dispatcher = Application.Current?.Dispatcher;
 		if (dispatcher == null)
 		{
-			return await ShowDialogOnUiAsync().ConfigureAwait(true);
+			return ShowDialogOnUi();
 		}
 
 		if (dispatcher.CheckAccess())
 		{
-			return await ShowDialogOnUiAsync().ConfigureAwait(true);
+			return ShowDialogOnUi();
 		}
 
-		return await dispatcher.InvokeAsync(ShowDialogOnUiAsync).Task.Unwrap().ConfigureAwait(true);
+		return await dispatcher.InvokeAsync(ShowDialogOnUi).Task.ConfigureAwait(true);
 	}
 
 	private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

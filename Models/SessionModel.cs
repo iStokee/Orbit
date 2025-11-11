@@ -28,8 +28,6 @@ namespace Orbit.Models
 		private nint _renderSurfaceHandle;
 		private bool _gallerySizeOverrideEnabled;
 		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
-		private bool _isCloseConfirmationVisible;
-		private TaskCompletionSource<bool>? closeConfirmationTcs;
 
 		public SessionModel()
 		{
@@ -311,40 +309,6 @@ namespace Orbit.Models
 			}
 		}
 
-		public bool IsCloseConfirmationVisible
-		{
-			get => _isCloseConfirmationVisible;
-			private set
-			{
-				if (_isCloseConfirmationVisible == value)
-					return;
-				_isCloseConfirmationVisible = value;
-				OnPropertyChanged();
-			}
-		}
-
-		public void ShowCloseConfirmation(TaskCompletionSource<bool> completionSource)
-		{
-			if (completionSource == null)
-			{
-				throw new ArgumentNullException(nameof(completionSource));
-			}
-
-			if (IsCloseConfirmationVisible)
-			{
-				ResolveCloseConfirmation(false);
-			}
-
-			closeConfirmationTcs = completionSource;
-			IsCloseConfirmationVisible = true;
-		}
-
-		public void ResolveCloseConfirmation(bool confirmed)
-		{
-			IsCloseConfirmationVisible = false;
-			closeConfirmationTcs?.TrySetResult(confirmed);
-			closeConfirmationTcs = null;
-		}
 
 		/// <summary>
 		/// Gets or sets the thumbnail preview image for this session

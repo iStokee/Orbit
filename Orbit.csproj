@@ -12,9 +12,9 @@
     <!-- ApplicationIcon removed - using vector DrawingImage via Icon property instead -->
 
     <!-- Version Information for Auto-Updater -->
-    <Version>1.0.3</Version>
-    <AssemblyVersion>1.0.3.0</AssemblyVersion>
-    <FileVersion>1.0.3.0</FileVersion>
+    <Version>1.0.4</Version>
+    <AssemblyVersion>1.0.4.0</AssemblyVersion>
+    <FileVersion>1.0.4.0</FileVersion>
     <PlatformTarget>x64</PlatformTarget>
 
   </PropertyGroup>
@@ -102,7 +102,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="docs\OrbitersGuide\*.md">
+    <Content Include="..\docs\OrbitersGuide\*.md">
+      <Link>docs\OrbitersGuide\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
@@ -115,5 +116,6 @@
   </ItemGroup>
 
 </Project>
+
 
 

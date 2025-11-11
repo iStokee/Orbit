@@ -111,17 +111,13 @@ namespace Orbit.Views
 		{
 			if (e.OldValue is SessionModel oldSession)
 			{
-				oldSession.PropertyChanged -= Session_PropertyChanged;
+			// Removed: overlay confirmation event unsubscription
 			}
 
 			if (e.NewValue is SessionModel newSession)
 			{
 				boundSession = newSession;
-				newSession.PropertyChanged += Session_PropertyChanged;
-				if (newSession.IsCloseConfirmationVisible)
-				{
-					Dispatcher.InvokeAsync(() => ConfirmCloseButton?.Focus(), DispatcherPriority.Loaded);
-				}
+			// Removed: overlay confirmation event subscription and focus logic
 			}
 			else
 			{
@@ -129,52 +125,26 @@ namespace Orbit.Views
 			}
 		}
 
-		private void Session_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-		{
-			if (sender is not SessionModel session || e.PropertyName != nameof(SessionModel.IsCloseConfirmationVisible))
-			{
-				return;
-			}
+		// Removed: Session_PropertyChanged method for overlay
 
-			if (session.IsCloseConfirmationVisible)
-			{
-				Dispatcher.InvokeAsync(() => ConfirmCloseButton?.Focus(), DispatcherPriority.Loaded);
-			}
-			else
-			{
-				Dispatcher.InvokeAsync(FocusEmbeddedClient, DispatcherPriority.Background);
-			}
-		}
+		// Removed: ConfirmCloseButton_Click method for overlay
 
-		private void ConfirmCloseButton_Click(object sender, RoutedEventArgs e)
-		{
-			boundSession?.ResolveCloseConfirmation(true);
-			e.Handled = true;
-		}
-
-		private void CancelCloseButton_Click(object sender, RoutedEventArgs e)
-		{
-			boundSession?.ResolveCloseConfirmation(false);
-			e.Handled = true;
-		}
+		// Removed: CancelCloseButton_Click method for overlay
 
 		private void ChildClientView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{
-			if (boundSession?.IsCloseConfirmationVisible != true)
-			{
-				return;
-			}
+		// Removed: overlay confirmation PreviewKeyDown check
 
-			if (e.Key == Key.Escape)
-			{
-				boundSession.ResolveCloseConfirmation(false);
-				e.Handled = true;
-			}
-			else if (e.Key == Key.Enter)
-			{
-				boundSession.ResolveCloseConfirmation(true);
-				e.Handled = true;
-			}
+		// Removed: if (e.Key == Key.Escape)
+		// Removed: {
+		// Removed: boundSession.ResolveCloseConfirmation(false);
+		// Removed: e.Handled = true;
+		// Removed: }
+		// Removed: else if (e.Key == Key.Enter)
+		// Removed: {
+		// Removed: boundSession.ResolveCloseConfirmation(true);
+		// Removed: e.Handled = true;
+		// Removed: }
 		}
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -214,7 +184,7 @@ namespace Orbit.Views
 				ParkSessionIntoOffscreenHost();
 				if (boundSession != null)
 				{
-					boundSession.PropertyChanged -= Session_PropertyChanged;
+				// Removed: boundSession.PropertyChanged -= Session_PropertyChanged;
 					boundSession = null;
 				}
 			}
