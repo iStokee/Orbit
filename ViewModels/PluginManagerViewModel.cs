@@ -42,18 +42,18 @@ public class PluginManagerViewModel : INotifyPropertyChanged
         }
     }
 
-    public ICommand LoadPluginCommand { get; }
-    public ICommand RefreshCommand { get; }
-    public ICommand AutoLoadAllCommand { get; }
+    public IRelayCommand LoadPluginCommand { get; }
+    public IRelayCommand RefreshCommand { get; }
+    public IRelayCommand AutoLoadAllCommand { get; }
 
     public PluginManagerViewModel(PluginManager pluginManager)
     {
         _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
         Plugins = new ObservableCollection<PluginItemViewModel>();
 
-        LoadPluginCommand = new RelayCommand(async _ => await LoadPluginAsync());
-        RefreshCommand = new RelayCommand(async _ => await RefreshPluginsAsync());
-        AutoLoadAllCommand = new RelayCommand(async _ => await AutoLoadAllAsync());
+        LoadPluginCommand = new RelayCommand(async () => await LoadPluginAsync());
+        RefreshCommand = new RelayCommand(async () => await RefreshPluginsAsync());
+        AutoLoadAllCommand = new RelayCommand(async () => await AutoLoadAllAsync());
 
         // Subscribe to plugin status changes
         _pluginManager.PluginStatusChanged += OnPluginStatusChanged;
@@ -188,16 +188,16 @@ public class PluginItemViewModel : INotifyPropertyChanged
     public string LoadedAt => _metadata.LoadedAt.ToString("g");
     public bool IsLoaded => _metadata.IsLoaded;
 
-    public ICommand UnloadCommand { get; }
-    public ICommand ReloadCommand { get; }
+    public IRelayCommand UnloadCommand { get; }
+    public IRelayCommand ReloadCommand { get; }
 
     public PluginItemViewModel(PluginMetadata metadata, PluginManager pluginManager)
     {
         _metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
         _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
 
-        UnloadCommand = new RelayCommand(async _ => await UnloadAsync());
-        ReloadCommand = new RelayCommand(async _ => await ReloadAsync());
+        UnloadCommand = new RelayCommand(async () => await UnloadAsync());
+        ReloadCommand = new RelayCommand(async () => await ReloadAsync());
     }
 
     private async Task UnloadAsync()

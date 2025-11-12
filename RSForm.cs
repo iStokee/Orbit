@@ -122,6 +122,7 @@ namespace Orbit
 
 		internal Task<Process> ProcessReadyTask => processReadyTcs.Task;
 
+		[DefaultValue(true)]
 		internal bool WaitForInjectionBeforeDock { get; set; } = true;
 
 		public event EventHandler<DockedEventArgs> Docked;

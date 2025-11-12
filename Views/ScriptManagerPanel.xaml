@@ -206,6 +206,7 @@
                         Height="40"
                         Margin="0,0,8,0"
                         Command="{Binding LoadScriptCommand}"
+                        CommandParameter="{Binding SelectedScript}"
                         Style="{StaticResource MahApps.Styles.Button.Square.Accent}"
                         ToolTip="Load or reload script with hot-reload">
                         <StackPanel Orientation="Horizontal">
@@ -224,6 +225,7 @@
                         Width="40"
                         Height="40"
                         Command="{Binding ReloadScriptCommand}"
+                        CommandParameter="{Binding SelectedScript}"
                         ToolTip="Quick reload"
                         Style="{StaticResource MahApps.Styles.Button.Circle}">
                         <iconPacks:PackIconMaterial

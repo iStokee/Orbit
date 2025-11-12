@@ -24,29 +24,29 @@ namespace Orbit.ViewModels
 			this.focusSession = focusSession;
 			this.closeSession = closeSession;
 
-			SetActiveCommand = new RelayCommand(param =>
+			SetActiveCommand = new RelayCommand<SessionModel?>(session =>
 			{
-				if (TryResolveSession(param, out var session))
+				if (TryResolveSession(session, out var resolved))
 				{
-					activateSession?.Invoke(session);
+					activateSession?.Invoke(resolved);
 				}
-			}, param => param is SessionModel);
+			}, session => session is SessionModel);
 
-			FocusCommand = new RelayCommand(param =>
+			FocusCommand = new RelayCommand<SessionModel?>(session =>
 			{
-				if (TryResolveSession(param, out var session))
+				if (TryResolveSession(session, out var resolved))
 				{
-					focusSession?.Invoke(session);
+					focusSession?.Invoke(resolved);
 				}
-			}, param => param is SessionModel);
+			}, session => session is SessionModel);
 
-			CloseCommand = new RelayCommand(param =>
+			CloseCommand = new RelayCommand<SessionModel?>(session =>
 			{
-				if (TryResolveSession(param, out var session))
+				if (TryResolveSession(session, out var resolved))
 				{
-					closeSession?.Invoke(session);
+					closeSession?.Invoke(resolved);
 				}
-			}, param => param is SessionModel);
+			}, session => session is SessionModel);
 		}
 
 		public ObservableCollection<SessionModel> Sessions { get; }
@@ -64,16 +64,16 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public ICommand SetActiveCommand { get; }
-		public ICommand FocusCommand { get; }
-		public ICommand CloseCommand { get; }
+		public IRelayCommand<SessionModel?> SetActiveCommand { get; }
+		public IRelayCommand<SessionModel?> FocusCommand { get; }
+		public IRelayCommand<SessionModel?> CloseCommand { get; }
 
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private bool TryResolveSession(object parameter, out SessionModel session)
+		private bool TryResolveSession(SessionModel? parameter, out SessionModel session)
 		{
 			if (parameter is SessionModel model)
 			{

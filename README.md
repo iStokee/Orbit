@@ -279,18 +279,20 @@ dotnet run -c Debug
 ## Dependencies
 
 ```xml
+<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 <PackageReference Include="Costura.Fody" Version="6.0.0" />
 <PackageReference Include="Dragablz" Version="0.0.3.234" />
-<PackageReference Include="MahApps.Metro" Version="2.4.10" />
-<PackageReference Include="MahApps.Metro.IconPacks" Version="5.1.0" />
+<PackageReference Include="Extended.Wpf.Toolkit" Version="5.0.0" />
+<PackageReference Include="MahApps.Metro" Version="2.4.11" />
+<PackageReference Include="MahApps.Metro.IconPacks" Version="6.2.1" />
 <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
-<PackageReference Include="MongoDB.Driver" Version="3.0.0" />
-<PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
-<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+<PackageReference Include="MongoDB.Driver" Version="3.5.0" />
+<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 <PackageReference Include="PixiEditor.ColorPicker" Version="3.4.2" />
 ```
 
 **Key Libraries**:
+- **CommunityToolkit.Mvvm**: Modern MVVM framework (ObservableObject, RelayCommand, source generators)
 - **Dragablz**: Tab reordering and docking
 - **MahApps.Metro**: Modern WPF UI framework
 - **MongoDB.Driver**: Account sync (optional)

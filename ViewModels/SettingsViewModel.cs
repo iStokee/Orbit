@@ -56,11 +56,11 @@ namespace Orbit.ViewModels
 			FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
 
 			// Commands
-			CheckForUpdatesCommand = new RelayCommand(async _ => await CheckForUpdatesAsync());
-			InstallUpdateCommand = new RelayCommand(async _ => await InstallUpdateAsync(), _ => CanInstallUpdate);
-			OpenThemeLogCommand = new RelayCommand(_ => OpenThemeLog());
-			ClearThemeLogCommand = new RelayCommand(_ => ClearThemeLog());
-			OpenToolsOverviewCommand = new RelayCommand(_ => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
+			CheckForUpdatesCommand = new RelayCommand(async () => await CheckForUpdatesAsync());
+			InstallUpdateCommand = new RelayCommand(async () => await InstallUpdateAsync(), () => CanInstallUpdate);
+			OpenThemeLogCommand = new RelayCommand(OpenThemeLog);
+			ClearThemeLogCommand = new RelayCommand(ClearThemeLog);
+			OpenToolsOverviewCommand = new RelayCommand(() => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
 
 			// Check for updates on startup (silently)
 			_ = CheckForUpdatesAsync(silent: true);
@@ -202,11 +202,11 @@ namespace Orbit.ViewModels
 
 		#region Commands
 
-		public ICommand CheckForUpdatesCommand { get; }
-		public ICommand InstallUpdateCommand { get; }
-		public ICommand OpenThemeLogCommand { get; }
-		public ICommand ClearThemeLogCommand { get; }
-		public ICommand OpenToolsOverviewCommand { get; }
+		public IRelayCommand CheckForUpdatesCommand { get; }
+		public IRelayCommand InstallUpdateCommand { get; }
+		public IRelayCommand OpenThemeLogCommand { get; }
+		public IRelayCommand ClearThemeLogCommand { get; }
+		public IRelayCommand OpenToolsOverviewCommand { get; }
 
 		#endregion
 

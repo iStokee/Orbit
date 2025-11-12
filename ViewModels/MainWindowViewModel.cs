@@ -127,26 +127,26 @@ namespace Orbit.ViewModels
 		InterTabClient = this.interTabClient;
 		hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
 
-		AddSessionCommand = new RelayCommand(async _ => await AddSessionAsync());
-		InjectCommand = new RelayCommand(async _ => await InjectAsync(), _ => CanInject());
-		ShowSessionsCommand = new RelayCommand(_ => ShowSessions(), _ => Sessions.Count > 0);
-		OpenSessionGalleryCommand = new RelayCommand(_ => TryOpenToolByKey("SessionGallery"));
-		OpenOrbitViewCommand = new RelayCommand(_ => TryOpenToolByKey("OrbitView"));
-		MoveTabToOrbitCommand = new RelayCommand(MoveTabToOrbit, CanMoveTabToOrbit);
-		OpenThemeManagerCommand = new RelayCommand(_ => OpenThemeManager());
-		OpenScriptManagerCommand = new RelayCommand(_ => OpenScriptManager());
-		OpenAccountManagerCommand = new RelayCommand(_ => OpenAccountManager(), _ => this.toolRegistry.Find(AccountManagerToolKey) != null);
-		OpenGuideCommand = new RelayCommand(_ => OpenGuideTab());
-		OpenSettingsCommand = new RelayCommand(_ => OpenSettingsTab());
-		OpenToolsOverviewCommand = new RelayCommand(_ => OpenToolsOverviewTab());
-		ToggleConsoleCommand = new RelayCommand(_ => ToggleConsole());
-		BrowseScriptCommand = new RelayCommand(_ => BrowseForScript());
-		LoadScriptCommand = new RelayCommand(async _ => await LoadScriptAsync(), _ => CanLoadScript());
-		ReloadScriptCommand = new RelayCommand(async _ => await ReloadScriptAsync(), _ => CanReloadScript());
-		BeginSessionRenameCommand = new RelayCommand(param => BeginSessionRename(param), param => param is SessionModel);
-		CommitSessionRenameCommand = new RelayCommand(param => CommitSessionRename(param), param => param is SessionModel);
-		CancelSessionRenameCommand = new RelayCommand(param => CancelSessionRename(param), param => param is SessionModel);
-		FloatingMenuWelcomeCommand = new RelayCommand(_ => OnFloatingMenuWelcomeInvoked());
+		AddSessionCommand = new AsyncRelayCommand(AddSessionAsync);
+		InjectCommand = new AsyncRelayCommand(InjectAsync, CanInject);
+		ShowSessionsCommand = new RelayCommand(ShowSessions, () => Sessions.Count > 0);
+		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey("SessionGallery"));
+		OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
+		MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
+		OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
+		OpenScriptManagerCommand = new RelayCommand(OpenScriptManager);
+		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => this.toolRegistry.Find(AccountManagerToolKey) != null);
+		OpenGuideCommand = new RelayCommand(OpenGuideTab);
+		OpenSettingsCommand = new RelayCommand(OpenSettingsTab);
+		OpenToolsOverviewCommand = new RelayCommand(OpenToolsOverviewTab);
+		ToggleConsoleCommand = new RelayCommand(ToggleConsole);
+		BrowseScriptCommand = new RelayCommand(BrowseForScript);
+		LoadScriptCommand = new RelayCommand(async () => await LoadScriptAsync(), CanLoadScript);
+		ReloadScriptCommand = new RelayCommand(async () => await ReloadScriptAsync(), CanReloadScript);
+		BeginSessionRenameCommand = new RelayCommand<object?>(BeginSessionRename, parameter => parameter is SessionModel);
+		CommitSessionRenameCommand = new RelayCommand<object?>(CommitSessionRename, parameter => parameter is SessionModel);
+		CancelSessionRenameCommand = new RelayCommand<object?>(CancelSessionRename, parameter => parameter is SessionModel);
+		FloatingMenuWelcomeCommand = new RelayCommand(OnFloatingMenuWelcomeInvoked);
 
 		floatingMenuLeft = Settings.Default.FloatingMenuLeft;
 		floatingMenuTop = Settings.Default.FloatingMenuTop;
@@ -183,28 +183,28 @@ namespace Orbit.ViewModels
 	public bool HasSessions => Sessions.Count > 0;
 	public ScriptManagerService ScriptManager { get; }
 	public ScriptIntegrationService ScriptIntegration => scriptIntegrationService;
-	public ICommand AddSessionCommand { get; }
-	public ICommand InjectCommand { get; }
-	public ICommand ShowSessionsCommand { get; }
-	public ICommand OpenSessionGalleryCommand { get; }
-	public ICommand OpenOrbitViewCommand { get; }
-	public ICommand MoveTabToOrbitCommand { get; }
-	public ICommand OpenThemeManagerCommand { get; }
-	public ICommand OpenScriptManagerCommand { get; }
-	public ICommand ToggleConsoleCommand { get; }
-	public ICommand BrowseScriptCommand { get; }
-	public ICommand LoadScriptCommand { get; }
-	public ICommand ReloadScriptCommand { get; }
-	public ICommand BeginSessionRenameCommand { get; }
-	public ICommand CommitSessionRenameCommand { get; }
-	public ICommand CancelSessionRenameCommand { get; }
-	public ICommand FloatingMenuWelcomeCommand { get; }
+	public IAsyncRelayCommand AddSessionCommand { get; }
+	public IAsyncRelayCommand InjectCommand { get; }
+	public IRelayCommand ShowSessionsCommand { get; }
+	public IRelayCommand OpenSessionGalleryCommand { get; }
+	public IRelayCommand OpenOrbitViewCommand { get; }
+	public IRelayCommand<object?> MoveTabToOrbitCommand { get; }
+	public IRelayCommand OpenThemeManagerCommand { get; }
+	public IRelayCommand OpenScriptManagerCommand { get; }
+	public IRelayCommand ToggleConsoleCommand { get; }
+	public IRelayCommand BrowseScriptCommand { get; }
+	public IRelayCommand LoadScriptCommand { get; }
+	public IRelayCommand ReloadScriptCommand { get; }
+	public IRelayCommand<object?> BeginSessionRenameCommand { get; }
+	public IRelayCommand<object?> CommitSessionRenameCommand { get; }
+	public IRelayCommand<object?> CancelSessionRenameCommand { get; }
+	public IRelayCommand FloatingMenuWelcomeCommand { get; }
 	public ConsoleLogService ConsoleLog { get; }
 	public AccountService AccountService { get; }
-	public ICommand OpenAccountManagerCommand { get; }
-	public ICommand OpenGuideCommand { get; }
-	public ICommand OpenSettingsCommand { get; }
-	public ICommand OpenToolsOverviewCommand { get; }
+	public IRelayCommand OpenAccountManagerCommand { get; }
+	public IRelayCommand OpenGuideCommand { get; }
+	public IRelayCommand OpenSettingsCommand { get; }
+	public IRelayCommand OpenToolsOverviewCommand { get; }
 	public Array FloatingMenuDirectionOptions { get; }
 	public Array FloatingMenuQuickToggleModes { get; }
 
@@ -327,7 +327,7 @@ namespace Orbit.ViewModels
 
 		public string ThemeLogFilePath => ThemeLogger.LogFilePath;
 
-		public ICommand OpenThemeLogCommand => new RelayCommand(_ =>
+		public IRelayCommand OpenThemeLogCommand => new RelayCommand(() =>
 		{
 			try
 			{
@@ -352,7 +352,7 @@ namespace Orbit.ViewModels
 			}
 		});
 
-		public ICommand ClearThemeLogCommand => new RelayCommand(_ =>
+		public IRelayCommand ClearThemeLogCommand => new RelayCommand(() =>
 		{
 			ThemeLogger.ClearLog();
 			MessageBox.Show("Theme log cleared successfully.",
@@ -1311,6 +1311,17 @@ namespace Orbit.ViewModels
 			if (Settings.Default.ShowMenuAccountManager == value) return;
 			Settings.Default.ShowMenuAccountManager = value;
 			OnPropertyChanged(nameof(ShowMenuAccountManager));
+		}
+	}
+
+	public bool ShowMenuScriptControls
+	{
+		get => Settings.Default.ShowMenuScriptControls;
+		set
+		{
+			if (Settings.Default.ShowMenuScriptControls == value) return;
+			Settings.Default.ShowMenuScriptControls = value;
+			OnPropertyChanged(nameof(ShowMenuScriptControls));
 		}
 	}
 

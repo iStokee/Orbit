@@ -1,10 +1,9 @@
 using System;
-using System.ComponentModel;
 using System.IO;
 
 namespace Orbit.Models;
 
-public class ScriptProfile : INotifyPropertyChanged
+public class ScriptProfile : ObservableObject
 {
 	private string _name = string.Empty;
 	private string _description = string.Empty;
@@ -16,23 +15,13 @@ public class ScriptProfile : INotifyPropertyChanged
 	public string Name
 	{
 		get => _name;
-		set
-		{
-			if (_name == value) return;
-			_name = value;
-			OnPropertyChanged(nameof(Name));
-		}
+		set => SetProperty(ref _name, value);
 	}
 
 	public string Description
 	{
 		get => _description;
-		set
-		{
-			if (_description == value) return;
-			_description = value;
-			OnPropertyChanged(nameof(Description));
-		}
+		set => SetProperty(ref _description, value);
 	}
 
 	public string FilePath
@@ -40,11 +29,11 @@ public class ScriptProfile : INotifyPropertyChanged
 		get => _filePath;
 		set
 		{
-			if (_filePath == value) return;
-			_filePath = value;
-			OnPropertyChanged(nameof(FilePath));
-			OnPropertyChanged(nameof(FileExists));
-			OnPropertyChanged(nameof(FileName));
+			if (SetProperty(ref _filePath, value))
+			{
+				OnPropertyChanged(nameof(FileExists));
+				OnPropertyChanged(nameof(FileName));
+			}
 		}
 	}
 
@@ -53,33 +42,23 @@ public class ScriptProfile : INotifyPropertyChanged
 		get => _lastUsed;
 		set
 		{
-			if (_lastUsed == value) return;
-			_lastUsed = value;
-			OnPropertyChanged(nameof(LastUsed));
-			OnPropertyChanged(nameof(LastUsedDisplay));
+			if (SetProperty(ref _lastUsed, value))
+			{
+				OnPropertyChanged(nameof(LastUsedDisplay));
+			}
 		}
 	}
 
 	public bool IsFavorite
 	{
 		get => _isFavorite;
-		set
-		{
-			if (_isFavorite == value) return;
-			_isFavorite = value;
-			OnPropertyChanged(nameof(IsFavorite));
-		}
+		set => SetProperty(ref _isFavorite, value);
 	}
 
 	public bool HideFromRecents
 	{
 		get => _hideFromRecents;
-		set
-		{
-			if (_hideFromRecents == value) return;
-			_hideFromRecents = value;
-			OnPropertyChanged(nameof(HideFromRecents));
-		}
+		set => SetProperty(ref _hideFromRecents, value);
 	}
 
 	// Computed properties
@@ -102,12 +81,6 @@ public class ScriptProfile : INotifyPropertyChanged
 			return LastUsed.ToString("MM/dd/yyyy");
 		}
 	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-	protected void OnPropertyChanged(string propertyName)
-		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
 	/// <summary>
 	/// Returns the file path for display in ComboBox text field.
 	/// This is critical for editable ComboBox to show the path instead of type name.

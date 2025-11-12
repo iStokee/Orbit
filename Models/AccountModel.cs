@@ -1,11 +1,9 @@
 using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace Orbit.Models
 {
-	public class AccountModel : INotifyPropertyChanged
+	public class AccountModel : ObservableObject
 	{
 		private string _username = string.Empty;
 		private string _password = string.Empty;
@@ -19,72 +17,42 @@ namespace Orbit.Models
 		public string Username
 		{
 			get => _username;
-			set
-			{
-				if (_username == value) return;
-				_username = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _username, value);
 		}
 
 		[JsonPropertyName("password")]
 		public string Password
 		{
 			get => _password;
-			set
-			{
-				if (_password == value) return;
-				_password = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _password, value);
 		}
 
 		[JsonPropertyName("preferredWorld")]
 		public int PreferredWorld
 		{
 			get => _preferredWorld;
-			set
-			{
-				if (_preferredWorld == value) return;
-				_preferredWorld = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _preferredWorld, value);
 		}
 
 		[JsonPropertyName("lastUsed")]
 		public DateTime LastUsed
 		{
 			get => _lastUsed;
-			set
-			{
-				if (_lastUsed == value) return;
-				_lastUsed = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _lastUsed, value);
 		}
 
 		[JsonPropertyName("autoLogin")]
 		public bool AutoLogin
 		{
 			get => _autoLogin;
-			set
-			{
-				if (_autoLogin == value) return;
-				_autoLogin = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _autoLogin, value);
 		}
 
 		[JsonPropertyName("notes")]
 		public string Notes
 		{
 			get => _notes;
-			set
-			{
-				if (_notes == value) return;
-				_notes = value;
-				OnPropertyChanged();
-			}
+			set => SetProperty(ref _notes, value);
 		}
 
 		[JsonPropertyName("nickname")]
@@ -94,9 +62,7 @@ namespace Orbit.Models
 			set
 			{
 				var normalized = value ?? string.Empty;
-				if (_nickname == normalized) return;
-				_nickname = normalized;
-				OnPropertyChanged();
+				SetProperty(ref _nickname, normalized);
 			}
 		}
 
@@ -106,12 +72,5 @@ namespace Orbit.Models
 		[JsonIgnore]
 		public string LastUsedDisplay =>
 			LastUsed == DateTime.MinValue ? "Never" : LastUsed.ToString("g");
-
-		public event PropertyChangedEventHandler? PropertyChanged;
-
-		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-		}
 	}
 }

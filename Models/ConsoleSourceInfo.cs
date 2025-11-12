@@ -1,10 +1,8 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using Orbit.Logging;
 
 namespace Orbit.Models;
 
-public sealed class ConsoleSourceInfo : INotifyPropertyChanged
+public sealed class ConsoleSourceInfo : ObservableObject
 {
 	private int _count;
 	private int _errorCount;
@@ -26,38 +24,18 @@ public sealed class ConsoleSourceInfo : INotifyPropertyChanged
 	public int Count
 	{
 		get => _count;
-		set
-		{
-			if (_count == value) return;
-			_count = value;
-			OnPropertyChanged();
-		}
+		set => SetProperty(ref _count, value);
 	}
 
 	public int ErrorCount
 	{
 		get => _errorCount;
-		set
-		{
-			if (_errorCount == value) return;
-			_errorCount = value;
-			OnPropertyChanged();
-		}
+		set => SetProperty(ref _errorCount, value);
 	}
 
 	public int WarningCount
 	{
 		get => _warningCount;
-		set
-		{
-			if (_warningCount == value) return;
-			_warningCount = value;
-			OnPropertyChanged();
-		}
+		set => SetProperty(ref _warningCount, value);
 	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-	private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

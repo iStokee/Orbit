@@ -1,18 +1,15 @@
+using Orbit.Logging;
 using Orbit.Services;
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows;
-using MediaColor = System.Windows.Media.Color;
-using MediaColors = System.Windows.Media.Colors;
-using MediaColorConverter = System.Windows.Media.ColorConverter;
 using Application = System.Windows.Application;
-using Orbit.Logging;
-
+using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using MediaColors = System.Windows.Media.Colors;
 
 namespace Orbit.ViewModels
 {
@@ -22,7 +19,7 @@ namespace Orbit.ViewModels
 		Foreground
 	}
 
-	public class ThemeManagerViewModel : INotifyPropertyChanged
+	public class ThemeManagerViewModel : ObservableObject
 	{
 		private readonly ThemeService themeService;
 		private string customThemeName = string.Empty;
@@ -46,67 +43,65 @@ namespace Orbit.ViewModels
 			ColorSchemes = themeService.GetAvailableColorSchemes();
 			CustomThemes = themeService.LoadCustomThemes();
 
+			ApplyThemeCommand = new RelayCommand(ApplySelectedTheme, CanApplyTheme);
+			SaveCustomThemeCommand = new RelayCommand(SaveCustomTheme, CanSaveCustomTheme);
+			ApplyCustomThemeCommand = new RelayCommand(ApplyCustomTheme, () => SelectedCustomTheme != null);
+			DeleteCustomThemeCommand = new RelayCommand(DeleteCustomTheme, () => SelectedCustomTheme != null);
+
 			// Detect current theme
 			DetectCurrentTheme();
-
-			ApplyThemeCommand = new RelayCommand(_ => ApplySelectedTheme(), _ => CanApplyTheme());
-			SaveCustomThemeCommand = new RelayCommand(_ => SaveCustomTheme(), _ => CanSaveCustomTheme());
-			ApplyCustomThemeCommand = new RelayCommand(_ => ApplyCustomTheme(), _ => SelectedCustomTheme != null);
-			DeleteCustomThemeCommand = new RelayCommand(_ => DeleteCustomTheme(), _ => SelectedCustomTheme != null);
 		}
 
 		public ObservableCollection<string> BaseThemes { get; }
-		public ObservableCollection<string> ColorSchemes { get; }
-		public ObservableCollection<CustomThemeDefinition> CustomThemes { get; }
+			public ObservableCollection<string> ColorSchemes { get; }
+			public ObservableCollection<CustomThemeDefinition> CustomThemes { get; }
 
-		public string? SelectedBaseTheme
-		{
-			get => selectedBaseTheme;
-			set
+			public string? SelectedBaseTheme
 			{
-				if (selectedBaseTheme == value)
-					return;
-				selectedBaseTheme = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				get => selectedBaseTheme;
+				set
+				{
+					if (SetProperty(ref selectedBaseTheme, value))
+					{
+						ApplyThemeCommand.NotifyCanExecuteChanged();
+						SaveCustomThemeCommand.NotifyCanExecuteChanged();
+					}
+				}
 			}
-		}
 
-		public string? SelectedColorScheme
-		{
-			get => selectedColorScheme;
-			set
+			public string? SelectedColorScheme
 			{
-				if (selectedColorScheme == value)
-					return;
-				selectedColorScheme = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				get => selectedColorScheme;
+				set
+				{
+					if (SetProperty(ref selectedColorScheme, value))
+					{
+						ApplyThemeCommand.NotifyCanExecuteChanged();
+						SaveCustomThemeCommand.NotifyCanExecuteChanged();
+					}
+				}
 			}
-		}
 
-		public string CustomThemeName
-		{
-			get => customThemeName;
-			set
+			public string CustomThemeName
 			{
-				if (customThemeName == value)
-					return;
-				customThemeName = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				get => customThemeName;
+				set
+				{
+					if (SetProperty(ref customThemeName, value))
+					{
+						SaveCustomThemeCommand.NotifyCanExecuteChanged();
+					}
+				}
 			}
-		}
 
 		public MediaColor SelectedCustomColor
 		{
 			get => selectedCustomColor;
 			set
 			{
-				if (selectedCustomColor == value)
+				if (!SetProperty(ref selectedCustomColor, value))
 					return;
-				selectedCustomColor = value;
-				OnPropertyChanged();
+
 				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
@@ -119,10 +114,9 @@ namespace Orbit.ViewModels
 			get => useCustomForeground;
 			set
 			{
-				if (useCustomForeground == value)
+				if (!SetProperty(ref useCustomForeground, value))
 					return;
-				useCustomForeground = value;
-				OnPropertyChanged();
+
 				OnPropertyChanged(nameof(IsActiveColorEditable));
 
 				if (SelectedCustomTheme != null)
@@ -143,10 +137,9 @@ namespace Orbit.ViewModels
 			get => selectedCustomForeground;
 			set
 			{
-				if (selectedCustomForeground == value)
+				if (!SetProperty(ref selectedCustomForeground, value))
 					return;
-				selectedCustomForeground = value;
-				OnPropertyChanged();
+
 				if (ActiveColorEditor == ThemeColorEditorMode.Foreground)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
@@ -166,9 +159,8 @@ namespace Orbit.ViewModels
 			{
 				if (selectedCustomTheme == value)
 					return;
-				selectedCustomTheme = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				if (!SetProperty(ref selectedCustomTheme, value))
+					return;
 				if (selectedCustomTheme != null)
 				{
 					CustomThemeName = selectedCustomTheme.Name;
@@ -238,7 +230,11 @@ namespace Orbit.ViewModels
 				else
 				{
 					UseCustomForeground = false;
+					SelectedCustomForeground = themeService.GetCurrentForegroundColor();
 				}
+
+				ApplyCustomThemeCommand.NotifyCanExecuteChanged();
+				DeleteCustomThemeCommand.NotifyCanExecuteChanged();
 
 				OnPropertyChanged(nameof(ActiveColorSelection));
 			}
@@ -305,12 +301,10 @@ namespace Orbit.ViewModels
 
 		public bool IsActiveColorEditable => ActiveColorEditor == ThemeColorEditorMode.Accent || UseCustomForeground;
 
-		public ICommand ApplyThemeCommand { get; }
-		public ICommand SaveCustomThemeCommand { get; }
-		public ICommand ApplyCustomThemeCommand { get; }
-		public ICommand DeleteCustomThemeCommand { get; }
-
-		public event PropertyChangedEventHandler? PropertyChanged;
+		public IRelayCommand ApplyThemeCommand { get; }
+		public IRelayCommand SaveCustomThemeCommand { get; }
+		public IRelayCommand ApplyCustomThemeCommand { get; }
+		public IRelayCommand DeleteCustomThemeCommand { get; }
 
 		private void DetectCurrentTheme()
 		{
@@ -433,8 +427,5 @@ namespace Orbit.ViewModels
 			themeService.SaveCustomThemes(CustomThemes);
 			SelectedCustomTheme = CustomThemes.FirstOrDefault();
 		}
-
-		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 }

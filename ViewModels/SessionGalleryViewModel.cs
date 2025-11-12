@@ -44,8 +44,14 @@ namespace Orbit.ViewModels
 			_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 
 			// Commands
-			ActivateSessionCommand = new RelayCommand(param => ActivateSession(param as SessionModel));
-			RefreshThumbnailsCommand = new RelayCommand(async _ => await RefreshAllThumbnailsAsync());
+			ActivateSessionCommand = new RelayCommand<SessionModel?>(session =>
+			{
+				if (session != null)
+				{
+					ActivateSession(session);
+				}
+			});
+			RefreshThumbnailsCommand = new RelayCommand(async () => await RefreshAllThumbnailsAsync());
 
 			// Auto-refresh timer (tick every second and check per-session intervals)
 			_refreshTimer = new DispatcherTimer { Interval = TimerInterval };
@@ -206,12 +212,12 @@ namespace Orbit.ViewModels
 		/// <summary>
 		/// Command to activate (switch to) a session when clicked
 		/// </summary>
-		public ICommand ActivateSessionCommand { get; }
+		public IRelayCommand<SessionModel?> ActivateSessionCommand { get; }
 
 		/// <summary>
 		/// Command to manually refresh all thumbnails
 		/// </summary>
-		public ICommand RefreshThumbnailsCommand { get; }
+		public IRelayCommand RefreshThumbnailsCommand { get; }
 
 		/// <summary>
 		/// Activates the selected session (switches to its tab)

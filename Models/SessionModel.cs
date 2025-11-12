@@ -1,7 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
@@ -9,7 +7,7 @@ using Orbit.Views;
 
 namespace Orbit.Models
 {
-	public class SessionModel : INotifyPropertyChanged
+	public class SessionModel : ObservableObject
 	{
 		private SessionState _state;
 		private InjectionState _injectionState;
@@ -227,7 +225,6 @@ namespace Orbit.Models
 			State != SessionState.Closed &&
 			InjectionState != InjectionState.Failed;
 
-		public event PropertyChangedEventHandler PropertyChanged;
 
 		public void UpdateState(SessionState state, bool clearError = true)
 		{
@@ -404,8 +401,5 @@ namespace Orbit.Models
 				? base.ToString()
 				: Name;
 		}
-
-		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 }

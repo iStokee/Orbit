@@ -254,6 +254,18 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuScriptControls {
+            get {
+                return ((bool)(this["ShowMenuScriptControls"]));
+            }
+            set {
+                this["ShowMenuScriptControls"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowMenuThemeManager {
             get {
                 return ((bool)(this["ShowMenuThemeManager"]));

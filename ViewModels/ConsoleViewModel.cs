@@ -24,9 +24,9 @@ public sealed class ConsoleViewModel : INotifyPropertyChanged
 
 	private ConsoleViewModel()
 	{
-		ClearCommand = new RelayCommand(_ => ConsoleLog.Clear());
-		CopySelectedCommand = new RelayCommand(p => CopySelected(p as IList), p => p is IList list && list.Count > 0);
-		OpenSourceTabCommand = new RelayCommand(p => OpenSourceTab(p as ConsoleSourceInfo), p => p is ConsoleSourceInfo);
+		ClearCommand = new RelayCommand(ConsoleLog.Clear);
+		CopySelectedCommand = new RelayCommand<IList?>(CopySelected, list => list is IList l && l.Count > 0);
+		OpenSourceTabCommand = new RelayCommand<ConsoleSourceInfo?>(OpenSourceTab, info => info != null);
 
 		// Load auto-scroll preference from settings
 		_autoScrollEnabled = Settings.Default.ConsoleAutoScroll;
@@ -97,9 +97,9 @@ public sealed class ConsoleViewModel : INotifyPropertyChanged
 	public ListCollectionView MemoryErrorEntries { get; }
 	public ListCollectionView ExternalEntries { get; }
 
-	public ICommand ClearCommand { get; }
-	public ICommand CopySelectedCommand { get; }
-	public ICommand OpenSourceTabCommand { get; }
+	public IRelayCommand ClearCommand { get; }
+	public IRelayCommand<IList?> CopySelectedCommand { get; }
+	public IRelayCommand<ConsoleSourceInfo?> OpenSourceTabCommand { get; }
 
 	public int SelectedTabIndex
 	{

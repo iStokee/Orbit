@@ -77,16 +77,16 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 		}
 	}
 
-	public ICommand RefreshCommand { get; }
-	public ICommand OpenDocsFolderCommand { get; }
+	public IRelayCommand RefreshCommand { get; }
+	public IRelayCommand OpenDocsFolderCommand { get; }
 
 	public GuideBrowserViewModel()
 	{
 		_docsRoot = ResolveDocsRoot();
 		_markdownPipeline = CreatePipeline();
 
-		RefreshCommand = new RelayCommand(_ => _ = LoadCurrentSectionAsync());
-		OpenDocsFolderCommand = new RelayCommand(_ => OpenDocsFolder());
+		RefreshCommand = new RelayCommand(() => _ = LoadCurrentSectionAsync());
+		OpenDocsFolderCommand = new RelayCommand(OpenDocsFolder);
 
 		SeedSections();
 		SelectedSection = Sections.FirstOrDefault();

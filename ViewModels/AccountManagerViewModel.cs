@@ -5,16 +5,17 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using Application = System.Windows.Application;
 
 namespace Orbit.ViewModels
 {
-	public class AccountManagerViewModel : INotifyPropertyChanged
+	public class AccountManagerViewModel : ObservableObject
 	{
 		private readonly AccountService _accountService;
 		private readonly SessionCollectionService _sessionCollectionService;
@@ -43,10 +44,10 @@ namespace Orbit.ViewModels
 			get => _searchText;
 			set
 			{
-				if (_searchText == value) return;
-				_searchText = value;
-				OnPropertyChanged();
-				UpdateFilteredAccounts();
+				if (SetProperty(ref _searchText, value))
+				{
+					UpdateFilteredAccounts();
+				}
 			}
 		}
 
@@ -55,10 +56,11 @@ namespace Orbit.ViewModels
 			get => _newUsername;
 			set
 			{
-				if (_newUsername == value) return;
-				_newUsername = value;
-				OnPropertyChanged();
-				OnPropertyChanged(nameof(CanAddAccount));
+				if (SetProperty(ref _newUsername, value))
+				{
+					OnPropertyChanged(nameof(CanAddAccount));
+					AddAccountCommand.NotifyCanExecuteChanged();
+				}
 			}
 		}
 
@@ -67,21 +69,14 @@ namespace Orbit.ViewModels
 		get => _newNickname;
 		set
 		{
-				if (_newNickname == value) return;
-				_newNickname = value;
-				OnPropertyChanged();
-			}
+			SetProperty(ref _newNickname, value);
 		}
+	}
 
 	public int NewPreferredWorld
 	{
 		get => _newPreferredWorld;
-		set
-		{
-			if (_newPreferredWorld == value) return;
-			_newPreferredWorld = value;
-			OnPropertyChanged();
-		}
+		set => SetProperty(ref _newPreferredWorld, value);
 	}
 
 	public void UpdateNewPassword(SecureString? password)
@@ -90,7 +85,7 @@ namespace Orbit.ViewModels
 		_newPassword?.Dispose();
 		_newPassword = newPassword;
 		OnPropertyChanged(nameof(CanAddAccount));
-		CommandManager.InvalidateRequerySuggested();
+		AddAccountCommand.NotifyCanExecuteChanged();
 	}
 
 		public AccountModel? SelectedAccount
@@ -98,10 +93,12 @@ namespace Orbit.ViewModels
 			get => _selectedAccount;
 			set
 			{
-				if (_selectedAccount == value) return;
-				_selectedAccount = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				if (SetProperty(ref _selectedAccount, value))
+				{
+					OnPropertyChanged(nameof(IsLoginAvailable));
+					DeleteAccountCommand.NotifyCanExecuteChanged();
+					LoginSelectedAccountCommand.NotifyCanExecuteChanged();
+				}
 			}
 		}
 
@@ -110,10 +107,11 @@ namespace Orbit.ViewModels
 			get => _selectedSession;
 			set
 			{
-				if (_selectedSession == value) return;
-				_selectedSession = value;
-				OnPropertyChanged();
-				CommandManager.InvalidateRequerySuggested();
+				if (SetProperty(ref _selectedSession, value))
+				{
+					OnPropertyChanged(nameof(IsLoginAvailable));
+					LoginSelectedAccountCommand.NotifyCanExecuteChanged();
+				}
 			}
 		}
 
@@ -122,11 +120,11 @@ namespace Orbit.ViewModels
 			get => _isLoggingIn;
 			private set
 			{
-				if (_isLoggingIn == value) return;
-				_isLoggingIn = value;
-				OnPropertyChanged();
-				OnPropertyChanged(nameof(IsLoginAvailable));
-				CommandManager.InvalidateRequerySuggested();
+				if (SetProperty(ref _isLoggingIn, value))
+				{
+					OnPropertyChanged(nameof(IsLoginAvailable));
+					LoginSelectedAccountCommand.NotifyCanExecuteChanged();
+				}
 			}
 		}
 
@@ -135,9 +133,7 @@ namespace Orbit.ViewModels
 			get => _loginStatusMessage;
 			private set
 			{
-				if (_loginStatusMessage == value) return;
-				_loginStatusMessage = value;
-				OnPropertyChanged();
+				SetProperty(ref _loginStatusMessage, value);
 			}
 		}
 
@@ -148,10 +144,10 @@ namespace Orbit.ViewModels
 		_newPassword != null &&
 		_newPassword.Length >= 5;
 
-		public ICommand AddAccountCommand { get; }
-		public ICommand DeleteAccountCommand { get; }
-		public ICommand ClearFormCommand { get; }
-		public ICommand LoginSelectedAccountCommand { get; }
+		public IRelayCommand AddAccountCommand { get; }
+		public IRelayCommand DeleteAccountCommand { get; }
+		public IRelayCommand ClearFormCommand { get; }
+		public IAsyncRelayCommand LoginSelectedAccountCommand { get; }
 
 		public AccountManagerViewModel(AccountService accountService, SessionCollectionService? sessionCollectionService = null, AutoLoginService? autoLoginService = null)
 		{
@@ -160,10 +156,10 @@ namespace Orbit.ViewModels
 			_autoLoginService = autoLoginService ?? new AutoLoginService(_accountService);
 			FilteredAccounts = new ObservableCollection<AccountModel>();
 
-			AddAccountCommand = new RelayCommand(_ => AddAccount(), _ => CanAddAccount);
-			DeleteAccountCommand = new RelayCommand(param => DeleteAccount(param), _ => SelectedAccount != null);
-			ClearFormCommand = new RelayCommand(_ => ClearForm());
-			LoginSelectedAccountCommand = new RelayCommand(async _ => await LoginSelectedAccountAsync(), _ => CanExecuteLogin());
+			AddAccountCommand = new RelayCommand(AddAccount, () => CanAddAccount);
+			DeleteAccountCommand = new RelayCommand<object?>(DeleteAccount, _ => SelectedAccount != null);
+			ClearFormCommand = new RelayCommand(ClearForm);
+			LoginSelectedAccountCommand = new AsyncRelayCommand(LoginSelectedAccountAsync, CanExecuteLogin);
 
 			// Subscribe to collection changes
 			_accountService.Accounts.CollectionChanged += OnAccountsCollectionChanged;
@@ -185,13 +181,12 @@ namespace Orbit.ViewModels
 
 		private async Task LoginSelectedAccountAsync()
 		{
-			if (SelectedAccount == null || SelectedSession == null)
+			var account = SelectedAccount;
+			var session = SelectedSession;
+			if (account == null || session == null)
 			{
 				return;
 			}
-
-			IsLoggingIn = true;
-			LoginStatusMessage = $"Sending auto-login for {SelectedAccount.Username}...";
 
 			_loginCts?.Cancel();
 			_loginCts?.Dispose();
@@ -199,32 +194,51 @@ namespace Orbit.ViewModels
 
 			try
 			{
-				var success = await _autoLoginService.LoginAsync(SelectedSession, SelectedAccount, _loginCts.Token).ConfigureAwait(false);
-				LoginStatusMessage = success
-					? $"Auto-login sequence dispatched for {SelectedAccount.Username}."
-					: "Auto-login could not run. Ensure the session is injected and focused.";
+					await Application.Current.Dispatcher.InvokeAsync(() =>
+					{
+						IsLoggingIn = true;
+						LoginStatusMessage = $"Sending auto-login for {account.Username}...";
+					});
+
+					var success = await _autoLoginService.LoginAsync(session, account, _loginCts.Token);
+
+					await Application.Current.Dispatcher.InvokeAsync(() =>
+					{
+						LoginStatusMessage = success
+							? $"Auto-login sequence dispatched for {account.Username}."
+						: "Auto-login could not run. Ensure the session is injected and focused.";
+				});
 			}
 			catch (OperationCanceledException)
 			{
-				LoginStatusMessage = "Auto-login cancelled.";
+				await Application.Current.Dispatcher.InvokeAsync(() =>
+				{
+					LoginStatusMessage = "Auto-login cancelled.";
+				});
 			}
 			catch (Exception ex)
 			{
-				LoginStatusMessage = $"Auto-login failed: {ex.Message}";
+				await Application.Current.Dispatcher.InvokeAsync(() =>
+				{
+					LoginStatusMessage = $"Auto-login failed: {ex.Message}";
+				});
 				Console.WriteLine($"[AccountManager] Auto-login failed: {ex}");
 			}
 			finally
 			{
 				_loginCts?.Dispose();
 				_loginCts = null;
-				IsLoggingIn = false;
+				await Application.Current.Dispatcher.InvokeAsync(() =>
+				{
+					IsLoggingIn = false;
+				});
 			}
 		}
 
 		private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 		{
 			OnPropertyChanged(nameof(HasSessions));
-			CommandManager.InvalidateRequerySuggested();
+			LoginSelectedAccountCommand.NotifyCanExecuteChanged();
 
 			if (Sessions.Count == 0)
 			{
@@ -248,7 +262,7 @@ namespace Orbit.ViewModels
 					SelectedSession = global;
 				}
 
-				CommandManager.InvalidateRequerySuggested();
+				LoginSelectedAccountCommand.NotifyCanExecuteChanged();
 			}
 		}
 
@@ -317,14 +331,14 @@ namespace Orbit.ViewModels
 			SelectedAccount = null;
 		}
 
-	private void ResetNewPassword()
-	{
-		_newPassword?.Dispose();
-		_newPassword = new SecureString();
-		OnPropertyChanged(nameof(CanAddAccount));
-		CommandManager.InvalidateRequerySuggested();
-		PasswordReset?.Invoke(this, EventArgs.Empty);
-	}
+private void ResetNewPassword()
+{
+	_newPassword?.Dispose();
+	_newPassword = new SecureString();
+	OnPropertyChanged(nameof(CanAddAccount));
+	AddAccountCommand.NotifyCanExecuteChanged();
+	PasswordReset?.Invoke(this, EventArgs.Empty);
+}
 
 	private void ClearForm()
 	{
@@ -374,13 +388,6 @@ namespace Orbit.ViewModels
 		}
 	}
 
-	public event EventHandler? PasswordReset;
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-		}
+public event EventHandler? PasswordReset;
 	}
 }

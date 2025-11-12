@@ -51,9 +51,9 @@ namespace Orbit.ViewModels
 		Items.CollectionChanged += (_, __) => CommandManager.InvalidateRequerySuggested();
 
 			// Commands for creating pre-defined grid layouts
-			CreateGrid2x2Command = new RelayCommand(_ => CreateGrid(2, 2), _ => CanCreateGrid());
-			CreateGrid3x3Command = new RelayCommand(_ => CreateGrid(3, 3), _ => CanCreateGrid());
-			ResetLayoutCommand = new RelayCommand(_ => ResetLayout(), _ => CanResetLayout());
+			CreateGrid2x2Command = new RelayCommand(() => CreateGrid(2, 2), CanCreateGrid);
+			CreateGrid3x3Command = new RelayCommand(() => CreateGrid(3, 3), CanCreateGrid);
+			ResetLayoutCommand = new RelayCommand(() => _ = ResetLayout(), CanResetLayout);
 
 			TabClosingHandler = HandleTabClosing;
 		}
@@ -77,17 +77,17 @@ namespace Orbit.ViewModels
 		/// <summary>
 		/// Command to create a 2x2 grid layout
 		/// </summary>
-		public ICommand CreateGrid2x2Command { get; }
+		public IRelayCommand CreateGrid2x2Command { get; }
 
 		/// <summary>
 		/// Command to create a 3x3 grid layout
 		/// </summary>
-		public ICommand CreateGrid3x3Command { get; }
+		public IRelayCommand CreateGrid3x3Command { get; }
 
 		/// <summary>
 		/// Command to reset layout to single view
 		/// </summary>
-		public ICommand ResetLayoutCommand { get; }
+		public IRelayCommand ResetLayoutCommand { get; }
 
 		/// <summary>
 		/// Dragablz callback invoked when a tab close is requested.

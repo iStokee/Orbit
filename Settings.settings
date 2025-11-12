@@ -59,6 +59,9 @@
   <Setting Name="ShowMenuAccountManager" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuScriptControls" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowMenuThemeManager" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>

@@ -1,4 +1,3 @@
-using Orbit.Models;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -6,6 +5,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
+using Orbit.Interop;
+using Orbit.Models;
+using System.Diagnostics;
 
 namespace Orbit.Services
 {
@@ -43,6 +45,13 @@ namespace Orbit.Services
 				return false;
 			}
 
+			var targetWindow = EnsureTargetWindow(session);
+			if (targetWindow == IntPtr.Zero)
+			{
+				Console.WriteLine("[Orbit] AutoLogin aborted: unable to resolve client window handle.");
+				return false;
+			}
+
 			// Ensure the embedded client owns focus before we start typing.
 			await Application.Current.Dispatcher.InvokeAsync(
 				() => session.HostControl.FocusEmbeddedClient(),
@@ -51,39 +60,45 @@ namespace Orbit.Services
 			await Task.Delay(FocusDelay, cancellationToken).ConfigureAwait(false);
 
 			// Type username, tab into password, then type password and submit.
-			if (!await SendTextAsync(account.Username, cancellationToken).ConfigureAwait(false))
+			if (!await SendTextAsync(targetWindow, account.Username, cancellationToken).ConfigureAwait(false))
 			{
 				return false;
 			}
 
 			await Task.Delay(RandomBetween(90, 140), cancellationToken).ConfigureAwait(false);
 
-			if (!await PressVirtualKeyAsync(0x09, cancellationToken).ConfigureAwait(false)) // Tab
+			if (!await PressVirtualKeyAsync(targetWindow, 0x09, cancellationToken).ConfigureAwait(false)) // Tab
 			{
 				return false;
 			}
 
 			await Task.Delay(RandomBetween(90, 140), cancellationToken).ConfigureAwait(false);
 
-			if (!await SendTextAsync(account.Password, cancellationToken).ConfigureAwait(false))
+			if (!await SendTextAsync(targetWindow, account.Password, cancellationToken).ConfigureAwait(false))
 			{
 				return false;
 			}
 
 			await Task.Delay(RandomBetween(110, 160), cancellationToken).ConfigureAwait(false);
 
-			if (!await PressVirtualKeyAsync(0x0D, cancellationToken).ConfigureAwait(false)) // VK_RETURN (Enter)
+			if (!await PressVirtualKeyAsync(targetWindow, 0x0D, cancellationToken).ConfigureAwait(false)) // VK_RETURN (Enter)
 			{
 				return false;
 			}
 
-			account.LastUsed = DateTime.UtcNow;
-			accountService.UpdateAccount(account);
+			await Application.Current.Dispatcher.InvokeAsync(
+				() =>
+				{
+					account.LastUsed = DateTime.UtcNow;
+					accountService.UpdateAccount(account);
+				},
+				DispatcherPriority.Normal,
+				cancellationToken);
 
 			return true;
 		}
 
-		private static async Task<bool> SendTextAsync(string text, CancellationToken cancellationToken)
+		private static async Task<bool> SendTextAsync(IntPtr targetWindow, string text, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrEmpty(text))
 			{
@@ -101,11 +116,14 @@ namespace Orbit.Services
 				}
 
 				var sent = await PressVirtualKeyAsync(
+					targetWindow,
 					keyInfo.VirtualKey,
 					cancellationToken,
 					keyInfo.Shift,
 					keyInfo.Control,
-					keyInfo.Alt).ConfigureAwait(false);
+					keyInfo.Alt,
+					emitChar: true,
+					character: keyInfo.Character).ConfigureAwait(false);
 
 				if (!sent)
 				{
@@ -119,90 +137,51 @@ namespace Orbit.Services
 		}
 
 		private static async Task<bool> PressVirtualKeyAsync(
+			IntPtr targetWindow,
 			int virtualKey,
 			CancellationToken cancellationToken,
 			bool shift = false,
 			bool control = false,
-			bool alt = false)
+			bool alt = false,
+			bool emitChar = false,
+			char? character = null)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			var shiftPressed = shift && SendKeyDown(0x10); // VK_SHIFT
-			var controlPressed = control && SendKeyDown(0x11); // VK_CONTROL
-			var altPressed = alt && SendKeyDown(0x12); // VK_MENU (Alt)
+			var shiftPressed = shift && ClientInputDispatcher.SendKeyDown(targetWindow, 0x10, emitChar: false); // VK_SHIFT
+			var controlPressed = control && ClientInputDispatcher.SendKeyDown(targetWindow, 0x11, emitChar: false); // VK_CONTROL
+			var altPressed = alt && ClientInputDispatcher.SendKeyDown(targetWindow, 0x12, emitChar: false); // VK_MENU (Alt)
 
 			try
 			{
-				if (!SendKeyDown(virtualKey))
+				if (!ClientInputDispatcher.SendKeyDown(targetWindow, virtualKey, emitChar, character))
 				{
 					Console.WriteLine($"[Orbit] AutoLogin failed to press virtual key 0x{virtualKey:X2}.");
 					return false;
 				}
 
 				await Task.Delay(KeyPressDelayMs, cancellationToken).ConfigureAwait(false);
-				SendKeyUp(virtualKey);
+				ClientInputDispatcher.SendKeyUp(targetWindow, virtualKey);
 			}
 			finally
 			{
 				if (altPressed)
 				{
-					SendKeyUp(0x12); // VK_MENU
+					ClientInputDispatcher.SendKeyUp(targetWindow, 0x12); // VK_MENU
 				}
 
 				if (controlPressed)
 				{
-					SendKeyUp(0x11); // VK_CONTROL
+					ClientInputDispatcher.SendKeyUp(targetWindow, 0x11); // VK_CONTROL
 				}
 
 				if (shiftPressed)
 				{
-					SendKeyUp(0x10); // VK_SHIFT
+					ClientInputDispatcher.SendKeyUp(targetWindow, 0x10); // VK_SHIFT
 				}
 			}
 
 			return true;
-		}
-
-		private static bool SendKeyDown(int virtualKey)
-		{
-			var input = new INPUT
-			{
-				Type = INPUT_KEYBOARD,
-				Data = new INPUTUNION
-				{
-					Keyboard = new KEYBDINPUT
-					{
-						Vk = (ushort)virtualKey,
-						Scan = 0,
-						Flags = 0,
-						Time = 0,
-						ExtraInfo = IntPtr.Zero
-					}
-				}
-			};
-
-			return SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>()) == 1;
-		}
-
-		private static bool SendKeyUp(int virtualKey)
-		{
-			var input = new INPUT
-			{
-				Type = INPUT_KEYBOARD,
-				Data = new INPUTUNION
-				{
-					Keyboard = new KEYBDINPUT
-					{
-						Vk = (ushort)virtualKey,
-						Scan = 0,
-						Flags = KEYEVENTF_KEYUP,
-						Time = 0,
-						ExtraInfo = IntPtr.Zero
-					}
-				}
-			};
-
-			return SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>()) == 1;
 		}
 
 		private static bool TryGetKeyInfo(char ch, out KeyInfo keyInfo)
@@ -220,7 +199,7 @@ namespace Orbit.Services
 			var control = (vkScan & 0x0200) != 0;
 			var alt = (vkScan & 0x0400) != 0;
 
-			keyInfo = new KeyInfo(vk, shift, control, alt);
+			keyInfo = new KeyInfo(vk, shift, control, alt, ch);
 			return true;
 		}
 
@@ -235,77 +214,85 @@ namespace Orbit.Services
 		[StructLayout(LayoutKind.Auto)]
 		private readonly struct KeyInfo
 		{
-			public KeyInfo(int virtualKey, bool shift, bool control, bool alt)
+			public KeyInfo(int virtualKey, bool shift, bool control, bool alt, char character)
 			{
 				VirtualKey = virtualKey;
 				Shift = shift;
 				Control = control;
 				Alt = alt;
+				Character = character;
 			}
 
 			public int VirtualKey { get; }
 			public bool Shift { get; }
 			public bool Control { get; }
 			public bool Alt { get; }
+			public char Character { get; }
 		}
+
+		private static IntPtr EnsureTargetWindow(SessionModel session)
+		{
+			if (session == null)
+				return IntPtr.Zero;
+
+			var cached = session.RenderSurfaceHandle;
+			if (cached != IntPtr.Zero && IsWindow(cached))
+				return cached;
+
+			var external = session.ExternalHandle;
+			if (external != IntPtr.Zero && IsWindow(external))
+				return external;
+
+			IntPtr resolved = IntPtr.Zero;
+
+			// Legacy fallback: try to locate JagRenderView or SunAwtCanvas dynamically
+			var processId = session.RSProcess?.Id ?? ClientSettings.rs2cPID;
+			if (processId > 0)
+			{
+				try
+				{
+					var process = Process.GetProcessById(processId);
+					if (process.MainWindowHandle != IntPtr.Zero)
+					{
+						resolved = FindWindowEx(process.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
+						if (resolved == IntPtr.Zero)
+						{
+							resolved = FindWindowEx(process.MainWindowHandle, IntPtr.Zero, "SunAwtCanvas", null);
+						}
+					}
+				}
+				catch
+				{
+					resolved = IntPtr.Zero;
+				}
+			}
+
+			if (resolved == IntPtr.Zero)
+			{
+				resolved = ClientSettings.jagOpenGL;
+			}
+
+			if (resolved != IntPtr.Zero && IsWindow(resolved))
+			{
+				session.RenderSurfaceHandle = resolved;
+				return resolved;
+			}
+
+			session.RenderSurfaceHandle = IntPtr.Zero;
+			return IntPtr.Zero;
+		}
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string lpszClass, string? lpszWindow);
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool IsWindow(IntPtr hWnd);
 
 		[DllImport("user32.dll")]
 		private static extern short VkKeyScanEx(char ch, IntPtr dwhkl);
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr GetKeyboardLayout(uint idThread);
-
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-		private const int INPUT_KEYBOARD = 1;
-		private const uint KEYEVENTF_KEYUP = 0x0002;
-
-		[StructLayout(LayoutKind.Sequential)]
-		private struct INPUT
-		{
-			public int Type;
-			public INPUTUNION Data;
-		}
-
-		[StructLayout(LayoutKind.Explicit)]
-		private struct INPUTUNION
-		{
-			[FieldOffset(0)]
-			public MOUSEINPUT Mouse;
-			[FieldOffset(0)]
-			public KEYBDINPUT Keyboard;
-			[FieldOffset(0)]
-			public HARDWAREINPUT Hardware;
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
-		private struct MOUSEINPUT
-		{
-			public int X;
-			public int Y;
-			public uint MouseData;
-			public uint Flags;
-			public uint Time;
-			public IntPtr ExtraInfo;
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
-		private struct KEYBDINPUT
-		{
-			public ushort Vk;
-			public ushort Scan;
-			public uint Flags;
-			public uint Time;
-			public IntPtr ExtraInfo;
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
-		private struct HARDWAREINPUT
-		{
-			public uint Msg;
-			public ushort ParamL;
-			public ushort ParamH;
-		}
 	}
 }

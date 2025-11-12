@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -28,7 +29,9 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	private readonly ScriptManagerService _scriptService;
 	private readonly SessionCollectionService _sessionCollectionService;
 	private readonly ObservableCollection<ScriptProfile> _favorites;
-	private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
+private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
+	private ScriptProfile? _selectedScript;
+	private string _hotReloadScriptPath = string.Empty;
 	private SessionModel? _targetSession;
 
 	/// <summary>
@@ -70,11 +73,16 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		_sessionCollectionService.PropertyChanged += OnSessionCollectionPropertyChanged;
 		_sessionCollectionService.Sessions.CollectionChanged += OnSessionsCollectionChanged;
 
-		AddScriptCommand = new RelayCommand(_ => AddScript());
-		RemoveScriptCommand = new RelayCommand(p => RemoveScript(p as ScriptProfile), p => p is ScriptProfile);
-		ToggleFavoriteCommand = new RelayCommand(p => ToggleFavorite(p as ScriptProfile), p => p is ScriptProfile);
-		LoadScriptCommand = new RelayCommand(async p => await LoadScriptAsync(p as ScriptProfile), p => p is ScriptProfile sp && sp.FileExists);
-		ClearMissingCommand = new RelayCommand(_ => ClearMissing());
+		AddScriptCommand = new RelayCommand(AddScript);
+		RemoveScriptCommand = new RelayCommand<ScriptProfile?>(RemoveScript, profile => profile != null);
+		ToggleFavoriteCommand = new RelayCommand<ScriptProfile?>(ToggleFavorite, profile => profile != null);
+		LoadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, false), CanExecuteScriptCommand);
+		ReloadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, true), CanExecuteScriptCommand);
+		ClearMissingCommand = new RelayCommand(ClearMissing);
+
+		_hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
+		_selectedScript = _scriptService.RecentScripts.FirstOrDefault(p =>
+			string.Equals(p.FilePath, _hotReloadScriptPath, StringComparison.OrdinalIgnoreCase));
 
 		var initialTarget = _sessionCollectionService.GlobalHotReloadTargetSession
 			?? _sessionCollectionService.GlobalSelectedSession
@@ -93,6 +101,52 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public ObservableCollection<ScriptProfile> Favorites => _favorites;
 
 	public ObservableCollection<SessionModel> Sessions => _sessionCollectionService.Sessions;
+
+	public ScriptProfile? SelectedScript
+	{
+		get => _selectedScript;
+		set
+		{
+			if (ReferenceEquals(_selectedScript, value))
+				return;
+
+			_selectedScript = value;
+			if (value?.FileExists == true)
+			{
+				HotReloadScriptPath = value.FilePath;
+			}
+
+			OnPropertyChanged(nameof(SelectedScript));
+			LoadScriptCommand.NotifyCanExecuteChanged();
+			ReloadScriptCommand.NotifyCanExecuteChanged();
+		}
+	}
+
+	public string HotReloadScriptPath
+	{
+		get => _hotReloadScriptPath;
+		set
+		{
+			var normalized = value ?? string.Empty;
+			if (string.Equals(_hotReloadScriptPath, normalized, StringComparison.Ordinal))
+				return;
+
+			_hotReloadScriptPath = normalized;
+			Settings.Default.HotReloadScriptPath = _hotReloadScriptPath;
+
+			// Try to keep SelectedScript in sync with manual edits
+			var match = _scriptService.FindByPath(_hotReloadScriptPath);
+			if (!ReferenceEquals(_selectedScript, match))
+			{
+				_selectedScript = match;
+				OnPropertyChanged(nameof(SelectedScript));
+			}
+
+			OnPropertyChanged(nameof(HotReloadScriptPath));
+			LoadScriptCommand.NotifyCanExecuteChanged();
+			ReloadScriptCommand.NotifyCanExecuteChanged();
+		}
+	}
 
 	/// <summary>
 	/// Session that script load/reload commands should target. This stays synchronized with the global hot reload target.
@@ -116,11 +170,12 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public bool HasLibraryScripts => _libraryScripts.Count > 0;
 	public string LibraryDirectoryPath => _scriptService.DefaultLibraryPath;
 
-	public ICommand AddScriptCommand { get; }
-	public ICommand RemoveScriptCommand { get; }
-	public ICommand ToggleFavoriteCommand { get; }
-	public ICommand LoadScriptCommand { get; }
-	public ICommand ClearMissingCommand { get; }
+	public IRelayCommand AddScriptCommand { get; }
+	public IRelayCommand<ScriptProfile?> RemoveScriptCommand { get; }
+	public IRelayCommand<ScriptProfile?> ToggleFavoriteCommand { get; }
+	public IRelayCommand<ScriptProfile?> LoadScriptCommand { get; }
+	public IRelayCommand<ScriptProfile?> ReloadScriptCommand { get; }
+	public IRelayCommand ClearMissingCommand { get; }
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -202,11 +257,19 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	/// <summary>
 	/// Sends a hot-reload request for the given script to the targeted session, validating injection state first.
 	/// </summary>
-    private async Task LoadScriptAsync(ScriptProfile? profile)
+    private async Task LoadScriptAsync(ScriptProfile? profile, bool isReload)
     {
-        if (profile == null || !profile.FileExists) return;
+		var resolvedProfile = ResolveExecutableProfile(profile);
+		if (resolvedProfile == null)
+		{
+			ConsoleLogService.Instance.Append(
+				"[ScriptManager] Select a script or enter a valid path before loading.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
 
-		var tracked = EnsureTrackedProfile(profile);
+		var tracked = EnsureTrackedProfile(resolvedProfile);
 		if (tracked == null)
 			return;
 
@@ -249,8 +312,9 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 		var pid = targetSession.RSProcess?.Id;
 
+		var verb = isReload ? "reload" : "load";
 		ConsoleLogService.Instance.Append(
-			$"[ScriptManager] Requesting load for '{tracked.Name}' to session '{targetSession.Name}' (PID {pid})",
+			$"[ScriptManager] Requesting {verb} for '{tracked.Name}' to session '{targetSession.Name}' (PID {pid})",
 			ConsoleLogSource.Orbit,
 			ConsoleLogLevel.Info);
 
@@ -261,12 +325,48 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		if (!success)
 		{
 			ConsoleLogService.Instance.Append(
-				$"[ScriptManager] Failed to send load command for '{tracked.Name}'. Check if MESharp is running.",
+				$"[ScriptManager] Failed to send {verb} command for '{tracked.Name}'. Check if MESharp is running.",
 				ConsoleLogSource.Orbit,
 				ConsoleLogLevel.Warning);
 		}
 		// Note: success=true only means the command was sent, not that the script loaded.
 		// Check the MESharp console for actual script loading results.
+	}
+
+	private bool CanExecuteScriptCommand(ScriptProfile? profile)
+	{
+		if (profile?.FileExists == true)
+		{
+			return true;
+		}
+
+		return !string.IsNullOrWhiteSpace(HotReloadScriptPath) && File.Exists(HotReloadScriptPath);
+	}
+
+	private ScriptProfile? ResolveExecutableProfile(ScriptProfile? profile)
+	{
+		if (profile?.FileExists == true)
+		{
+			return profile;
+		}
+
+		if (!string.IsNullOrWhiteSpace(HotReloadScriptPath) && File.Exists(HotReloadScriptPath))
+		{
+			var existing = _scriptService.FindByPath(HotReloadScriptPath);
+			if (existing != null)
+			{
+				return existing;
+			}
+
+			return new ScriptProfile
+			{
+				FilePath = HotReloadScriptPath,
+				Name = Path.GetFileNameWithoutExtension(HotReloadScriptPath),
+				Description = string.Empty
+			};
+		}
+
+		return null;
 	}
 
 	private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

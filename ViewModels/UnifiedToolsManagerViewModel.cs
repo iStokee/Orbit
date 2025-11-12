@@ -61,9 +61,9 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged
         }
     }
 
-    public ICommand ImportPluginCommand { get; }
-    public ICommand AutoLoadAllCommand { get; }
-    public ICommand RefreshCommand { get; }
+    public IRelayCommand ImportPluginCommand { get; }
+    public IRelayCommand AutoLoadAllCommand { get; }
+    public IRelayCommand RefreshCommand { get; }
 
     public UnifiedToolsManagerViewModel(
         IToolRegistry toolRegistry,
@@ -76,9 +76,9 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged
 
         ToolCards = new ObservableCollection<ToolCardViewModel>();
 
-        ImportPluginCommand = new RelayCommand(async _ => await ImportPluginAsync());
-        AutoLoadAllCommand = new RelayCommand(async _ => await AutoLoadAllPluginsAsync());
-        RefreshCommand = new RelayCommand(async _ => await RefreshToolsAsync());
+        ImportPluginCommand = new RelayCommand(async () => await ImportPluginAsync());
+        AutoLoadAllCommand = new RelayCommand(async () => await AutoLoadAllPluginsAsync());
+        RefreshCommand = new RelayCommand(async () => await RefreshToolsAsync());
 
         // Subscribe to plugin events
         _pluginManager.PluginStatusChanged += OnPluginStatusChanged;
@@ -270,8 +270,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
 
     public string Description => GetToolDescription();
 
-    public ICommand UnloadCommand { get; }
-    public ICommand ReloadCommand { get; }
+    public IRelayCommand UnloadCommand { get; }
+    public IRelayCommand ReloadCommand { get; }
 
     public ToolCardViewModel(
         IOrbitTool tool,
@@ -286,8 +286,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
         _pluginManager = pluginManager;
         _mainWindowViewModel = mainWindowViewModel;
 
-        UnloadCommand = new RelayCommand(async _ => await UnloadPluginAsync(), _ => IsPlugin);
-        ReloadCommand = new RelayCommand(async _ => await ReloadPluginAsync(), _ => IsPlugin);
+        UnloadCommand = new RelayCommand(async () => await UnloadPluginAsync(), () => IsPlugin);
+        ReloadCommand = new RelayCommand(async () => await ReloadPluginAsync(), () => IsPlugin);
     }
 
     private async Task UnloadPluginAsync()
