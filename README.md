@@ -111,13 +111,7 @@ Secure credential storage:
 
 An in-app handbook styled like a well-loved field guide. It curates:
 
-- 🚀 **Flight School**: Install, configure, and operate Orbit day-to-day
-- 🛠️ **Contributor Manual**: Environment setup, coding standards, review flow
-- 🧭 **API Reference**: Script APIs, Orbit services, plugin contracts
-- 🧱 **Systems Primer**: Architectural overviews with links to deep dives
-- 🗃️ **Quick Links**: Launch external docs and open the docs folder directly
-
-The guide renders Markdown with Orbit's theme, includes quick status hints, and embraces the "Don't panic" Hitchhiker tone without sacrificing usability.
+The guide renders Markdown with Orbit's theme, includes quick status hints, and embraces the "Don't panic" Hitchhiker tone (though probably a bit too much)
 
 **How to Access**:
 1. Click the **book icon** (📖) in Orbit's floating menu
@@ -130,7 +124,7 @@ The guide renders Markdown with Orbit's theme, includes quick status hints, and 
 - Status footer highlights load issues (missing files, parse errors)
 
 **Use Cases**:
-- Give operators a friendly "Don't panic" landing experience
+- Give operators a friendly experience
 - Onboard contributors with a single linkable handbook
 - Surface API docs alongside architectural context and historical research
 - Provide quick actions for refreshing or opening the docs folder for edits
@@ -190,63 +184,6 @@ Tools are:
 4. Add command/method to `MainWindowViewModel` to open it
 5. Add UI button (optional) in `MainWindow.xaml` floating menu
 
-## 📁 Project Structure
-
-```
-Orbit/
-├── MainWindow.xaml          # Main application shell
-├── MainWindow.xaml.cs       # Main window logic
-├── App.xaml                 # Application resources, theme initialization
-├── App.xaml.cs              # Application startup and lifecycle
-├── OrbitAPI.cs              # Public API for external script integration
-├── Services/                # Core services
-│   ├── SessionCollectionService.cs      # Session state management
-│   ├── SessionManagerService.cs         # Session CRUD operations
-│   ├── ScriptIntegrationService.cs      # External script embedding
-│   ├── ScriptManagerService.cs          # Script loading via ME
-│   ├── OrbitCommandClient.cs            # Communication with ME
-│   ├── ThemeService.cs                  # Theme management
-│   ├── AccountService.cs                # Account CRUD
-│   └── AutoLoginService.cs              # Auto-login logic
-├── ViewModels/              # MVVM view models
-│   ├── MainWindowViewModel.cs           # Main window VM
-│   ├── SessionsOverviewViewModel.cs     # Sessions tab VM
-│   ├── ConsoleViewModel.cs              # Console logging VM
-│   ├── ThemeManagerViewModel.cs         # Theme editor VM
-│   ├── ScriptManagerViewModel.cs        # Script manager VM
-│   └── AccountManagerViewModel.cs       # Account manager VM
-├── Views/                   # User controls for tabs
-│   ├── SessionsView.xaml                # Session management UI
-│   ├── ConsoleView.xaml                 # Console log viewer
-│   ├── ThemeManagerView.xaml            # Theme editor
-│   ├── ScriptManagerView.xaml           # Script loader
-│   ├── AccountManagerView.xaml          # Account management
-│   └── ChildClientView.xaml             # Embedded window host
-├── Models/                  # Data models
-│   ├── SessionModel.cs                  # Session state
-│   ├── AccountModel.cs                  # Account credentials
-│   ├── ConsoleEntry.cs                  # Log entry
-│   └── ThemeModel.cs                    # Theme definition
-├── Tooling/                 # Tool system infrastructure
-│   ├── IOrbitTool.cs                    # Tool interface
-│   ├── ToolRegistry.cs                  # Tool discovery service
-│   └── BuiltInTools/                    # Built-in tool implementations
-│       ├── ScriptControlsTool.cs
-│       ├── SettingsTool.cs
-│       ├── ConsoleTool.cs
-│       ├── ThemeManagerTool.cs
-│       ├── SessionsOverviewTool.cs
-│       ├── ScriptManagerTool.cs
-│       ├── AccountManagerTool.cs
-│       └── GuideTool.cs                 # Orbiters Guide wrapper
-├── Classes/                 # Utilities
-│   ├── Win32.cs                         # Win32 API interop
-│   ├── SessionState.cs                  # Enums for session states
-│   └── MELoader.cs                      # DLL injection helper
-├── Converters/              # XAML value converters
-├── Tooling/                 # Developer tools
-└── Logging/                 # Logging infrastructure
-```
 
 ## 🔨 Building
 
