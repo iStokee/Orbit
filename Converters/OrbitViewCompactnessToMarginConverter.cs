@@ -14,14 +14,14 @@ namespace Orbit.Converters
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value is not int compactness)
-				return new Thickness(5); // Default: Moderate
+				return new Thickness(6); // Default: Moderate
 
 			return (OrbitViewCompactness)compactness switch
 			{
-				OrbitViewCompactness.Minimal => new Thickness(1),
-				OrbitViewCompactness.Moderate => new Thickness(5),
-				OrbitViewCompactness.Maximum => new Thickness(10),
-				_ => new Thickness(5)
+				OrbitViewCompactness.Minimal => new Thickness(0),
+				OrbitViewCompactness.Moderate => new Thickness(8),
+				OrbitViewCompactness.Maximum => new Thickness(16),
+				_ => new Thickness(6)
 			};
 		}
 

@@ -13,14 +13,14 @@ namespace Orbit.Converters
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value is not int headerSize)
-				return 32.0; // Default: Standard
+				return 36.0; // Default: Standard
 
 			return (OrbitViewTabHeaderSize)headerSize switch
 			{
-				OrbitViewTabHeaderSize.Compact => 24.0,
-				OrbitViewTabHeaderSize.Standard => 32.0,
-				OrbitViewTabHeaderSize.Comfortable => 40.0,
-				_ => 32.0
+				OrbitViewTabHeaderSize.Compact => 26.0,
+				OrbitViewTabHeaderSize.Standard => 36.0,
+				OrbitViewTabHeaderSize.Comfortable => 48.0,
+				_ => 36.0
 			};
 		}
 

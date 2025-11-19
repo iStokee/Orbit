@@ -14,14 +14,14 @@ namespace Orbit.Converters
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value is not int borderThickness)
-				return new Thickness(2); // Default: Standard
+				return new Thickness(3); // Default: Standard
 
 			return (OrbitViewBorderThickness)borderThickness switch
 			{
 				OrbitViewBorderThickness.None => new Thickness(0),
-				OrbitViewBorderThickness.Minimal => new Thickness(1),
-				OrbitViewBorderThickness.Standard => new Thickness(2),
-				_ => new Thickness(2)
+				OrbitViewBorderThickness.Minimal => new Thickness(2),
+				OrbitViewBorderThickness.Standard => new Thickness(4),
+				_ => new Thickness(3)
 			};
 		}
 

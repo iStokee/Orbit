@@ -56,9 +56,11 @@ namespace Orbit.Services
             if (session.HostControl is not ChildClientView clientView)
                 throw new InvalidOperationException("Session host control is missing or invalid.");
 
-			try
-			{
+            try
+            {
 				var rsForm = await clientView.WaitForSessionAsync();
+				// Window exists; give it a brief moment to finish initializing before we grab handles.
+				await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
 				rsForm.WaitForInjectionBeforeDock = session.RequireInjectionBeforeDock;
 				EventHandler<DockedEventArgs> dockedHandler = null;
 				dockedHandler = async (_, args) =>
@@ -312,18 +314,19 @@ namespace Orbit.Services
 			var processId = process?.Id;
 			var parentProcessIdValue = parentProcess?.Id;
 
-			var clientExited = await TryShutdownProcessAsync(process, externalHandle, "client", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
-			if (processId.HasValue && clientExited)
+			// Close parent/launcher first if present (outer shell), then the client. This reduces cases where we signal the embedded child window only.
+			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle)>
 			{
-				TryUnregisterProcess(processId.Value);
-			}
+				(parentProcess, "launcher", nint.Zero),
+				(process, "client", externalHandle)
+			}.Where(p => p.process != null).ToList();
 
-			if (parentProcess != null)
+			foreach (var target in shutdownTargets)
 			{
-				var parentExited = await TryShutdownProcessAsync(parentProcess, nint.Zero, "launcher", session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
-				if (parentProcessIdValue.HasValue && parentExited)
+				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+				if (exited)
 				{
-					TryUnregisterProcess(parentProcessIdValue.Value);
+					TryUnregisterProcess(target.process.Id);
 				}
 			}
 

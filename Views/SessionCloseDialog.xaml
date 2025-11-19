@@ -6,7 +6,7 @@
                       xmlns:viewModels="clr-namespace:Orbit.ViewModels"
                       Title="Close Session"
                       Width="520"
-                      Height="400"
+                      Height="490"
                       MinWidth="480"
                       MinHeight="360"
                       MaxWidth="700"
@@ -220,7 +220,7 @@
                 Width="150"
                 Height="36"
                 Click="CloseButton_Click"
-                Content="Close Session"
+                Content="Close session"
                 IsDefault="True"
                 Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
                 <Button.ContentTemplate>

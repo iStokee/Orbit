@@ -12,8 +12,10 @@
 
     <UserControl.Resources>
         <converters:OrbitViewCompactnessToMarginConverter x:Key="CompactnessToMarginConverter" />
+        <converters:OrbitViewCompactnessToCellMarginConverter x:Key="CellMarginConverter" />
         <converters:OrbitViewBorderThicknessConverter x:Key="BorderThicknessConverter" />
         <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </UserControl.Resources>
 
     <UserControl.InputBindings>
@@ -32,22 +34,36 @@
             Modifiers="Ctrl+Shift" />
     </UserControl.InputBindings>
 
-    <Grid Margin="16,16,0,0">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!--  Header with controls  -->
-        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
-            <Grid Margin="0">
+        <Border
+            Grid.Row="0"
+            HorizontalAlignment="Stretch">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource Orbit.ToolHeader}">
+                    <Setter Property="Padding" Value="12" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsHeaderCollapsed}" Value="True">
+                            <Setter Property="Padding" Value="6,4,6,4" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid Margin="0" x:Name="HeaderGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                <Border
+                    Style="{StaticResource Orbit.ToolHeaderIcon}"
+                    Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}">
                     <iconPacks:PackIconMaterial
                         Width="35"
                         Height="35"
@@ -70,7 +86,15 @@
                         FontSize="12"
                         Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                         Opacity="0.85"
+                        Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}"
                         Text="Live session grid - Drag to edges to split" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        FontSize="11"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.75"
+                        Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}"
+                        Text="{Binding SuggestedGridLabel}" />
                 </StackPanel>
 
                 <StackPanel
@@ -78,6 +102,38 @@
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
+                    <Button
+                        Height="32"
+                        Margin="0,0,8,0"
+                        Padding="12,0"
+                        Command="{Binding ToggleHeaderCommand}"
+                        Style="{StaticResource MahApps.Styles.Button}">
+                        <Button.ToolTip>
+                            <TextBlock Text="Toggle compact header" />
+                        </Button.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="UnfoldLessHorizontal"
+                                Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="UnfoldMoreHorizontal"
+                                Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Expand"
+                                Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Collapse"
+                                Visibility="{Binding IsHeaderCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}" />
+                        </StackPanel>
+                    </Button>
                     <!--  Grid Layout Buttons  -->
                     <Button
                         Height="36"
@@ -113,6 +169,63 @@
                         </StackPanel>
                     </Button>
 
+                    <Button
+                        Height="36"
+                        Margin="4,0"
+                        Padding="12,0"
+                        Command="{Binding AutoFitGridCommand}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Auto-fit grid to current sessions">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontWeight="SemiBold" Text="Auto Fit" />
+                        </StackPanel>
+                    </Button>
+
+                    <!--  Custom Grid  -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <StackPanel Orientation="Vertical" Margin="0,0,8,13.5">
+                            <TextBlock
+                                FontSize="10"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Rows" />
+                            <Controls:NumericUpDown
+                                Width="70"
+                                Height="36"
+                                Margin="0,0,0,0"
+                                Minimum="1"
+                                Maximum="6"
+                                Value="{Binding CustomRows, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Margin="0,0,8,0">
+                            <TextBlock
+                                FontSize="10"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Cols" />
+                            <Controls:NumericUpDown
+                                Width="70"
+                                Height="36"
+                                Margin="0,0,0,0"
+                                Minimum="1"
+                                Maximum="6"
+                                Value="{Binding CustomColumns, Mode=TwoWay}" />
+                        </StackPanel>
+                        <Button
+                            Height="36"
+                            Padding="12,0"
+                            Command="{Binding CreateCustomGridCommand}"
+                            Style="{StaticResource MahApps.Styles.Button}"
+                            ToolTip="Create a custom grid with the specified rows/columns">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,6,0"
+                                    Kind="TableColumnWidth" />
+                                <TextBlock FontWeight="SemiBold" Text="Apply" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
                     <!--  Reset Button  -->
                     <Button
                         Height="36"
@@ -130,6 +243,30 @@
                             <TextBlock FontWeight="SemiBold" Text="Reset" />
                         </StackPanel>
                     </Button>
+
+                    <Button
+                        Height="36"
+                        Margin="4,0,0,0"
+                        Padding="12,0"
+                        Command="{Binding BalanceRowsCommand}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Evenly resize all rows">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontWeight="SemiBold" Text="Balance Rows" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button
+                        Height="36"
+                        Margin="4,0,0,0"
+                        Padding="12,0"
+                        Command="{Binding BalanceColumnsCommand}"
+                        Style="{StaticResource MahApps.Styles.Button}"
+                        ToolTip="Evenly resize all columns">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontWeight="SemiBold" Text="Balance Cols" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -137,7 +274,9 @@
         <!--  Main Layout Area using Dragablz Layout  -->
         <Border
             Grid.Row="1"
-            Margin="0,0,0,0"
+            Margin="0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             Background="{DynamicResource MahApps.Brushes.Gray9}"
             BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
             BorderThickness="1"
@@ -151,7 +290,10 @@
                 <dockablz:Layout.BranchTemplate>
                     <DataTemplate>
                         <dragablz:TabablzControl
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
                             Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
+                            Padding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CellMarginConverter}}"
                             Background="Transparent"
                             BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}"
                             BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
@@ -170,7 +312,10 @@
 
                 <!--  Initial content: Single TabablzControl showing all sessions  -->
                 <dragablz:TabablzControl
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
                     Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
+                    Padding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CellMarginConverter}}"
                     Background="Transparent"
                     BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                     BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"

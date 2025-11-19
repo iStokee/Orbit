@@ -1,18 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Globalization;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Dragablz;
 using Dragablz.Dockablz;
+using Orbit.Converters;
 using Orbit.Models;
 using Orbit.Services;
+using Orbit;
 using Application = System.Windows.Application;
 using Orientation = System.Windows.Controls.Orientation;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
 namespace Orbit.ViewModels
 {
@@ -22,11 +29,20 @@ namespace Orbit.ViewModels
 	/// </summary>
 	public class OrbitGridLayoutViewModel : INotifyPropertyChanged
 	{
-	private readonly SessionCollectionService _sessionCollectionService;
-	private readonly OrbitLayoutStateService _layoutStateService;
-	private readonly IInterTabClient _interTabClient;
-	private readonly Action<SessionModel> _closeSession;
-	private Layout? _sessionLayout;
+		private readonly SessionCollectionService _sessionCollectionService;
+		private readonly OrbitLayoutStateService _layoutStateService;
+		private readonly IInterTabClient _interTabClient;
+		private readonly Action<SessionModel> _closeSession;
+		private Layout? _sessionLayout;
+		private readonly OrbitViewCompactnessToMarginConverter _marginConverter = new();
+		private int _customRows = 2;
+		private int _customColumns = 2;
+		private readonly OrbitViewCompactnessToCellMarginConverter _cellMarginConverter = new();
+		private readonly OrbitViewBorderThicknessConverter _borderThicknessConverter = new();
+		private int _currentRows = 1;
+		private int _currentColumns = 1;
+		private string _suggestedGridLabel = "Suggested: 1 x 1";
+		private bool _isHeaderCollapsed;
 
 	public OrbitGridLayoutViewModel(
 		SessionCollectionService sessionCollectionService,
@@ -47,15 +63,15 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		_sessionCollectionService.Sessions.CollectionChanged += OnSessionsCollectionChanged;
-		Items.CollectionChanged += (_, __) => CommandManager.InvalidateRequerySuggested();
-
-			// Commands for creating pre-defined grid layouts
-			CreateGrid2x2Command = new RelayCommand(() => CreateGrid(2, 2), CanCreateGrid);
-			CreateGrid3x3Command = new RelayCommand(() => CreateGrid(3, 3), CanCreateGrid);
-			ResetLayoutCommand = new RelayCommand(() => _ = ResetLayout(), CanResetLayout);
+			_sessionCollectionService.Sessions.CollectionChanged += OnSessionsCollectionChanged;
+			Items.CollectionChanged += (_, __) =>
+			{
+				RefreshCommandStates();
+				UpdateSuggestedGridLabel();
+			};
 
 			TabClosingHandler = HandleTabClosing;
+			UpdateSuggestedGridLabel();
 		}
 
 		/// <summary>
@@ -70,24 +86,119 @@ namespace Orbit.ViewModels
 	public ObservableCollection<object> Items => _layoutStateService.Items;
 
 		/// <summary>
+		/// Suggested grid text (based on current session count).
+		/// </summary>
+		public string SuggestedGridLabel
+		{
+			get => _suggestedGridLabel;
+			private set
+			{
+				if (_suggestedGridLabel == value)
+					return;
+				_suggestedGridLabel = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public bool IsHeaderCollapsed
+		{
+			get => _isHeaderCollapsed;
+			set
+			{
+				if (_isHeaderCollapsed == value)
+					return;
+				_isHeaderCollapsed = value;
+				OnPropertyChanged();
+			}
+		}
+
+		/// <summary>
+		/// Custom grid rows for user-defined layout.
+		/// </summary>
+		public int CustomRows
+		{
+			get => _customRows;
+			set
+			{
+				var normalized = value < 1 ? 1 : value;
+				if (_customRows == normalized)
+					return;
+				_customRows = normalized;
+				OnPropertyChanged();
+				RefreshCommandStates();
+			}
+		}
+
+		/// <summary>
+		/// Custom grid columns for user-defined layout.
+		/// </summary>
+		public int CustomColumns
+		{
+			get => _customColumns;
+			set
+			{
+				var normalized = value < 1 ? 1 : value;
+				if (_customColumns == normalized)
+					return;
+				_customColumns = normalized;
+				OnPropertyChanged();
+				RefreshCommandStates();
+			}
+		}
+
+		/// <summary>
 		/// Gets the InterTabClient for cross-window dragging
 		/// </summary>
-		public IInterTabClient InterTabClient => _interTabClient;
+	public IInterTabClient InterTabClient => _interTabClient;
+
+		private RelayCommand? _createCustomGridCommand;
+		private RelayCommand? _createGrid2x2Command;
+		private RelayCommand? _createGrid3x3Command;
+		private RelayCommand? _resetLayoutCommand;
+		private RelayCommand? _autoFitGridCommand;
+		private RelayCommand? _balanceRowsCommand;
+		private RelayCommand? _balanceColumnsCommand;
+		private RelayCommand? _toggleHeaderCommand;
+
+		/// <summary>
+		/// Command to create a custom rows x columns grid layout
+		/// </summary>
+		public IRelayCommand CreateCustomGridCommand => _createCustomGridCommand ??= new RelayCommand(CreateCustomGrid, CanCreateCustomGrid);
 
 		/// <summary>
 		/// Command to create a 2x2 grid layout
 		/// </summary>
-		public IRelayCommand CreateGrid2x2Command { get; }
+	public IRelayCommand CreateGrid2x2Command => _createGrid2x2Command ??= new RelayCommand(() => CreateGrid(2, 2), CanCreateGrid);
 
 		/// <summary>
 		/// Command to create a 3x3 grid layout
 		/// </summary>
-		public IRelayCommand CreateGrid3x3Command { get; }
+		public IRelayCommand CreateGrid3x3Command => _createGrid3x3Command ??= new RelayCommand(() => CreateGrid(3, 3), CanCreateGrid);
 
 		/// <summary>
 		/// Command to reset layout to single view
 		/// </summary>
-		public IRelayCommand ResetLayoutCommand { get; }
+		public IRelayCommand ResetLayoutCommand => _resetLayoutCommand ??= new RelayCommand(() => _ = ResetLayout(), CanResetLayout);
+
+		/// <summary>
+		/// Command to auto-fit the grid to the current session count (closest to square with minimal empty cells).
+		/// </summary>
+		public IRelayCommand AutoFitGridCommand => _autoFitGridCommand ??= new RelayCommand(AutoFitGrid, CanCreateGrid);
+
+		/// <summary>
+		/// Command to rebalance row heights evenly.
+		/// </summary>
+		public IRelayCommand BalanceRowsCommand => _balanceRowsCommand ??= new RelayCommand(() => ReapplyCurrentGrid(), CanBalanceGrid);
+
+		/// <summary>
+		/// Command to rebalance column widths evenly.
+		/// </summary>
+		public IRelayCommand BalanceColumnsCommand => _balanceColumnsCommand ??= new RelayCommand(() => ReapplyCurrentGrid(), CanBalanceGrid);
+
+		/// <summary>
+		/// Command to toggle the header density (compact vs full).
+		/// </summary>
+		public IRelayCommand ToggleHeaderCommand => _toggleHeaderCommand ??= new RelayCommand(() => IsHeaderCollapsed = !IsHeaderCollapsed);
 
 		/// <summary>
 		/// Dragablz callback invoked when a tab close is requested.
@@ -101,6 +212,7 @@ namespace Orbit.ViewModels
 		public void SetLayoutControl(Layout layout)
 		{
 			_sessionLayout = layout;
+			RefreshCommandStates();
 		}
 
 		/// <summary>
@@ -114,72 +226,54 @@ namespace Orbit.ViewModels
 
 			try
 			{
-				var controlCount = GetAllTabControls(_sessionLayout).Take(2).Count();
-				var rootTabControl = controlCount > 1
-					? ResetLayout()
-					: GetFirstTabControl(_sessionLayout) ?? ResetLayout();
+				var allItems = Items.ToList();
+				var rootTabControl = ResetLayout();
 
 				if (rootTabControl == null)
 					return;
 
-				if (rootTabControl.Items.Count > 0 && rootTabControl.SelectedItem == null)
-				{
-					rootTabControl.SelectedIndex = 0;
-				}
+				_sessionLayout.UpdateLayout();
 
-				var allSessions = rootTabControl.Items.Cast<object>().ToList();
-				rootTabControl.Items.Clear();
-
-				var knownControls = new System.Collections.Generic.HashSet<TabablzControl> { rootTabControl };
-				var rowControls = new System.Collections.Generic.List<TabablzControl> { rootTabControl };
-
-				TabablzControl? CaptureNewControl()
-				{
-					foreach (var control in GetAllTabControls(_sessionLayout))
-					{
-						if (knownControls.Add(control))
-						{
-							return control;
-						}
-					}
-
-					return null;
-				}
+				var rowControls = new List<TabablzControl> { rootTabControl };
 
 				for (int row = 1; row < rows; row++)
 				{
 					var sourceControl = rowControls[rowControls.Count - 1];
-					Layout.Branch(
+					var branchResult = Layout.Branch(
 						sourceControl,
+						CreateTabControlShell(),
 						Orientation.Vertical,
 						false,
 						0.5);
 
-					var newControl = CaptureNewControl();
+					var newControl = branchResult?.TabablzControl;
 					if (newControl != null)
 					{
+						ConfigureTabControl(newControl);
 						rowControls.Add(newControl);
 					}
 				}
 
-				var allCellControls = new System.Collections.Generic.List<TabablzControl>();
+				var allCellControls = new List<TabablzControl>();
 
 				foreach (var rowControl in rowControls.ToList())
 				{
-					var cellsInRow = new System.Collections.Generic.List<TabablzControl> { rowControl };
+					var cellsInRow = new List<TabablzControl> { rowControl };
 
 					for (int col = 1; col < cols; col++)
 					{
 						var sourceControl = cellsInRow[cellsInRow.Count - 1];
-						Layout.Branch(
+						var branchResult = Layout.Branch(
 							sourceControl,
+							CreateTabControlShell(),
 							Orientation.Horizontal,
 							false,
 							0.5);
 
-						var newControl = CaptureNewControl();
+						var newControl = branchResult?.TabablzControl;
 						if (newControl != null)
 						{
+							ConfigureTabControl(newControl);
 							cellsInRow.Add(newControl);
 						}
 					}
@@ -187,16 +281,26 @@ namespace Orbit.ViewModels
 					allCellControls.AddRange(cellsInRow);
 				}
 
-				if (allSessions.Count > 0 && allCellControls.Count > 0)
+				// Clear any existing items from each cell before redistribution to avoid duplicates sticking to (1,1)
+				foreach (var control in allCellControls)
+				{
+					control.Items.Clear();
+				}
+
+				if (allCellControls.Count > 0)
 				{
 					int cellIndex = 0;
-					foreach (var session in allSessions)
+					foreach (var item in allItems)
 					{
 						var targetControl = allCellControls[cellIndex % allCellControls.Count];
-						targetControl.Items.Add(session);
+						if (!targetControl.Items.Contains(item))
+						{
+							targetControl.Items.Add(item);
+						}
+
 						if (targetControl.SelectedItem == null)
 						{
-							targetControl.SelectedItem = session;
+							targetControl.SelectedItem = item;
 						}
 
 						cellIndex++;
@@ -211,7 +315,7 @@ namespace Orbit.ViewModels
 					}
 				}
 
-				foreach (var session in allSessions.OfType<SessionModel>())
+				foreach (var session in allItems.OfType<SessionModel>())
 				{
 					var host = session.HostControl;
 					if (host == null)
@@ -223,12 +327,20 @@ namespace Orbit.ViewModels
 						host.EnsureActiveAfterLayout();
 					}, DispatcherPriority.Background);
 				}
+
+				_currentRows = rows;
+				_currentColumns = cols;
 			}
 			catch (Exception ex)
 			{
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Failed to create {rows}x{cols} grid: {ex.Message}");
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Stack trace: {ex.StackTrace}");
 				// TODO: Show user-friendly error message via ViewModel property
+			}
+			finally
+			{
+				RefreshCommandStates();
+				UpdateSuggestedGridLabel();
 			}
 		}
 
@@ -243,52 +355,9 @@ namespace Orbit.ViewModels
 
 			try
 			{
-				var allControls = GetAllTabControls(_sessionLayout).ToList();
-				if (allControls.Count <= 1)
-				{
-					var existing = allControls.FirstOrDefault();
-					if (existing != null && existing.Items.Count > 0 && existing.SelectedItem == null)
-					{
-						existing.SelectedIndex = 0;
-					}
+				var allItems = Items.ToList();
 
-					return existing;
-				}
-
-				var allItems = new System.Collections.Generic.List<object>();
-				foreach (var control in allControls)
-				{
-					if (control.Items == null)
-						continue;
-
-					foreach (var item in control.Items.Cast<object>().ToList())
-					{
-						if (!allItems.Contains(item))
-						{
-							allItems.Add(item);
-						}
-					}
-				}
-
-				var newRootControl = new TabablzControl
-				{
-					Margin = new System.Windows.Thickness(4),
-					Background = System.Windows.Media.Brushes.Transparent,
-					BorderBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["MahApps.Brushes.Accent"],
-					BorderThickness = new System.Windows.Thickness(2),
-					ShowDefaultAddButton = false,
-					ShowDefaultCloseButton = true,
-					ClosingItemCallback = TabClosingHandler
-				};
-
-				newRootControl.ContentTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["SessionContentTemplate"];
-				newRootControl.ItemTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["OrbitSessionHeaderTemplate"];
-
-				newRootControl.InterTabController = new Dragablz.InterTabController
-				{
-					InterTabClient = InterTabClient,
-					Partition = "OrbitMainShell"
-				};
+				var newRootControl = CreateTabControlShell();
 
 				foreach (var item in allItems)
 				{
@@ -301,6 +370,7 @@ namespace Orbit.ViewModels
 				}
 
 				_sessionLayout.Content = newRootControl;
+				_sessionLayout.UpdateLayout();
 
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Layout reset complete. Restored {allItems.Count} sessions to single view.");
 				return newRootControl;
@@ -311,6 +381,50 @@ namespace Orbit.ViewModels
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Stack trace: {ex.StackTrace}");
 				return null;
 			}
+			finally
+			{
+				RefreshCommandStates();
+				_currentRows = 1;
+				_currentColumns = 1;
+				UpdateSuggestedGridLabel();
+			}
+		}
+
+		private TabablzControl CreateTabControlShell()
+		{
+			var tabControl = new TabablzControl
+			{
+				HorizontalAlignment = HorizontalAlignment.Stretch,
+				VerticalAlignment = VerticalAlignment.Stretch,
+				Margin = GetMarginFromSettings(),
+				Padding = GetCellMarginFromSettings(),
+				Background = System.Windows.Media.Brushes.Transparent,
+				BorderBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["MahApps.Brushes.Accent"],
+				BorderThickness = GetBorderThicknessFromSettings(),
+				ShowDefaultAddButton = false,
+				ShowDefaultCloseButton = true,
+				ClosingItemCallback = TabClosingHandler
+			};
+
+			tabControl.ContentTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["SessionContentTemplate"];
+			tabControl.ItemTemplate = (System.Windows.DataTemplate)System.Windows.Application.Current.Resources["OrbitSessionHeaderTemplate"];
+
+			tabControl.InterTabController = new Dragablz.InterTabController
+			{
+				InterTabClient = InterTabClient,
+				Partition = "OrbitMainShell"
+			};
+
+			return tabControl;
+		}
+
+		private void ConfigureTabControl(TabablzControl control)
+		{
+			control.HorizontalAlignment = HorizontalAlignment.Stretch;
+			control.VerticalAlignment = VerticalAlignment.Stretch;
+			control.Margin = GetMarginFromSettings();
+			control.Padding = GetCellMarginFromSettings();
+			control.BorderThickness = GetBorderThicknessFromSettings();
 		}
 
 		private bool CanResetLayout()
@@ -384,7 +498,45 @@ namespace Orbit.ViewModels
 			}
 		}
 
-	private bool CanCreateGrid() => _sessionLayout != null && Items.Count > 0;
+		private Thickness GetMarginFromSettings()
+		{
+			return (Thickness)_marginConverter.Convert(Settings.Default.OrbitViewCompactness, typeof(Thickness), null, CultureInfo.CurrentCulture);
+		}
+
+		private Thickness GetCellMarginFromSettings()
+		{
+			return (Thickness)_cellMarginConverter.Convert(Settings.Default.OrbitViewCompactness, typeof(Thickness), null, CultureInfo.CurrentCulture);
+		}
+
+		private Thickness GetBorderThicknessFromSettings()
+		{
+			return (Thickness)_borderThicknessConverter.Convert(Settings.Default.OrbitViewBorderThickness, typeof(Thickness), null, CultureInfo.CurrentCulture);
+		}
+
+		private void CreateCustomGrid()
+		{
+			CreateGrid(CustomRows, CustomColumns);
+		}
+
+		private bool CanCreateCustomGrid() => _sessionLayout != null && CustomRows > 0 && CustomColumns > 0;
+
+		public void ApplyDefaultGridDensity()
+		{
+			if (_sessionLayout == null)
+				return;
+
+			var density = Settings.Default.OrbitViewGridDensity;
+				if (density <= 1)
+				{
+					ResetLayout();
+					return;
+				}
+
+				CreateGrid(density, density);
+			RefreshCommandStates();
+		}
+
+	private bool CanCreateGrid() => _sessionLayout != null;
 
 		private void HandleTabClosing(ItemActionCallbackArgs<TabablzControl> args)
 		{
@@ -410,6 +562,7 @@ namespace Orbit.ViewModels
 				Application.Current.Dispatcher.BeginInvoke(() =>
 				{
 					Items.Remove(item);
+					RefreshCommandStates();
 				}, DispatcherPriority.Background);
 			}
 		}
@@ -426,33 +579,161 @@ namespace Orbit.ViewModels
 					{
 						Items.Add(item);
 					}
+					AddItemToLayout(item);
 				}
 			}
 		}
 
-		if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace or NotifyCollectionChangedAction.Reset)
-		{
-			if (e.OldItems != null)
+			if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace or NotifyCollectionChangedAction.Reset)
 			{
-				foreach (var item in e.OldItems.OfType<SessionModel>())
+				if (e.OldItems != null)
 				{
-					Items.Remove(item);
-				}
-			}
-			else if (e.Action == NotifyCollectionChangedAction.Reset)
-			{
-				for (int i = Items.Count - 1; i >= 0; i--)
-				{
-					if (Items[i] is SessionModel session && !_sessionCollectionService.Sessions.Contains(session))
+					foreach (var item in e.OldItems.OfType<SessionModel>())
 					{
-						Items.RemoveAt(i);
+						Items.Remove(item);
+						RemoveItemFromLayout(item);
+					}
+				}
+				else if (e.Action == NotifyCollectionChangedAction.Reset)
+				{
+					for (int i = Items.Count - 1; i >= 0; i--)
+					{
+						if (Items[i] is SessionModel session && !_sessionCollectionService.Sessions.Contains(session))
+						{
+							Items.RemoveAt(i);
+							RemoveItemFromLayout(session);
+						}
 					}
 				}
 			}
-		}
+			RefreshCommandStates();
+			UpdateSuggestedGridLabel();
 		}
 
 		public event PropertyChangedEventHandler? PropertyChanged;
+
+		private void AddItemToLayout(object item)
+		{
+			if (_sessionLayout == null)
+				return;
+
+			var targetControl = SelectTargetControlForNewItem();
+			if (targetControl == null)
+				return;
+
+			if (!targetControl.Items.Contains(item))
+			{
+				targetControl.Items.Add(item);
+				if (targetControl.SelectedItem == null)
+				{
+					targetControl.SelectedItem = item;
+				}
+			}
+			RefreshCommandStates();
+		}
+
+		private TabablzControl? SelectTargetControlForNewItem()
+		{
+			if (_sessionLayout == null)
+				return null;
+
+			var tabControls = GetAllTabControls(_sessionLayout).ToList();
+			if (tabControls.Count == 0)
+				return null;
+
+			return tabControls
+				.OrderBy(c => c.Items.Count)
+				.ThenBy(c => tabControls.IndexOf(c))
+				.FirstOrDefault();
+		}
+
+		private void AutoFitGrid()
+		{
+			var (rows, columns) = CalculateRecommendedGrid(GetSessionCount());
+			CreateGrid(rows, columns);
+		}
+
+		private void ReapplyCurrentGrid()
+		{
+			if (_currentRows < 1 || _currentColumns < 1)
+				return;
+
+			CreateGrid(_currentRows, _currentColumns);
+		}
+
+		private bool CanBalanceGrid() => _sessionLayout != null && (_currentRows > 1 || _currentColumns > 1);
+
+		private (int rows, int columns) CalculateRecommendedGrid(int sessionCount)
+		{
+			if (sessionCount <= 1)
+				return (1, 1);
+
+			var columns = (int)Math.Ceiling(Math.Sqrt(sessionCount));
+			if (columns < 1)
+				columns = 1;
+
+			var rows = (int)Math.Ceiling(sessionCount / (double)columns);
+			if (rows < 1)
+				rows = 1;
+
+			return (rows, columns);
+		}
+
+		private int GetSessionCount() => Items.OfType<SessionModel>().Count();
+
+		private void UpdateSuggestedGridLabel()
+		{
+			var sessionCount = GetSessionCount();
+			var (rows, columns) = CalculateRecommendedGrid(sessionCount);
+			SuggestedGridLabel = $"Suggested: {rows} x {columns} for {sessionCount} session{(sessionCount == 1 ? string.Empty : "s")}";
+		}
+
+		private void RemoveItemFromLayout(object item)
+		{
+			if (_sessionLayout == null)
+				return;
+
+			foreach (var control in GetAllTabControls(_sessionLayout))
+			{
+				if (control.Items.Contains(item))
+				{
+					control.Items.Remove(item);
+					CollapseIfEmpty(control);
+				}
+			}
+		}
+
+		private void CollapseIfEmpty(TabablzControl control)
+		{
+			if (control == null || control.Items.Count > 0)
+				return;
+
+			// Attempt to collapse empty branches inside the Layout (matches Dragablz branch consolidation).
+			var consolidate = typeof(Dragablz.Dockablz.Layout).GetMethod("ConsolidateBranch", BindingFlags.Static | BindingFlags.NonPublic);
+			var targetNode = (DependencyObject)control;
+			consolidate?.Invoke(null, new object[] { targetNode });
+
+			// If this tab control lives in a tear-off window (not the main window) and is now empty, close that window.
+			var hostWindow = System.Windows.Window.GetWindow(control);
+			if (hostWindow != null && !ReferenceEquals(hostWindow, Application.Current?.MainWindow) && control.Items.Count == 0)
+			{
+				try { hostWindow.Close(); } catch { /* best effort */ }
+			}
+
+			RefreshCommandStates();
+		}
+
+		private void RefreshCommandStates()
+		{
+			_createCustomGridCommand?.NotifyCanExecuteChanged();
+			_createGrid2x2Command?.NotifyCanExecuteChanged();
+			_createGrid3x3Command?.NotifyCanExecuteChanged();
+			_resetLayoutCommand?.NotifyCanExecuteChanged();
+			_autoFitGridCommand?.NotifyCanExecuteChanged();
+			_balanceRowsCommand?.NotifyCanExecuteChanged();
+			_balanceColumnsCommand?.NotifyCanExecuteChanged();
+			_toggleHeaderCommand?.NotifyCanExecuteChanged();
+		}
 
 		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

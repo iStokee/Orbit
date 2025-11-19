@@ -25,6 +25,7 @@ namespace Orbit.Views
 			if (DataContext is OrbitGridLayoutViewModel viewModel)
 			{
 				viewModel.SetLayoutControl(SessionLayout);
+				viewModel.ApplyDefaultGridDensity();
 			}
 		}
 	}
