@@ -117,67 +117,77 @@ namespace Orbit.ViewModels
 
 		private void SetVisibilitySetting(bool value)
 		{
+			void ApplyToViewModel()
+			{
+				switch (Key)
+				{
+					case "Sessions":
+						_mainWindowViewModel!.ShowMenuSessions = value;
+						break;
+					case "AccountManager":
+						_mainWindowViewModel!.ShowMenuAccountManager = value;
+						break;
+					case "ThemeManager":
+						_mainWindowViewModel!.ShowMenuThemeManager = value;
+						break;
+					case "FsmNodeEditor":
+						_mainWindowViewModel!.ShowMenuFsmNodeEditor = value;
+						break;
+					case "Console":
+						_mainWindowViewModel!.ShowMenuConsole = value;
+						break;
+					case "ApiDocumentation":
+						_mainWindowViewModel!.ShowMenuGuide = value;
+						break;
+					case "Settings":
+						_mainWindowViewModel!.ShowMenuSettings = value;
+						break;
+				}
+			}
+
+			void ApplyToSettings()
+			{
+				switch (Key)
+				{
+					case "Sessions":
+						Settings.Default.ShowMenuSessions = value;
+						break;
+					case "AccountManager":
+						Settings.Default.ShowMenuAccountManager = value;
+						break;
+					case "ThemeManager":
+						Settings.Default.ShowMenuThemeManager = value;
+						break;
+					case "FsmNodeEditor":
+						Settings.Default.ShowMenuFsmNodeEditor = value;
+						break;
+					case "Console":
+						Settings.Default.ShowMenuConsole = value;
+						break;
+					case "ApiDocumentation":
+						Settings.Default.ShowMenuApiDocumentation = value;
+						break;
+					case "Settings":
+						Settings.Default.ShowMenuSettings = value;
+						break;
+					// Tools without settings - no-op
+				}
+			}
+
 			if (_mainWindowViewModel != null)
 			{
-				void Apply()
-				{
-					switch (Key)
-					{
-						case "Sessions":
-							_mainWindowViewModel.ShowMenuSessions = value;
-							break;
-						case "AccountManager":
-							_mainWindowViewModel.ShowMenuAccountManager = value;
-							break;
-							_mainWindowViewModel.ShowMenuThemeManager = value;
-							break;
-						case "Console":
-							_mainWindowViewModel.ShowMenuConsole = value;
-							break;
-						case "ApiDocumentation":
-							_mainWindowViewModel.ShowMenuGuide = value;
-							break;
-						case "Settings":
-							_mainWindowViewModel.ShowMenuSettings = value;
-							break;
-						// Tools without settings - no-op
-					}
-				}
-
 				var dispatcher = Application.Current?.Dispatcher;
 				if (dispatcher?.CheckAccess() == true)
 				{
-					Apply();
+					ApplyToViewModel();
 				}
 				else
 				{
-					dispatcher?.Invoke(Apply);
+					dispatcher?.Invoke(ApplyToViewModel);
 				}
-				Settings.Default.Save();
-				return;
 			}
 
-			switch (Key)
-			{
-				case "Sessions":
-					Settings.Default.ShowMenuSessions = value;
-					break;
-				case "AccountManager":
-					Settings.Default.ShowMenuAccountManager = value;
-					break;
-					Settings.Default.ShowMenuThemeManager = value;
-					break;
-				case "Console":
-					Settings.Default.ShowMenuConsole = value;
-					break;
-				case "ApiDocumentation":
-					Settings.Default.ShowMenuApiDocumentation = value;
-					break;
-				case "Settings":
-					Settings.Default.ShowMenuSettings = value;
-					break;
-				// Tools without settings - no-op
-			}
+			ApplyToSettings();
 			Settings.Default.Save();
 		}
 
@@ -194,6 +204,7 @@ namespace Orbit.ViewModels
 				"Console" => "View unified logs from Orbit, ME, and scripts",
 				"ApiDocumentation" => "Open the Orbiters Guide documentation hub",
 				"ToolsOverview" => "Manage registered tools and their visibility",
+				"FsmNodeEditor" => "Design and run finite state machine scripts visually",
 				"Settings" => "Configure Orbit application settings",
 				_ => "Custom tool - no description available"
 			};

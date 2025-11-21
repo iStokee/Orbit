@@ -346,6 +346,18 @@ namespace Orbit {
                 this["ShowMenuOrbitView"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuFsmNodeEditor {
+            get {
+                return ((bool)(this["ShowMenuFsmNodeEditor"]));
+            }
+            set {
+                this["ShowMenuFsmNodeEditor"] = value;
+            }
+        }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

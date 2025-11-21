@@ -34,10 +34,11 @@
 
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                     <iconPacks:PackIconMaterial
-                        Width="30"
-                        Height="30"
-                        Margin="2"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Width="32"
+                        Height="32"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                         Kind="ViewDashboard" />
                 </Border>
 

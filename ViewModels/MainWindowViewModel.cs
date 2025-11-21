@@ -44,6 +44,7 @@ namespace Orbit.ViewModels
 	private const string ScriptManagerToolKey = "ScriptManager";
 	private const string GuideToolKey = "ApiDocumentation";
 	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
+	private const string FsmNodeEditorToolKey = "FsmNodeEditor";
 
 	private readonly SessionManagerService sessionManager;
 	private readonly ThemeService themeService;
@@ -135,6 +136,7 @@ namespace Orbit.ViewModels
 		MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
 		OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
 		OpenScriptManagerCommand = new RelayCommand(OpenScriptManager);
+		OpenFsmNodeEditorCommand = new RelayCommand(OpenFsmNodeEditor);
 		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => this.toolRegistry.Find(AccountManagerToolKey) != null);
 		OpenGuideCommand = new RelayCommand(OpenGuideTab);
 		OpenSettingsCommand = new RelayCommand(OpenSettingsTab);
@@ -191,6 +193,7 @@ namespace Orbit.ViewModels
 	public IRelayCommand<object?> MoveTabToOrbitCommand { get; }
 	public IRelayCommand OpenThemeManagerCommand { get; }
 	public IRelayCommand OpenScriptManagerCommand { get; }
+	public IRelayCommand OpenFsmNodeEditorCommand { get; }
 	public IRelayCommand ToggleConsoleCommand { get; }
 	public IRelayCommand BrowseScriptCommand { get; }
 	public IRelayCommand LoadScriptCommand { get; }
@@ -503,6 +506,11 @@ namespace Orbit.ViewModels
 			name: "Script Manager",
 			controlFactory: () => new Views.ScriptManagerPanel(new ScriptManagerViewModel(scriptManagerService, sessionCollectionService)),
 			icon: PackIconMaterialKind.CodeBraces);
+	}
+
+	private void OpenFsmNodeEditor()
+	{
+		TryOpenToolByKey(FsmNodeEditorToolKey);
 	}
 
 		private void OpenAccountManager()
@@ -1399,6 +1407,17 @@ namespace Orbit.ViewModels
 			if (Settings.Default.ShowMenuOrbitView == value) return;
 			Settings.Default.ShowMenuOrbitView = value;
 			OnPropertyChanged(nameof(ShowMenuOrbitView));
+		}
+	}
+
+	public bool ShowMenuFsmNodeEditor
+	{
+		get => Settings.Default.ShowMenuFsmNodeEditor;
+		set
+		{
+			if (Settings.Default.ShowMenuFsmNodeEditor == value) return;
+			Settings.Default.ShowMenuFsmNodeEditor = value;
+			OnPropertyChanged(nameof(ShowMenuFsmNodeEditor));
 		}
 	}
 

@@ -334,6 +334,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "AccountManager" => Settings.Default.ShowMenuAccountManager,
             "ThemeManager" => Settings.Default.ShowMenuThemeManager,
             "Console" => Settings.Default.ShowMenuConsole,
+            "FsmNodeEditor" => Settings.Default.ShowMenuFsmNodeEditor,
             "ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
             "Settings" => Settings.Default.ShowMenuSettings,
             _ => true // Plugins and other tools default to visible
@@ -360,14 +361,17 @@ public class ToolCardViewModel : INotifyPropertyChanged
                     case "AccountManager":
                         _mainWindowViewModel.ShowMenuAccountManager = value;
                         break;
-                    case "ThemeManager":
-                        _mainWindowViewModel.ShowMenuThemeManager = value;
-                        break;
-                    case "Console":
-                        _mainWindowViewModel.ShowMenuConsole = value;
-                        break;
-                    case "ApiDocumentation":
-                        _mainWindowViewModel.ShowMenuGuide = value;
+                case "ThemeManager":
+                    _mainWindowViewModel.ShowMenuThemeManager = value;
+                    break;
+                case "FsmNodeEditor":
+                    _mainWindowViewModel.ShowMenuFsmNodeEditor = value;
+                    break;
+                case "Console":
+                    _mainWindowViewModel.ShowMenuConsole = value;
+                    break;
+                case "ApiDocumentation":
+                    _mainWindowViewModel.ShowMenuGuide = value;
                         break;
                     case "Settings":
                         _mainWindowViewModel.ShowMenuSettings = value;
@@ -395,6 +399,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
                 break;
             case "ThemeManager":
                 Settings.Default.ShowMenuThemeManager = value;
+                break;
+            case "FsmNodeEditor":
+                Settings.Default.ShowMenuFsmNodeEditor = value;
                 break;
             case "Console":
                 Settings.Default.ShowMenuConsole = value;
@@ -430,6 +437,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ThemeManager" => "Customize themes, accents, and appearance",
             "ScriptManager" => "Browse and manage script library",
             "Console" => "View unified logs from Orbit, ME, and scripts",
+            "FsmNodeEditor" => "Visual editor and runner for FSM-based automations",
             "ApiDocumentation" => "Open the Orbiters Guide documentation hub",
             "ToolsOverview" => "Manage registered tools and their visibility",
             "PluginManager" => "Load and manage dynamic plugin tools",

@@ -1357,6 +1357,13 @@
                                     Visibility="{Binding ShowMenuToolsOverview, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="Tools" />
                                 </Button>
+                                <Button
+                                    Command="{Binding OpenFsmNodeEditorCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="FSM Node Editor"
+                                    Visibility="{Binding ShowMenuFsmNodeEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="GraphOutline" />
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -65,6 +65,8 @@ public partial class App : Application
 		services.AddSingleton<AccountService>();
 		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<InterTabClient>();
+		services.AddSingleton<FsmScriptService>();
+		services.AddTransient<FsmExecutionEngine>();
 
 		services.AddTransient<SettingsView>();
 		services.AddTransient<ConsoleView>();
@@ -72,6 +74,11 @@ public partial class App : Application
 		services.AddTransient<ThemeManagerPanel>(sp => new ThemeManagerPanel(sp.GetRequiredService<ThemeManagerViewModel>()));
 		services.AddTransient<ScriptManagerViewModel>();
 		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
+		services.AddTransient<FsmNodeEditorViewModel>();
+		services.AddTransient<FsmNodeEditorView>(sp => new FsmNodeEditorView
+		{
+			DataContext = sp.GetRequiredService<FsmNodeEditorViewModel>()
+		});
 
 		services.AddTransient<AccountManagerViewModel>(sp => new AccountManagerViewModel(
 			sp.GetRequiredService<AccountService>(),
@@ -89,6 +96,7 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool>(sp => new OrbitViewTool(
 			sp.GetRequiredService<SessionCollectionService>(),
 			sp.GetRequiredService<OrbitLayoutStateService>()));
+		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.FsmNodeEditorTool>();
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
