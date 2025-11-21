@@ -65,8 +65,12 @@ public partial class App : Application
 		services.AddSingleton<AccountService>();
 		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<InterTabClient>();
-		services.AddSingleton<FsmScriptService>();
-		services.AddTransient<FsmExecutionEngine>();
+		services.AddSingleton<NodeCatalogService>();
+		services.AddSingleton<NodeExecutorRegistry>();
+		services.AddSingleton<FsmScriptService>(sp => new FsmScriptService(sp.GetRequiredService<NodeCatalogService>()));
+		services.AddTransient<FsmExecutionEngine>(sp => new FsmExecutionEngine(
+			sp.GetRequiredService<NodeCatalogService>(),
+			sp.GetRequiredService<NodeExecutorRegistry>()));
 
 		services.AddTransient<SettingsView>();
 		services.AddTransient<ConsoleView>();
@@ -74,7 +78,10 @@ public partial class App : Application
 		services.AddTransient<ThemeManagerPanel>(sp => new ThemeManagerPanel(sp.GetRequiredService<ThemeManagerViewModel>()));
 		services.AddTransient<ScriptManagerViewModel>();
 		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
-		services.AddTransient<FsmNodeEditorViewModel>();
+		services.AddTransient<FsmNodeEditorViewModel>(sp => new FsmNodeEditorViewModel(
+			sp.GetRequiredService<FsmScriptService>(),
+			sp.GetRequiredService<FsmExecutionEngine>(),
+			sp.GetRequiredService<NodeCatalogService>()));
 		services.AddTransient<FsmNodeEditorView>(sp => new FsmNodeEditorView
 		{
 			DataContext = sp.GetRequiredService<FsmNodeEditorViewModel>()

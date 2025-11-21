@@ -18,6 +18,20 @@ public class FsmExecutionEngine
 	public event EventHandler? Completed;
 	public event EventHandler<Exception>? Faulted;
 
+	private readonly NodeCatalogService _catalogService;
+	private readonly NodeExecutorRegistry _executorRegistry;
+
+	public FsmExecutionEngine()
+		: this(new NodeCatalogService(), new NodeExecutorRegistry())
+	{
+	}
+
+	public FsmExecutionEngine(NodeCatalogService catalogService, NodeExecutorRegistry executorRegistry)
+	{
+		_catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+		_executorRegistry = executorRegistry ?? throw new ArgumentNullException(nameof(executorRegistry));
+	}
+
 	public bool IsRunning { get; private set; }
 
 	public async Task RunAsync(
@@ -36,6 +50,7 @@ public class FsmExecutionEngine
 		{
 			do
 			{
+				var runtimeSignals = new Dictionary<string, bool>(signals, StringComparer.OrdinalIgnoreCase);
 				var startNode = ResolveStartNode(script);
 				var current = startNode;
 
@@ -43,12 +58,38 @@ public class FsmExecutionEngine
 				{
 					NodeEntered?.Invoke(this, current);
 
-					if (current.DwellMilliseconds > 0)
+					var definition = ResolveDefinition(current);
+					var parameterMap = BuildParameterMap(current, definition);
+					var executor = _executorRegistry.Resolve(definition.Id);
+
+					var result = await executor.ExecuteAsync(
+						new NodeExecutionContext(current, definition, runtimeSignals, parameterMap),
+						cancellationToken);
+
+					if (result.Outputs != null)
 					{
-						await Task.Delay(current.DwellMilliseconds, cancellationToken);
+						foreach (var kv in result.Outputs)
+						{
+							runtimeSignals[kv.Key] = kv.Value;
+						}
 					}
 
-					var nextTransition = ResolveTransition(current, signals);
+					if (definition.Id == NodeCatalogDefaults.TerminalId)
+					{
+						break;
+					}
+
+					if (result.Status == NodeExecutionStatus.Retry)
+					{
+						continue;
+					}
+
+					if (result.Status == NodeExecutionStatus.Fail)
+					{
+						break;
+					}
+
+					var nextTransition = ResolveTransition(current, runtimeSignals);
 					if (nextTransition == null)
 					{
 						break;
@@ -109,5 +150,28 @@ public class FsmExecutionEngine
 		// Then fall back to the declared fallback edge
 		var fallback = current.Transitions.FirstOrDefault(t => t.IsFallback);
 		return fallback ?? current.Transitions.FirstOrDefault();
+	}
+
+	private NodeDefinition ResolveDefinition(FsmNodeModel node)
+	{
+		return _catalogService.GetDefinition(node.DefinitionId) ?? _catalogService.GetDefaultDefinitionForType(node.Type);
+	}
+
+	private static IReadOnlyDictionary<string, object?> BuildParameterMap(FsmNodeModel node, NodeDefinition definition)
+	{
+		var map = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		if (definition.Parameters == null || definition.Parameters.Count == 0)
+			return map;
+
+		foreach (var parameter in definition.Parameters)
+		{
+			var value = node.Parameters.FirstOrDefault(p => string.Equals(p.Key, parameter.Key, StringComparison.OrdinalIgnoreCase));
+			if (value == null)
+				continue;
+
+			map[parameter.Key] = value.GetTypedValue();
+		}
+
+		return map;
 	}
 }

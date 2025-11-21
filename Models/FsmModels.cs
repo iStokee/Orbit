@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
 
 namespace Orbit.Models;
 
@@ -88,6 +89,8 @@ public class FsmNodeModel : ObservableObject
 	private Guid _id = Guid.NewGuid();
 	private string _title = "State";
 	private string _description = string.Empty;
+	private string _definitionId = NodeCatalogDefaults.GenericActionId;
+	private string _definitionTitle = "Generic Action";
 	private FsmNodeType _type = FsmNodeType.Action;
 	private double _x = 60;
 	private double _y = 60;
@@ -96,6 +99,7 @@ public class FsmNodeModel : ObservableObject
 	private bool _isActive;
 	private bool _isSelected;
 	private ObservableCollection<FsmTransitionModel> _transitions = new();
+	private ObservableCollection<NodeParameterValue> _parameters = new();
 
 	public Guid Id
 	{
@@ -113,6 +117,24 @@ public class FsmNodeModel : ObservableObject
 	{
 		get => _description;
 		set => SetProperty(ref _description, value ?? string.Empty);
+	}
+
+	/// <summary>
+	/// Definition identifier that maps to catalog-provided metadata.
+	/// </summary>
+	public string DefinitionId
+	{
+		get => _definitionId;
+		set => SetProperty(ref _definitionId, value ?? NodeCatalogDefaults.GenericActionId);
+	}
+
+	/// <summary>
+	/// Cached title of the definition for canvas/inspector display.
+	/// </summary>
+	public string DefinitionTitle
+	{
+		get => _definitionTitle;
+		set => SetProperty(ref _definitionTitle, value ?? "Node");
 	}
 
 	public FsmNodeType Type
@@ -168,6 +190,13 @@ public class FsmNodeModel : ObservableObject
 		get => _transitions;
 		set => SetProperty(ref _transitions, value ?? new ObservableCollection<FsmTransitionModel>());
 	}
+
+	[JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+	public ObservableCollection<NodeParameterValue> Parameters
+	{
+		get => _parameters;
+		set => SetProperty(ref _parameters, value ?? new ObservableCollection<NodeParameterValue>());
+	}
 }
 
 public class FsmScriptModel : ObservableObject
@@ -177,6 +206,7 @@ public class FsmScriptModel : ObservableObject
 	private string _description = string.Empty;
 	private string _author = "Local";
 	private Guid? _startNodeId;
+	private int _schemaVersion = 2;
 	private DateTime _updatedAt = DateTime.UtcNow;
 	private ObservableCollection<FsmNodeModel> _nodes = new();
 
@@ -214,6 +244,15 @@ public class FsmScriptModel : ObservableObject
 	{
 		get => _updatedAt;
 		set => SetProperty(ref _updatedAt, value);
+	}
+
+	/// <summary>
+	/// Version tag for serialized scripts to allow migrations.
+	/// </summary>
+	public int SchemaVersion
+	{
+		get => _schemaVersion;
+		set => SetProperty(ref _schemaVersion, value);
 	}
 
 	public ObservableCollection<FsmNodeModel> Nodes

@@ -1,0 +1,725 @@
+{
+  "Id": "88888888-1111-4f4f-9999-aaaaaaaaaaa1",
+  "Name": "Green Dragons (Stokee sample)",
+  "Description": "Port of the Stokee green dragon FSM into the Orbit node-editor data model. Drives teleport -> bank -> wildy wall -> dragons -> combat -> loot -> notepaper -> repeat.",
+  "Author": "Stokee (ported)",
+  "StartNodeId": "11111111-1111-1111-1111-111111111111",
+  "SchemaVersion": 2,
+  "UpdatedAt": "2024-02-01T00:00:00Z",
+  "Nodes": [
+    {
+      "Id": "11111111-1111-1111-1111-111111111111",
+      "Title": "Start",
+      "Description": "Entry point",
+      "DefinitionId": "control.start",
+      "DefinitionTitle": "Start",
+      "Type": 0,
+      "X": 40.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaaa1-2222-4bbb-8888-bbbbbbbbbbb1",
+          "FromNodeId": "11111111-1111-1111-1111-111111111111",
+          "ToNodeId": "22222222-2222-2222-2222-222222222222",
+          "Label": "Begin",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": []
+    },
+    {
+      "Id": "22222222-2222-2222-2222-222222222222",
+      "Title": "Check location",
+      "Description": "Inspect player position and inventory to choose a lane.",
+      "DefinitionId": "actions.generic",
+      "DefinitionTitle": "Generic Action",
+      "Type": 1,
+      "X": 220.0,
+      "Y": 60.0,
+      "DwellMilliseconds": 250,
+      "ActionText": "Read coords + inventory -> set signals",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaaa2-3333-4bbb-8888-bbbbbbbbbbb2",
+          "FromNodeId": "22222222-2222-2222-2222-222222222222",
+          "ToNodeId": "33333333-3333-3333-3333-333333333333",
+          "Label": "At bank",
+          "ConditionKey": "atBank",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaaa3-4444-4bbb-8888-bbbbbbbbbbb3",
+          "FromNodeId": "22222222-2222-2222-2222-222222222222",
+          "ToNodeId": "55555555-5555-5555-5555-555555555555",
+          "Label": "At edge lodestone",
+          "ConditionKey": "atEdge",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaaa4-5555-4bbb-8888-bbbbbbbbbbb4",
+          "FromNodeId": "22222222-2222-2222-2222-222222222222",
+          "ToNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "Label": "At dragons",
+          "ConditionKey": "atDragons",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaaa5-6666-4bbb-8888-bbbbbbbbbbb5",
+          "FromNodeId": "22222222-2222-2222-2222-222222222222",
+          "ToNodeId": "44444444-4444-4444-4444-444444444444",
+          "Label": "Needs bank",
+          "ConditionKey": "needsBank",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaaa6-7777-4bbb-8888-bbbbbbbbbbb6",
+          "FromNodeId": "22222222-2222-2222-2222-222222222222",
+          "ToNodeId": "33333333-3333-3333-3333-333333333333",
+          "Label": "Else teleport",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "action",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Check location + inventory; emit signals: atEdge, atBank, needsBank, atWall, atDragons.",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "33333333-3333-3333-3333-333333333333",
+      "Title": "Teleport to Edge",
+      "Description": "Hotkey teleport to Edgeville lodestone.",
+      "DefinitionId": "keyboard.send",
+      "DefinitionTitle": "Keyboard macro",
+      "Type": 1,
+      "X": 440.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 1500,
+      "ActionText": "Send V; wait for animation to finish",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaaa7-8888-4bbb-8888-bbbbbbbbbbb7",
+          "FromNodeId": "33333333-3333-3333-3333-333333333333",
+          "ToNodeId": "44444444-4444-4444-4444-444444444444",
+          "Label": "Tele complete",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "keys",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "V",
+          "BoolValue": false
+        },
+        {
+          "Key": "delayMs",
+          "Type": 1,
+          "AllowMultiple": false,
+          "RawValue": "1500",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "44444444-4444-4444-4444-444444444444",
+      "Title": "Run to bank",
+      "Description": "Path to Edgeville bank from lodestone.",
+      "DefinitionId": "traversal.walk",
+      "DefinitionTitle": "Walk / traverse path",
+      "Type": 1,
+      "X": 660.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "Walk to bank tiles",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaaa8-9999-4bbb-8888-bbbbbbbbbbb8",
+          "FromNodeId": "44444444-4444-4444-4444-444444444444",
+          "ToNodeId": "55555555-5555-5555-5555-555555555555",
+          "Label": "Arrived bank",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 5,
+          "AllowMultiple": true,
+          "RawValue": "3092,3493\n3093,3490",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "55555555-5555-5555-5555-555555555555",
+      "Title": "Banking",
+      "Description": "Open banker, deposit inventory, withdraw notepaper.",
+      "DefinitionId": "actions.generic",
+      "DefinitionTitle": "Generic Action",
+      "Type": 1,
+      "X": 880.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 3000,
+      "ActionText": "Bank all; keep notepaper",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaaa9-1111-4bbb-8888-bbbbbbbbbbb9",
+          "FromNodeId": "55555555-5555-5555-5555-555555555555",
+          "ToNodeId": "66666666-6666-6666-6666-666666666666",
+          "Label": "Banked",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "action",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Open banker, deposit inventory, withdraw notepaper.",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "66666666-6666-6666-6666-666666666666",
+      "Title": "Teleport post-bank",
+      "Description": "Teleport back to Edgeville lodestone to start walk north.",
+      "DefinitionId": "keyboard.send",
+      "DefinitionTitle": "Keyboard macro",
+      "Type": 1,
+      "X": 1100.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 1500,
+      "ActionText": "Send V after banking",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaab1-2222-4bbb-8888-bbbbbbbbbbc1",
+          "FromNodeId": "66666666-6666-6666-6666-666666666666",
+          "ToNodeId": "77777777-7777-7777-7777-777777777777",
+          "Label": "Tele complete",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "keys",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "V",
+          "BoolValue": false
+        },
+        {
+          "Key": "delayMs",
+          "Type": 1,
+          "AllowMultiple": false,
+          "RawValue": "1500",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "77777777-7777-7777-7777-777777777777",
+      "Title": "Run to wildy wall",
+      "Description": "Walk north to wilderness wall.",
+      "DefinitionId": "traversal.walk",
+      "DefinitionTitle": "Walk / traverse path",
+      "Type": 1,
+      "X": 1320.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "Path to wall and wait",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaab2-3333-4bbb-8888-bbbbbbbbbbc2",
+          "FromNodeId": "77777777-7777-7777-7777-777777777777",
+          "ToNodeId": "88888888-8888-8888-8888-888888888888",
+          "Label": "At wall",
+          "ConditionKey": "atWall",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaab3-4444-4bbb-8888-bbbbbbbbbbc3",
+          "FromNodeId": "77777777-7777-7777-7777-777777777777",
+          "ToNodeId": "88888888-8888-8888-8888-888888888888",
+          "Label": "Arrive",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 5,
+          "AllowMultiple": true,
+          "RawValue": "3068,3519\n3072,3520",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "88888888-8888-8888-8888-888888888888",
+      "Title": "Click wildy wall",
+      "Description": "Interact with Wilderness wall to cross north.",
+      "DefinitionId": "actions.interaction",
+      "DefinitionTitle": "Interaction",
+      "Type": 1,
+      "X": 1540.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 5000,
+      "ActionText": "Interact with wall",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaab4-5555-4bbb-8888-bbbbbbbbbbc4",
+          "FromNodeId": "88888888-8888-8888-8888-888888888888",
+          "ToNodeId": "aaaaaaa0-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+          "Label": "Crossed",
+          "ConditionKey": "wallCrossed",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaab5-6666-4bbb-8888-bbbbbbbbbbc5",
+          "FromNodeId": "88888888-8888-8888-8888-888888888888",
+          "ToNodeId": "aaaaaaa0-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+          "Label": "Fallback",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Wilderness wall",
+          "BoolValue": false
+        },
+        {
+          "Key": "option",
+          "Type": 3,
+          "AllowMultiple": false,
+          "RawValue": "Cross",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "aaaaaaa0-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+      "Title": "Run to dragons",
+      "Description": "Three-step walk into the dragon area.",
+      "DefinitionId": "traversal.walk",
+      "DefinitionTitle": "Walk / traverse path",
+      "Type": 1,
+      "X": 1760.0,
+      "Y": 40.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "Walk toward dragons",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaab6-7777-4bbb-8888-bbbbbbbbbbc6",
+          "FromNodeId": "aaaaaaa0-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+          "ToNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "Label": "At dragons",
+          "ConditionKey": "atDragons",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaab7-8888-4bbb-8888-bbbbbbbbbbc7",
+          "FromNodeId": "aaaaaaa0-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+          "ToNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "Label": "Arrive",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 5,
+          "AllowMultiple": true,
+          "RawValue": "3050,3575\n3020,3575\n2978,3615",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "99999999-9999-4999-aaaa-999999999999",
+      "Title": "Check inventory (dragons)",
+      "Description": "Branch based on bag fullness at dragons.",
+      "DefinitionId": "conditions.boolean",
+      "DefinitionTitle": "Boolean Condition",
+      "Type": 2,
+      "X": 1980.0,
+      "Y": 60.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaab8-9999-4bbb-8888-bbbbbbbbbbc8",
+          "FromNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "ToNodeId": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+          "Label": "Inventory full",
+          "ConditionKey": "inventoryFull",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaab9-aaaa-4bbb-8888-bbbbbbbbbbc9",
+          "FromNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "ToNodeId": "cccccccc-cccc-4ccc-cccc-cccccccccccc",
+          "Label": "Space available",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "signal",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "inventoryFull",
+          "BoolValue": false
+        },
+        {
+          "Key": "expected",
+          "Type": 2,
+          "AllowMultiple": false,
+          "RawValue": "",
+          "BoolValue": true
+        }
+      ]
+    },
+    {
+      "Id": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+      "Title": "Notepaper / full bag",
+      "Description": "Use notepaper if available; otherwise bail out.",
+      "DefinitionId": "actions.generic",
+      "DefinitionTitle": "Generic Action",
+      "Type": 1,
+      "X": 2200.0,
+      "Y": 20.0,
+      "DwellMilliseconds": 500,
+      "ActionText": "Use notepaper on bones/hides",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaac1-bbbb-4bbb-8888-bbbbbbbbbcd1",
+          "FromNodeId": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+          "ToNodeId": "cccccccc-cccc-4ccc-cccc-cccccccccccc",
+          "Label": "Notepaper worked",
+          "ConditionKey": "hasNotepaper",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaac2-cccc-4bbb-8888-bbbbbbbbbcd2",
+          "FromNodeId": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+          "ToNodeId": "33333333-3333-3333-3333-333333333333",
+          "Label": "No notepaper",
+          "ConditionKey": "hasNotepaper",
+          "ExpectedValue": false,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "action",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Use notepaper on dragon bones/hide; emit hasNotepaper and inventoryFull signals.",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "cccccccc-cccc-4ccc-cccc-cccccccccccc",
+      "Title": "Find dragon",
+      "Description": "Target and attack nearest green dragon.",
+      "DefinitionId": "actions.interaction",
+      "DefinitionTitle": "Interaction",
+      "Type": 1,
+      "X": 2200.0,
+      "Y": 120.0,
+      "DwellMilliseconds": 3000,
+      "ActionText": "Attack green dragon",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaac3-dddd-4bbb-8888-bbbbbbbbbcd3",
+          "FromNodeId": "cccccccc-cccc-4ccc-cccc-cccccccccccc",
+          "ToNodeId": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+          "Label": "Clicked dragon",
+          "ConditionKey": "clickedDragon",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaac4-eeee-4bbb-8888-bbbbbbbbbcd4",
+          "FromNodeId": "cccccccc-cccc-4ccc-cccc-cccccccccccc",
+          "ToNodeId": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+          "Label": "Fallback",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Green dragon",
+          "BoolValue": false
+        },
+        {
+          "Key": "option",
+          "Type": 3,
+          "AllowMultiple": false,
+          "RawValue": "Attack",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+      "Title": "Check combat",
+      "Description": "Stay in combat until target is dead.",
+      "DefinitionId": "conditions.boolean",
+      "DefinitionTitle": "Boolean Condition",
+      "Type": 2,
+      "X": 2420.0,
+      "Y": 120.0,
+      "DwellMilliseconds": 0,
+      "ActionText": "",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaac5-ffff-4bbb-8888-bbbbbbbbbcd5",
+          "FromNodeId": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+          "ToNodeId": "eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee",
+          "Label": "In combat",
+          "ConditionKey": "inCombat",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaac6-1111-4ccc-8888-bbbbbbbbbcd6",
+          "FromNodeId": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+          "ToNodeId": "ffffffff-ffff-4fff-ffff-ffffffffffff",
+          "Label": "Not in combat",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "signal",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "inCombat",
+          "BoolValue": false
+        },
+        {
+          "Key": "expected",
+          "Type": 2,
+          "AllowMultiple": false,
+          "RawValue": "",
+          "BoolValue": true
+        }
+      ]
+    },
+    {
+      "Id": "eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee",
+      "Title": "In combat (hold)",
+      "Description": "Wait while fighting the dragon.",
+      "DefinitionId": "actions.generic",
+      "DefinitionTitle": "Generic Action",
+      "Type": 1,
+      "X": 2640.0,
+      "Y": 80.0,
+      "DwellMilliseconds": 2000,
+      "ActionText": "Hold until combat ends",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaac7-1212-4ccc-8888-bbbbbbbbbcd7",
+          "FromNodeId": "eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee",
+          "ToNodeId": "dddddddd-dddd-4ddd-dddd-dddddddddddd",
+          "Label": "Recheck combat",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "action",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Monitor combat; emit inCombat signal until target dies.",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "ffffffff-ffff-4fff-ffff-ffffffffffff",
+      "Title": "Loot",
+      "Description": "Area loot bones; refresh ground items.",
+      "DefinitionId": "actions.generic",
+      "DefinitionTitle": "Generic Action",
+      "Type": 1,
+      "X": 2420.0,
+      "Y": 200.0,
+      "DwellMilliseconds": 1500,
+      "ActionText": "Loot stack; emit inventoryFull/randomsFound",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaaac8-1313-4ccc-8888-bbbbbbbbbcd8",
+          "FromNodeId": "ffffffff-ffff-4fff-ffff-ffffffffffff",
+          "ToNodeId": "10101010-1010-4101-a010-101010101010",
+          "Label": "Randoms nearby",
+          "ConditionKey": "randomsFound",
+          "ExpectedValue": true,
+          "IsFallback": false,
+          "IsActive": false
+        },
+        {
+          "Id": "aaaaaac9-1414-4ccc-8888-bbbbbbbbbcd9",
+          "FromNodeId": "ffffffff-ffff-4fff-ffff-ffffffffffff",
+          "ToNodeId": "99999999-9999-4999-aaaa-999999999999",
+          "Label": "Continue",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "action",
+          "Type": 0,
+          "AllowMultiple": false,
+          "RawValue": "Area loot bones; detect random spawns; update inventoryFull/randomsFound.",
+          "BoolValue": false
+        }
+      ]
+    },
+    {
+      "Id": "10101010-1010-4101-a010-101010101010",
+      "Title": "Flee randoms",
+      "Description": "Walk a short distance away, then teleport out.",
+      "DefinitionId": "traversal.walk",
+      "DefinitionTitle": "Walk / traverse path",
+      "Type": 1,
+      "X": 2640.0,
+      "Y": 200.0,
+      "DwellMilliseconds": 6000,
+      "ActionText": "Step away from random",
+      "IsActive": false,
+      "IsSelected": false,
+      "Transitions": [
+        {
+          "Id": "aaaaac10-1515-4ccc-8888-bbbbbbbbce10",
+          "FromNodeId": "10101010-1010-4101-a010-101010101010",
+          "ToNodeId": "33333333-3333-3333-3333-333333333333",
+          "Label": "Teleport out",
+          "ConditionKey": "",
+          "ExpectedValue": true,
+          "IsFallback": true,
+          "IsActive": false
+        }
+      ],
+      "Parameters": [
+        {
+          "Key": "target",
+          "Type": 5,
+          "AllowMultiple": true,
+          "RawValue": "-5,-25\n-10,-30",
+          "BoolValue": false
+        }
+      ]
+    }
+  ]
+}

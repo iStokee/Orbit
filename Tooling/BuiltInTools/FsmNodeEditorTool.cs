@@ -7,7 +7,7 @@ using Orbit.Views;
 namespace Orbit.Tooling.BuiltInTools;
 
 /// <summary>
-/// Built-in tool surface for the FSM node editor.
+/// Built-in tool surface for the Orbit Builder (visual node editor).
 /// </summary>
 public sealed class FsmNodeEditorTool : IOrbitTool
 {
@@ -20,7 +20,7 @@ public sealed class FsmNodeEditorTool : IOrbitTool
 
 	public string Key => "FsmNodeEditor";
 
-	public string DisplayName => "FSM Node Editor";
+	public string DisplayName => "Orbit Builder";
 
 	public PackIconMaterialKind Icon => PackIconMaterialKind.GraphOutline;
 
