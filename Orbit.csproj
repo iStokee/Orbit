@@ -112,7 +112,7 @@
 
   <ItemGroup>
     <Reference Include="csharp_interop">
-      <HintPath>..\..\C#\csharp_interop\bin\Debug\net8.0-windows\csharp_interop.dll</HintPath>
+      <HintPath>..\..\C#\csharp_interop\bin\Debug\net10.0-windows\csharp_interop.dll</HintPath>
     </Reference>
   </ItemGroup>
 
