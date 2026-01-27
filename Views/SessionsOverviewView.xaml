@@ -4,22 +4,48 @@
              xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              xmlns:converters="clr-namespace:Orbit.Converters"
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             xmlns:local="clr-namespace:Orbit"
+             xmlns:models="clr-namespace:Orbit.Models"
              Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
     <UserControl.Resources>
         <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
         <converters:InjectionStateToColorConverter x:Key="InjectionStateToColorConverter" />
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+
+        <Style x:Key="SessionToolbarHeaderStyle" TargetType="Border" BasedOn="{StaticResource Orbit.ToolHeader}">
+            <Setter Property="Padding" Value="8,6" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Compact}">
+                    <Setter Property="Padding" Value="6,4" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Minimal}">
+                    <Setter Property="Padding" Value="4,3" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+        <!-- Header Summary -->
+        <Border Grid.Row="0">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource Orbit.ToolHeader}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Full}">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -50,8 +76,56 @@
             </Grid>
         </Border>
 
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Style="{StaticResource SessionToolbarHeaderStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Session Manager" />
+                    <TextBlock
+                        Margin="12,0,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Opacity="0.85"
+                        Text="{Binding Sessions.Count, StringFormat='{}{0} Active Sessions'}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Header:" />
+                    <ToggleButton
+                        Margin="0,0,4,0"
+                        Padding="8,2"
+                        Content="Full"
+                        IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
+                        Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                    <ToggleButton
+                        Margin="0,0,4,0"
+                        Padding="8,2"
+                        Content="Compact"
+                        IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
+                        Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                    <ToggleButton
+                        Padding="8,2"
+                        Content="Minimal"
+                        IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
+                        Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- Sessions list -->
-        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
+        <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Sessions}">
                 <ItemsControl.ItemTemplate>

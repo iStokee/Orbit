@@ -565,6 +565,18 @@ namespace Orbit {
 
 		[global::System.Configuration.UserScopedSettingAttribute()]
 		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int SessionHeaderDensity {
+			get {
+				return ((int)(this["SessionHeaderDensity"]));
+			}
+			set {
+				this["SessionHeaderDensity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
 		[global::System.Configuration.DefaultSettingValueAttribute("1")]
 		public int OrbitViewTabHeaderSize {
 			get {
