@@ -11,10 +11,7 @@
     <TargetFramework>net10.0-windows8.0</TargetFramework>
     <!-- ApplicationIcon removed - using vector DrawingImage via Icon property instead -->
 
-    <!-- Version Information for Auto-Updater -->
-    <Version>1.0.4</Version>
-    <AssemblyVersion>1.0.4.0</AssemblyVersion>
-    <FileVersion>1.0.4.0</FileVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PlatformTarget>x64</PlatformTarget>
 
   </PropertyGroup>
@@ -117,6 +114,5 @@
   </ItemGroup>
 
 </Project>
-
 
 

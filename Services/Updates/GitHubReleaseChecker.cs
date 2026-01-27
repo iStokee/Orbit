@@ -1,8 +1,9 @@
 using System;
 using System.Net.Http;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using Orbit;
 
 namespace Orbit.Services.Updates
 {
@@ -13,10 +14,7 @@ namespace Orbit.Services.Updates
 	{
 		private static readonly HttpClient _http = new HttpClient();
 
-		// TODO: Update these with your actual GitHub owner/repo
-		private const string Owner = "iStokee";
-		private const string Repo = "Orbit";
-		public const string DefaultAssetName = "orbit-win-x64.zip";
+		public const string DefaultAssetName = UpdateConfig.DefaultAssetName;
 
 		public sealed class GitHubRelease
 		{
@@ -62,7 +60,7 @@ namespace Orbit.Services.Updates
 
 			try
 			{
-				var url = $"https://api.github.com/repos/{Owner}/{Repo}/releases/latest";
+				var url = $"https://api.github.com/repos/{UpdateConfig.Owner}/{UpdateConfig.Repo}/releases/latest";
 				var req = new HttpRequestMessage(HttpMethod.Get, url);
 				// GitHub requires a user-agent
 				req.Headers.UserAgent.ParseAdd("Orbit-Updater/1.0");
@@ -189,19 +187,7 @@ namespace Orbit.Services.Updates
 
 		private static Version GetCurrentVersion()
 		{
-			var entry = Assembly.GetEntryAssembly();
-			if (entry == null)
-				return new Version(0, 0, 0, 0);
-
-			var informational = entry.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-			if (TryParseVersion(informational, out var parsed))
-				return parsed;
-
-			var fileVersion = entry.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
-			if (TryParseVersion(fileVersion, out parsed))
-				return parsed;
-
-			return entry.GetName()?.Version ?? new Version(0, 0, 0, 0);
+			return AppVersion.Parsed;
 		}
 
 		private static bool TryParseVersion(string input, out Version version)
@@ -210,17 +196,11 @@ namespace Orbit.Services.Updates
 			if (string.IsNullOrWhiteSpace(input))
 				return false;
 
-			// Strip metadata/prerelease suffixes (e.g., "1.2.3-beta+4")
-			var sanitized = input;
-			var dashIndex = sanitized.IndexOf('-');
-			if (dashIndex >= 0)
-				sanitized = sanitized.Substring(0, dashIndex);
+			var match = Regex.Match(input, @"\d+(\.\d+){1,3}");
+			if (!match.Success)
+				return false;
 
-			var plusIndex = sanitized.IndexOf('+');
-			if (plusIndex >= 0)
-				sanitized = sanitized.Substring(0, plusIndex);
-
-			return Version.TryParse(sanitized, out version);
+			return Version.TryParse(match.Value, out version);
 		}
 	}
 }
