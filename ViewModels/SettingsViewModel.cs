@@ -47,7 +47,7 @@ namespace Orbit.ViewModels
 
 		public SettingsViewModel()
 		{
-			// Get current version from assembly
+			// Get current version from AppVersion helper
 			CurrentVersion = AppVersion.Display;
 
 			FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
