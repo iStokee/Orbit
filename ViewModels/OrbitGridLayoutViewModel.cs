@@ -42,7 +42,6 @@ namespace Orbit.ViewModels
 		private int _currentRows = 1;
 		private int _currentColumns = 1;
 		private string _suggestedGridLabel = "Suggested: 1 x 1";
-		private bool _isHeaderCollapsed;
 
 	public OrbitGridLayoutViewModel(
 		SessionCollectionService sessionCollectionService,
@@ -100,18 +99,6 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public bool IsHeaderCollapsed
-		{
-			get => _isHeaderCollapsed;
-			set
-			{
-				if (_isHeaderCollapsed == value)
-					return;
-				_isHeaderCollapsed = value;
-				OnPropertyChanged();
-			}
-		}
-
 		/// <summary>
 		/// Custom grid rows for user-defined layout.
 		/// </summary>
@@ -158,7 +145,6 @@ namespace Orbit.ViewModels
 		private RelayCommand? _autoFitGridCommand;
 		private RelayCommand? _balanceRowsCommand;
 		private RelayCommand? _balanceColumnsCommand;
-		private RelayCommand? _toggleHeaderCommand;
 
 		/// <summary>
 		/// Command to create a custom rows x columns grid layout
@@ -194,11 +180,6 @@ namespace Orbit.ViewModels
 		/// Command to rebalance column widths evenly.
 		/// </summary>
 		public IRelayCommand BalanceColumnsCommand => _balanceColumnsCommand ??= new RelayCommand(() => ReapplyCurrentGrid(), CanBalanceGrid);
-
-		/// <summary>
-		/// Command to toggle the header density (compact vs full).
-		/// </summary>
-		public IRelayCommand ToggleHeaderCommand => _toggleHeaderCommand ??= new RelayCommand(() => IsHeaderCollapsed = !IsHeaderCollapsed);
 
 		/// <summary>
 		/// Dragablz callback invoked when a tab close is requested.

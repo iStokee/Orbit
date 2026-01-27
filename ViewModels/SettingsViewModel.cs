@@ -1,12 +1,12 @@
 using System;
 using System.ComponentModel;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.IO;
 using MahApps.Metro.IconPacks;
+using Orbit;
 using Orbit.Logging;
 using Orbit.Services;
 using Orbit.Services.Updates;
@@ -43,14 +43,12 @@ namespace Orbit.ViewModels
 		private string _downloadedZipPath;
 		private string _extractedFolderPath;
 
-		// TODO: Replace with your GitHub username
-		private const string ExpectedGitHubAuthor = "iStokee";
+		private const string ExpectedGitHubAuthor = UpdateConfig.ExpectedAuthor;
 
 		public SettingsViewModel()
 		{
-			// Get current version from assembly
-			var version = Assembly.GetEntryAssembly()?.GetName()?.Version;
-			CurrentVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "Unknown";
+			// Get current version from AppVersion helper
+			CurrentVersion = AppVersion.Display;
 
 			FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
 			FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
@@ -234,12 +232,12 @@ namespace Orbit.ViewModels
 				}
 
 				ConsoleLogService.Instance.Append(
-					$"[Update] Querying GitHub API: {ExpectedGitHubAuthor}/Orbit",
+					$"[Update] Querying GitHub API: {UpdateConfig.Owner}/{UpdateConfig.Repo}",
 					ConsoleLogSource.Orbit,
 					ConsoleLogLevel.Debug);
 
 				var updateInfo = await _releaseChecker.CheckAsync(
-					expectedAssetName: "orbit-win-x64.zip",
+					expectedAssetName: UpdateConfig.DefaultAssetName,
 					expectedAuthor: ExpectedGitHubAuthor,
 					includePrereleases: false
 				);
@@ -402,7 +400,7 @@ namespace Orbit.ViewModels
 					ConsoleLogLevel.Debug);
 
 				var updateInfo = await _releaseChecker.CheckAsync(
-					expectedAssetName: "orbit-win-x64.zip",
+					expectedAssetName: UpdateConfig.DefaultAssetName,
 					expectedAuthor: ExpectedGitHubAuthor
 				);
 
