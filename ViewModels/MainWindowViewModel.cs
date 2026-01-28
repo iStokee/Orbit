@@ -1766,9 +1766,17 @@ namespace Orbit.ViewModels
 
 		ConsoleLog.Append($"[OrbitCmd] Requesting load for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
 		// Use RELOAD for both initial and subsequent loads to avoid legacy runtime restart; send to selected session
+		var runtimeReady = await OrbitCommandClient
+			.SendStartRuntimeWithRetryAsync(targetSession.RSProcess?.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			.ConfigureAwait(false);
+		if (!runtimeReady)
+		{
+			ConsoleLog.Append($"[OrbitCmd] Unable to start ME .NET runtime for '{targetSession.Name}'. Load may fail.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+
 		var success = targetSession.RSProcess != null
-			? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
-			: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
+			? await OrbitCommandClient.SendReloadWithRetryAsync(path, targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			: await OrbitCommandClient.SendReloadWithRetryAsync(path, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
 			if (!success)
 			{
 				ConsoleLog.Append("[OrbitCmd] Failed to send load command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
@@ -1837,9 +1845,17 @@ namespace Orbit.ViewModels
 		}
 
 		ConsoleLog.Append($"[OrbitCmd] Requesting reload for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
+		var runtimeReady = await OrbitCommandClient
+			.SendStartRuntimeWithRetryAsync(targetSession.RSProcess?.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			.ConfigureAwait(false);
+		if (!runtimeReady)
+		{
+			ConsoleLog.Append($"[OrbitCmd] Unable to start ME .NET runtime for '{targetSession.Name}'. Reload may fail.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+
 		var success = targetSession.RSProcess != null
-			? await OrbitCommandClient.SendReloadAsync(path, targetSession.RSProcess.Id, CancellationToken.None)
-			: await OrbitCommandClient.SendReloadAsync(path, CancellationToken.None);
+			? await OrbitCommandClient.SendReloadWithRetryAsync(path, targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			: await OrbitCommandClient.SendReloadWithRetryAsync(path, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
 			if (!success)
 			{
 				ConsoleLog.Append("[OrbitCmd] Failed to send reload command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
@@ -1901,6 +1917,56 @@ namespace Orbit.ViewModels
 		SelectedSession = session;
 	}
 
+	/// <summary>
+	/// Reasserts MESharp input passthrough and focus spoof state for injected sessions.
+	/// This mirrors the WPF debug app behavior so Orbit can reliably accept keyboard input.
+	/// </summary>
+	public Task ReassertInputPassthroughAsync(bool orbitActive)
+	{
+		var targets = Sessions
+			.OfType<SessionModel>()
+			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
+			.ToList();
+
+		if (targets.Count == 0)
+		{
+			return Task.CompletedTask;
+		}
+
+		var focusSpoofEnabled = false;
+
+		return Task.Run(async () =>
+		{
+			foreach (var session in targets)
+			{
+				try
+				{
+					var process = session.RSProcess;
+					if (process == null || process.HasExited)
+					{
+						continue;
+					}
+
+					await OrbitCommandClient
+						.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+						.ConfigureAwait(false);
+
+					await OrbitCommandClient
+						.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+						.ConfigureAwait(false);
+
+					await OrbitCommandClient
+						.SendFocusSpoofWithRetryAsync(focusSpoofEnabled, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+						.ConfigureAwait(false);
+				}
+				catch
+				{
+					// Best-effort only; individual sessions may be shutting down.
+				}
+			}
+		});
+	}
+
 	public void FocusSession(SessionModel session)
 	{
 		session?.SetFocus();
@@ -1911,10 +1977,10 @@ namespace Orbit.ViewModels
 		if (session == null)
 			return;
 
-		_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
+		_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: false);
 	}
 
-		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = true)
+		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = false)
 		{
 			var sessionsSnapshot = Sessions.OfType<SessionModel>().ToList();
 			foreach (var session in sessionsSnapshot)
@@ -1923,10 +1989,10 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public Task ShutdownTrackedProcessesAsync(CancellationToken cancellationToken = default)
-			=> sessionManager.ShutdownManagedProcessesAsync(cancellationToken);
+		public Task ShutdownTrackedProcessesAsync(bool forceKillOnTimeout = false, CancellationToken cancellationToken = default)
+			=> sessionManager.ShutdownManagedProcessesAsync(forceKillOnTimeout, cancellationToken);
 
-		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = true)
+		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = false)
 		{
 			if (session == null)
 			{
@@ -2102,7 +2168,20 @@ namespace Orbit.ViewModels
 			HotReloadTargetSession = Sessions.FirstOrDefault();
 		}
 
+		if (SelectedSession != null && !Sessions.Contains(SelectedSession))
+		{
+			SelectedSession = Sessions.FirstOrDefault();
+		}
+		else if (SelectedSession == null && Sessions.Count > 0 && (e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace))
+		{
+			SelectedSession = Sessions.FirstOrDefault();
+		}
+
 		OnPropertyChanged(nameof(HasSessions));
+		ShowSessionsCommand?.NotifyCanExecuteChanged();
+		InjectCommand?.NotifyCanExecuteChanged();
+		LoadScriptCommand?.NotifyCanExecuteChanged();
+		ReloadScriptCommand?.NotifyCanExecuteChanged();
 		CommandManager.InvalidateRequerySuggested();
 	}
 

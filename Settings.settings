@@ -140,6 +140,15 @@
   <Setting Name="SessionHeaderDensity" Type="System.Int32" Scope="User">
     <Value Profile="(Default)">0</Value>
   </Setting>
+  <Setting Name="OrbitHeaderDensity" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">0</Value>
+  </Setting>
+  <Setting Name="GalleryHeaderDensity" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">0</Value>
+  </Setting>
+  <Setting Name="SessionsHeaderDensity" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">0</Value>
+  </Setting>
   <Setting Name="OrbitViewTabHeaderSize" Type="System.Int32" Scope="User">
     <Value Profile="(Default)">1</Value>
   </Setting>

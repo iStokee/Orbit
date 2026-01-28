@@ -318,9 +318,20 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 			ConsoleLogSource.Orbit,
 			ConsoleLogLevel.Info);
 
+		var runtimeReady = await OrbitCommandClient
+			.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			.ConfigureAwait(false);
+		if (!runtimeReady)
+		{
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Unable to start ME .NET runtime for session '{targetSession.Name}'. Load may fail.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+		}
+
 		var success = pid.HasValue
-			? await OrbitCommandClient.SendReloadAsync(tracked.FilePath, pid.Value, CancellationToken.None)
-			: await OrbitCommandClient.SendReloadAsync(tracked.FilePath, CancellationToken.None);
+			? await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, pid.Value, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+			: await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
 
 		if (!success)
 		{

@@ -22,17 +22,82 @@
         <converters:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
 
-        <Style x:Key="SessionToolbarBorderStyle" TargetType="Border">
-            <Setter Property="Margin" Value="0,12,0,0" />
+        <Style x:Key="GalleryRootGridStyle" TargetType="Grid">
+            <Setter Property="Margin" Value="16" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
+                    <Setter Property="Margin" Value="12" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="2">
+                    <Setter Property="Margin" Value="8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style
+            x:Key="GalleryHeaderBorderStyle"
+            BasedOn="{StaticResource Orbit.ToolHeader}"
+            TargetType="Border">
             <Setter Property="Padding" Value="12" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Compact}">
-                    <Setter Property="Margin" Value="0,8,0,0" />
-                    <Setter Property="Padding" Value="8" />
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
+                    <Setter Property="Padding" Value="8,6,8,6" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Minimal}">
-                    <Setter Property="Margin" Value="0,6,0,0" />
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="2">
+                    <Setter Property="Padding" Value="6,4,6,4" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GalleryToolbarGridStyle" TargetType="Grid">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
+                    <Setter Property="Margin" Value="0,3,0,0" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="2">
+                    <Setter Property="Margin" Value="0,2,0,0" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GalleryToolbarSecondaryRowStyle" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,12,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
+                    <Setter Property="Margin" Value="0,8,0,0" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="2">
+                    <Setter Property="Margin" Value="0,4,0,0" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SessionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Margin" Value="8" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect
+                        BlurRadius="8"
+                        Direction="270"
+                        Opacity="0.2"
+                        ShadowDepth="2"
+                        Color="Black" />
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
                     <Setter Property="Padding" Value="6" />
+                    <Setter Property="Margin" Value="6" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="2">
+                    <Setter Property="Padding" Value="4" />
+                    <Setter Property="Margin" Value="4" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -40,248 +105,222 @@
         <!--  Thumbnail card style  -->
         <Style x:Key="ThumbnailCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
-            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Margin" Value="8" />
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                    <Setter Property="BorderThickness" Value="3" />
+                    <Setter Property="BorderThickness" Value="2" />
                 </Trigger>
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16">
+    <Grid Style="{StaticResource GalleryRootGridStyle}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Header Summary  -->
-        <Border Grid.Row="0">
-            <Border.Style>
-                <Style TargetType="Border" BasedOn="{StaticResource Orbit.ToolHeader}">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity}" Value="{x:Static models:SessionHeaderDensity.Full}">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial
-                        Width="35"
-                        Height="35"
-                        Margin="10,10,0,0"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Kind="ViewModule" />
-                </Border>
-                <StackPanel
-                    Grid.Column="1"
-                    Margin="12,0,0,0"
-                    VerticalAlignment="Center">
-                    <TextBlock
-                        FontSize="22"
-                        FontWeight="Bold"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Text="Gallery View" />
-                    <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                        <TextBlock
-                            FontSize="12"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Opacity="0.85"
-                            Text="{Binding Sessions.Count, StringFormat='{}{0} Sessions'}" />
-                    </StackPanel>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!--  Toolbar  -->
-        <Border
-            Grid.Row="1"
-            Style="{StaticResource SessionToolbarBorderStyle}"
-            Background="{DynamicResource MahApps.Brushes.Gray9}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-            BorderThickness="1"
-            CornerRadius="6">
+        <!--  Header + Toolbar  -->
+        <Border Grid.Row="0" Style="{StaticResource GalleryHeaderBorderStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*" />
-                    <ColumnDefinition Width="1.5*" />
-                    <ColumnDefinition Width=".6*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
 
-                <StackPanel
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    Orientation="Horizontal">
-                    <TextBlock
-                        Margin="0,0,12,0"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                        Text="Thumbnail Size:" />
-                    <Slider
-                        Width="150"
-                        VerticalAlignment="Center"
-                        IsEnabled="{Binding UseCustomThumbnailSize, Converter={StaticResource InverseBoolConverter}}"
-                        IsSnapToTickEnabled="True"
-                        Maximum="800"
-                        Minimum="200"
-                        TickFrequency="50"
-                        Value="{Binding ThumbnailSize}" />
-                    <TextBlock
-                        Width="60"
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                        Text="{Binding EffectiveThumbnailSize, StringFormat='{}{0}px'}" />
-                </StackPanel>
+                <!--  Header Summary  -->
+                <Grid Grid.Row="0">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                        <iconPacks:PackIconMaterial
+                            Width="35"
+                            Height="35"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Kind="ViewModule" />
+                    </Border>
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="22"
+                            FontWeight="Bold"
+                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Text="Gallery View" />
+                        <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.85"
+                                Text="{Binding Sessions.Count, StringFormat='{}{0} Sessions'}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
 
-                <!--  Custom Size Override  -->
-                <StackPanel
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    Margin="16,0,0,0"
-                    Orientation="Horizontal">
-                    <CheckBox
-                        VerticalAlignment="Center"
-                        Content="Custom Size:"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                        IsChecked="{Binding UseCustomThumbnailSize}" />
-                    <Controls:NumericUpDown
-                        Width="100"
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        IsEnabled="{Binding UseCustomThumbnailSize}"
-                        Maximum="800"
-                        Minimum="200"
-                        StringFormat="F0"
-                        Value="{Binding CustomThumbnailSize}" />
-                </StackPanel>
+                <!--  Toolbar  -->
+                <Grid Grid.Row="1" Style="{StaticResource GalleryToolbarGridStyle}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.25*" />
+                        <ColumnDefinition Width="1.75*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel
-                    Grid.Row="0"
-                    Grid.Column="2"
-                    HorizontalAlignment="Right"
-                    Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
+                    <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Text="Thumbnail Size:" />
+                        <Slider
+                            Width="150"
+                            VerticalAlignment="Center"
+                            IsEnabled="{Binding UseCustomThumbnailSize, Converter={StaticResource InverseBoolConverter}}"
+                            IsSnapToTickEnabled="True"
+                            Maximum="800"
+                            Minimum="200"
+                            TickFrequency="50"
+                            Value="{Binding ThumbnailSize}" />
+                        <TextBlock
+                            Width="60"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Text="{Binding EffectiveThumbnailSize, StringFormat='{}{0}px'}" />
+                        <TextBlock
+                            Margin="18,0,8,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Opacity="0.6"
+                            Text="|" />
+                        <CheckBox
+                            VerticalAlignment="Center"
+                            Content="Custom Size:"
+                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            IsChecked="{Binding UseCustomThumbnailSize}" />
+                        <Controls:NumericUpDown
+                            Width="100"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            IsEnabled="{Binding UseCustomThumbnailSize}"
+                            Maximum="800"
+                            Minimum="200"
+                            StringFormat="F0"
+                            Value="{Binding CustomThumbnailSize}" />
+                    </WrapPanel>
+
+                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                            Text="Auto-refresh (All):" />
+                            Text="Auto-refresh:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AutoRefreshEnabled}"
                             OffContent="Off"
                             OnContent="On"
                             ToolTip="Automatically refresh thumbnails using the global rate." />
-                    </StackPanel>
-                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
                         <TextBlock
-                            Margin="0,0,8,0"
+                            Margin="16,0,8,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                             Text="Overrides:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AllowSessionOverrides}"
-                            OffContent="Disabled"
-                            OnContent="Enabled"
+                            OffContent="Off"
+                            OnContent="On"
                             ToolTip="Allow sessions to override the global refresh settings." />
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="4"
-                    Margin="0,12,0,0"
-                    Orientation="Horizontal">
-                    <TextBlock
-                        Margin="0,0,12,0"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                        Text="All Sessions Rate:" />
-                    <Slider
-                        Width="220"
-                        VerticalAlignment="Center"
-                        IsSnapToTickEnabled="True"
-                        Maximum="{Binding MaximumRefreshInterval}"
-                        Minimum="{Binding MinimumRefreshInterval}"
-                        TickFrequency="1"
-                        ToolTip="Adjust the shared refresh cadence for sessions following the global policy."
-                        Value="{Binding GlobalRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock
-                        Margin="12,0,0,0"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                        Text="{Binding GlobalRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
-                </StackPanel>
-
-                <StackPanel
-                    Grid.Row="0"
-                    Grid.Column="3"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-                    <Button
-                        Width="36"
-                        Height="36"
-                        Margin="0,0,8,0"
-                        Command="{Binding RefreshThumbnailsCommand}"
-                        Style="{StaticResource MahApps.Styles.Button.Circle}"
-                        ToolTip="Refresh All Thumbnails">
-                        <iconPacks:PackIconMaterial
-                            Width="18"
-                            Height="18"
-                            Kind="Refresh" />
-                    </Button>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock
-                            Margin="0,0,8,0"
+                            Margin="16,0,8,0"
                             VerticalAlignment="Center"
-                            FontSize="11"
                             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                            Text="Header:" />
-                        <ToggleButton
-                            Margin="0,0,4,0"
-                            Padding="8,2"
-                            Content="Full"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
-                            Margin="0,0,4,0"
-                            Padding="8,2"
-                            Content="Compact"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
-                            Padding="8,2"
-                            Content="Minimal"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                            Text="Rate:" />
+                        <Slider
+                            Width="200"
+                            VerticalAlignment="Center"
+                            IsSnapToTickEnabled="True"
+                            Maximum="{Binding MaximumRefreshInterval}"
+                            Minimum="{Binding MinimumRefreshInterval}"
+                            TickFrequency="1"
+                            ToolTip="Adjust the shared refresh cadence for sessions following the global policy."
+                            Value="{Binding GlobalRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock
+                            Margin="12,0,0,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Text="{Binding GlobalRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
+                    </WrapPanel>
+
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Horizontal">
+                        <Button
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            Command="{Binding RefreshThumbnailsCommand}"
+                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            ToolTip="Refresh All Thumbnails">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                Kind="Refresh" />
+                        </Button>
+                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                            <TextBlock
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                Text="Header:" />
+                            <ToggleButton
+                                Margin="0,0,4,0"
+                                Padding="8,2"
+                                Content="Full"
+                                IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
+                                Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                            <ToggleButton
+                                Margin="0,0,4,0"
+                                Padding="8,2"
+                                Content="Compact"
+                                IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
+                                Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                            <ToggleButton
+                                Padding="8,2"
+                                Content="Minimal"
+                                IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
+                                Style="{StaticResource MahApps.Styles.ToggleButton}" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Grid>
         </Border>
 
         <!--  Gallery Grid  -->
-        <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <ItemsControl Margin="8" ItemsSource="{Binding Sessions}">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
+            <ScrollViewer
+                Padding="8,6,16,8"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <ItemsControl Margin="0" ItemsSource="{Binding Sessions}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -289,213 +328,218 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Width="{Binding DataContext.EffectiveThumbnailSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Margin="0,0,0,16">
-                                <Border Width="{Binding DataContext.EffectiveThumbnailSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Height="{Binding DataContext.ThumbnailSizeWithAspect, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                                    <Border.InputBindings>
-                                        <MouseBinding
-                                            Command="{Binding DataContext.ActivateSessionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}"
-                                            MouseAction="LeftClick" />
-                                    </Border.InputBindings>
+                            <Border Width="{Binding DataContext.ThumbnailCardWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource SessionCardStyle}">
+                                <StackPanel>
+                                    <Border
+                                        Width="{Binding DataContext.ThumbnailImageWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        Height="{Binding DataContext.ThumbnailImageHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        HorizontalAlignment="Center">
+                                        <Border.InputBindings>
+                                            <MouseBinding
+                                                Command="{Binding DataContext.ActivateSessionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                MouseAction="LeftClick" />
+                                        </Border.InputBindings>
 
-                                    <!--  Hover effect animation  -->
-                                    <Border.Style>
-                                        <Style BasedOn="{StaticResource ThumbnailCard}" TargetType="Border">
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Trigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                                    To="1.05"
-                                                                    Duration="0:0:0.15" />
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                                    To="1.05"
-                                                                    Duration="0:0:0.15" />
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.EnterActions>
-                                                    <Trigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                                    To="1.0"
-                                                                    Duration="0:0:0.15" />
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                                    To="1.0"
-                                                                    Duration="0:0:0.15" />
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.ExitActions>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Border.RenderTransform>
-                                        <ScaleTransform CenterX="0.5" CenterY="0.5" ScaleX="1.0" ScaleY="1.0" />
-                                    </Border.RenderTransform>
-                                    <Border.RenderTransformOrigin>0.5,0.5</Border.RenderTransformOrigin>
+                                        <!--  Hover effect animation  -->
+                                        <Border.Style>
+                                            <Style BasedOn="{StaticResource ThumbnailCard}" TargetType="Border">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Trigger.EnterActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation
+                                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                        To="1.05"
+                                                                        Duration="0:0:0.15" />
+                                                                    <DoubleAnimation
+                                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                        To="1.05"
+                                                                        Duration="0:0:0.15" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </Trigger.EnterActions>
+                                                        <Trigger.ExitActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation
+                                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                        To="1.0"
+                                                                        Duration="0:0:0.15" />
+                                                                    <DoubleAnimation
+                                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                        To="1.0"
+                                                                        Duration="0:0:0.15" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </Trigger.ExitActions>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Border.RenderTransform>
+                                            <ScaleTransform CenterX="0.5" CenterY="0.5" ScaleX="1.0" ScaleY="1.0" />
+                                        </Border.RenderTransform>
+                                        <Border.RenderTransformOrigin>0.5,0.5</Border.RenderTransformOrigin>
 
-                                    <Grid>
-                                        <!--  Thumbnail Image  -->
-                                        <Image
-                                            Source="{Binding Thumbnail}"
-                                            Stretch="Uniform"
-                                            Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <Grid>
+                                            <!--  Thumbnail Image  -->
+                                            <Image
+                                                Source="{Binding Thumbnail}"
+                                                Stretch="Uniform"
+                                                Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                        <!--  Placeholder when no thumbnail  -->
-                                        <Grid Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}">
-                                            <iconPacks:PackIconMaterial
-                                                Width="64"
-                                                Height="64"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                                Kind="ImageOff" />
-                                        </Grid>
+                                            <!--  Placeholder when no thumbnail  -->
+                                            <Grid Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}">
+                                                <iconPacks:PackIconMaterial
+                                                    Width="64"
+                                                    Height="64"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                                    Kind="ImageOff" />
+                                            </Grid>
 
-                                        <!--  Overlay with session info  -->
-                                        <Border VerticalAlignment="Bottom">
-                                            <Border.Background>
-                                                <SolidColorBrush Opacity="0.85" Color="{DynamicResource MahApps.Colors.ThemeBackground}" />
-                                            </Border.Background>
-                                            <Grid Margin="8">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock
-                                                    Grid.Row="0"
-                                                    FontSize="14"
-                                                    FontWeight="SemiBold"
-                                                    Foreground="White"
-                                                    Text="{Binding Name}"
-                                                    TextTrimming="CharacterEllipsis" />
-
-                                                <StackPanel
-                                                    Grid.Row="1"
-                                                    Margin="0,4,0,0"
-                                                    Orientation="Horizontal">
-                                                    <!--  Status indicator  -->
-                                                    <Ellipse
-                                                        Width="10"
-                                                        Height="10"
-                                                        Margin="0,0,6,0"
-                                                        Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
-                                                        Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
-                                                        StrokeThickness="2" />
+                                            <!--  Overlay with session info  -->
+                                            <Border VerticalAlignment="Bottom">
+                                                <Border.Background>
+                                                    <SolidColorBrush Opacity="0.85" Color="{DynamicResource MahApps.Colors.ThemeBackground}" />
+                                                </Border.Background>
+                                                <Grid Margin="8">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
 
                                                     <TextBlock
-                                                        FontSize="10"
+                                                        Grid.Row="0"
+                                                        FontSize="14"
+                                                        FontWeight="SemiBold"
                                                         Foreground="White"
-                                                        Opacity="0.8"
-                                                        Text="{Binding State, FallbackValue='Unknown'}" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
+                                                        Text="{Binding Name}"
+                                                        TextTrimming="CharacterEllipsis" />
 
-                                        <!--  External script indicator  -->
-                                        <Border
-                                            Padding="6,3"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Background="{DynamicResource MahApps.Brushes.Accent}"
-                                            CornerRadius="0,8,0,8"
-                                            Visibility="{Binding IsExternalScript, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <iconPacks:PackIconMaterial
-                                                Width="16"
-                                                Height="16"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                                Kind="ApplicationCog" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
+                                                    <StackPanel
+                                                        Grid.Row="1"
+                                                        Margin="0,4,0,0"
+                                                        Orientation="Horizontal">
+                                                        <!--  Status indicator  -->
+                                                        <Ellipse
+                                                            Width="10"
+                                                            Height="10"
+                                                            Margin="0,0,6,0"
+                                                            Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
+                                                            Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
+                                                            StrokeThickness="2" />
 
-                                <StackPanel Margin="4,8,4,0">
-                                    <StackPanel.IsEnabled>
-                                        <Binding Path="DataContext.AllowSessionOverrides" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                    </StackPanel.IsEnabled>
+                                                        <TextBlock
+                                                            FontSize="10"
+                                                            Foreground="White"
+                                                            Opacity="0.8"
+                                                            Text="{Binding State, FallbackValue='Unknown'}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
 
-                                    <StackPanel Orientation="Horizontal">
+                                            <!--  External script indicator  -->
+                                            <Border
+                                                Padding="6,3"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Background="{DynamicResource MahApps.Brushes.Accent}"
+                                                CornerRadius="0,8,0,8"
+                                                Visibility="{Binding IsExternalScript, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <iconPacks:PackIconMaterial
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Kind="ApplicationCog" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Margin="4,8,4,0">
+                                        <StackPanel.IsEnabled>
+                                            <Binding Path="DataContext.AllowSessionOverrides" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        </StackPanel.IsEnabled>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Text="Override global:" />
+                                            <Controls:ToggleSwitch
+                                                Margin="8,0,0,0"
+                                                IsOn="{Binding GalleryOverrideEnabled}"
+                                                OffContent="No"
+                                                OnContent="Yes"
+                                                ToolTip="Toggle a per-session refresh policy." />
+                                        </StackPanel>
+
+                                        <StackPanel
+                                            Margin="0,6,0,0"
+                                            IsEnabled="{Binding GalleryOverrideEnabled}"
+                                            Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Text="Auto refresh:" />
+                                            <Controls:ToggleSwitch
+                                                Margin="8,0,0,0"
+                                                IsOn="{Binding GalleryAutoRefreshEnabled}"
+                                                OffContent="Manual"
+                                                OnContent="Auto"
+                                                ToolTip="When off, this session keeps the last captured thumbnail until you refresh manually." />
+                                        </StackPanel>
+
+                                        <StackPanel
+                                            Margin="0,6,0,0"
+                                            IsEnabled="{Binding GalleryIntervalIsEnabled}"
+                                            Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Text="Custom rate:" />
+                                            <Slider
+                                                Width="140"
+                                                Margin="8,0,0,0"
+                                                IsSnapToTickEnabled="True"
+                                                Maximum="{Binding DataContext.MaximumRefreshInterval, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                Minimum="{Binding DataContext.MinimumRefreshInterval, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                TickFrequency="1"
+                                                ToolTip="Seconds between automatic captures for this session."
+                                                Value="{Binding GalleryRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock
+                                                Margin="8,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Text="{Binding GalleryRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
+                                        </StackPanel>
+
                                         <TextBlock
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                                            Text="Override global:" />
-                                        <Controls:ToggleSwitch
-                                            Margin="8,0,0,0"
-                                            IsOn="{Binding GalleryOverrideEnabled}"
-                                            OffContent="No"
-                                            OnContent="Yes"
-                                            ToolTip="Toggle a per-session refresh policy." />
+                                            Margin="0,6,0,0"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Text="Overrides disabled by global policy"
+                                            Visibility="{Binding DataContext.AllowSessionOverrides, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
+
+                                        <TextBlock
+                                            Margin="0,6,0,0"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Text="Following global refresh rate"
+                                            Visibility="{Binding UsesGlobalGallerySettings, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <TextBlock
+                                            Margin="0,2,0,0"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Text="Manual refresh only"
+                                            Visibility="{Binding GalleryAutoRefreshEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
                                     </StackPanel>
-
-                                    <StackPanel
-                                        Margin="0,6,0,0"
-                                        IsEnabled="{Binding GalleryOverrideEnabled}"
-                                        Orientation="Horizontal">
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                                            Text="Auto refresh:" />
-                                        <Controls:ToggleSwitch
-                                            Margin="8,0,0,0"
-                                            IsOn="{Binding GalleryAutoRefreshEnabled}"
-                                            OffContent="Manual"
-                                            OnContent="Auto"
-                                            ToolTip="When off, this session keeps the last captured thumbnail until you refresh manually." />
-                                    </StackPanel>
-
-                                    <StackPanel
-                                        Margin="0,6,0,0"
-                                        IsEnabled="{Binding GalleryIntervalIsEnabled}"
-                                        Orientation="Horizontal">
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                                            Text="Custom rate:" />
-                                        <Slider
-                                            Width="140"
-                                            Margin="8,0,0,0"
-                                            IsSnapToTickEnabled="True"
-                                            Maximum="{Binding DataContext.MaximumRefreshInterval, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            Minimum="{Binding DataContext.MinimumRefreshInterval, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            TickFrequency="1"
-                                            ToolTip="Seconds between automatic captures for this session."
-                                            Value="{Binding GalleryRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock
-                                            Margin="8,0,0,0"
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                                            Text="{Binding GalleryRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
-                                    </StackPanel>
-
-                                    <TextBlock
-                                        Margin="0,6,0,0"
-                                        FontSize="10"
-                                        Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                        Text="Overrides disabled by global policy"
-                                        Visibility="{Binding DataContext.AllowSessionOverrides, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
-
-                                    <TextBlock
-                                        Margin="0,6,0,0"
-                                        FontSize="10"
-                                        Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                        Text="Following global refresh rate"
-                                        Visibility="{Binding UsesGlobalGallerySettings, Converter={StaticResource BoolToVisibilityConverter}}" />
-
-                                    <TextBlock
-                                        Margin="0,2,0,0"
-                                        FontSize="10"
-                                        Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                        Text="Manual refresh only"
-                                        Visibility="{Binding GalleryAutoRefreshEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
                                 </StackPanel>
-                            </StackPanel>
+                            </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

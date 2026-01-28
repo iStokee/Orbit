@@ -78,6 +78,9 @@ namespace Orbit
 
 			DataContext = this.viewModel;
 
+			Activated += (_, __) => _ = this.viewModel.ReassertInputPassthroughAsync(orbitActive: true);
+			Deactivated += (_, __) => _ = this.viewModel.ReassertInputPassthroughAsync(orbitActive: false);
+
 			// Initialize Orbit API for external script integration
 			OrbitAPI.Initialize(this.viewModel.ScriptIntegration);
 
@@ -140,7 +143,7 @@ namespace Orbit
 
 			try
 			{
-				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: false);
+				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: true);
 			}
 			catch (Exception ex)
 			{
@@ -148,7 +151,7 @@ namespace Orbit
 			}
 			try
 			{
-				await viewModel.ShutdownTrackedProcessesAsync();
+				await viewModel.ShutdownTrackedProcessesAsync(forceKillOnTimeout: true);
 			}
 			catch (Exception ex)
 			{
@@ -883,6 +886,7 @@ namespace Orbit
 		private void MainWindow_Loaded(object sender, RoutedEventArgs e)
 		{
 			UpdateTaskbarOverlay();
+			_ = viewModel?.ReassertInputPassthroughAsync(orbitActive: true);
 
 			// Auto-open Orbit View if enabled
 			if (Settings.Default.AutoOpenOrbitViewOnStartup)

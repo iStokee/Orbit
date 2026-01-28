@@ -38,6 +38,7 @@ namespace Orbit.ViewModels
 		private CancellationTokenSource _refreshCancellationTokenSource;
 		private bool _useCustomThumbnailSize = false;
 		private double _customThumbnailSize = 300;
+		private const double ThumbnailCardPadding = 8;
 
 		public SessionGalleryViewModel(SessionCollectionService sessionCollectionService)
 		{
@@ -93,6 +94,10 @@ namespace Orbit.ViewModels
 				OnPropertyChanged();
 				OnPropertyChanged(nameof(ThumbnailSizeWithAspect));
 				OnPropertyChanged(nameof(EffectiveThumbnailSize));
+				OnPropertyChanged(nameof(ThumbnailImageWidth));
+				OnPropertyChanged(nameof(ThumbnailImageHeight));
+				OnPropertyChanged(nameof(ThumbnailCardWidth));
+				OnPropertyChanged(nameof(ThumbnailCardHeight));
 			}
 		}
 
@@ -110,6 +115,10 @@ namespace Orbit.ViewModels
 				OnPropertyChanged();
 				OnPropertyChanged(nameof(EffectiveThumbnailSize));
 				OnPropertyChanged(nameof(ThumbnailSizeWithAspect));
+				OnPropertyChanged(nameof(ThumbnailImageWidth));
+				OnPropertyChanged(nameof(ThumbnailImageHeight));
+				OnPropertyChanged(nameof(ThumbnailCardWidth));
+				OnPropertyChanged(nameof(ThumbnailCardHeight));
 			}
 		}
 
@@ -130,6 +139,10 @@ namespace Orbit.ViewModels
 				{
 					OnPropertyChanged(nameof(EffectiveThumbnailSize));
 					OnPropertyChanged(nameof(ThumbnailSizeWithAspect));
+					OnPropertyChanged(nameof(ThumbnailImageWidth));
+					OnPropertyChanged(nameof(ThumbnailImageHeight));
+					OnPropertyChanged(nameof(ThumbnailCardWidth));
+					OnPropertyChanged(nameof(ThumbnailCardHeight));
 				}
 			}
 		}
@@ -143,6 +156,26 @@ namespace Orbit.ViewModels
 		/// Gets the thumbnail height based on 4:3 aspect ratio
 		/// </summary>
 		public double ThumbnailSizeWithAspect => EffectiveThumbnailSize * 0.75;
+
+		/// <summary>
+		/// Width of the thumbnail image frame.
+		/// </summary>
+		public double ThumbnailImageWidth => EffectiveThumbnailSize;
+
+		/// <summary>
+		/// Height of the thumbnail image frame.
+		/// </summary>
+		public double ThumbnailImageHeight => ThumbnailSizeWithAspect;
+
+		/// <summary>
+		/// Width of the thumbnail card including padding so content does not get clipped.
+		/// </summary>
+		public double ThumbnailCardWidth => ThumbnailImageWidth + (ThumbnailCardPadding * 2);
+
+		/// <summary>
+		/// Height of the thumbnail card including padding so content does not get clipped.
+		/// </summary>
+		public double ThumbnailCardHeight => ThumbnailImageHeight + (ThumbnailCardPadding * 2);
 
 		/// <summary>
 		/// Minimum refresh interval (seconds) exposed to the UI sliders.

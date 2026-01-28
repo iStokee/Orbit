@@ -14,6 +14,7 @@
             x:Name="RSPanel"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
+            Focusable="False"
             Loaded="RSPanel_Loaded"
             SizeChanged="RSPanel_SizeChanged"
             PreviewMouseDown="RSPanel_PreviewMouseDown" />

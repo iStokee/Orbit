@@ -6,10 +6,10 @@ namespace Orbit
 	{
 		public const string Current = "1.0.4";
 		public const string InformationalVersion = Current;
+		public const string AssemblyVersion = Current + ".0";
+		public const string FileVersion = AssemblyVersion;
 
 		private static readonly Version _parsed;
-		public static readonly string AssemblyVersion;
-		public static readonly string FileVersion;
 
 		static AppVersion()
 		{
@@ -19,11 +19,6 @@ namespace Orbit
 			}
 
 			_parsed = parsed;
-
-			// Ensure AssemblyVersion and FileVersion use a four-component version.
-			var assemblyVersion = new Version(parsed.Major, parsed.Minor, parsed.Build, 0);
-			AssemblyVersion = assemblyVersion.ToString();
-			FileVersion = AssemblyVersion;
 		}
 
 		public static Version Parsed => _parsed;

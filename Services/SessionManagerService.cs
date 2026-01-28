@@ -172,6 +172,14 @@ namespace Orbit.Services
 				Console.WriteLine($"[Orbit] Restoring focus to game window (0x{session.ExternalHandle:X})");
 				try { session.HostControl?.FocusEmbeddedClient(); } catch { }
 
+				var runtimeStarted = await OrbitCommandClient
+					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+					.ConfigureAwait(true);
+				if (!runtimeStarted)
+				{
+					Console.WriteLine("[Orbit] Warning: Unable to start MemoryError .NET runtime after injection.");
+				}
+
 				// Ensure ImGui does not capture keyboard input by default
 				var inputModeApplied = await OrbitCommandClient
 					.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
@@ -179,6 +187,14 @@ namespace Orbit.Services
 				if (!inputModeApplied)
 				{
 					Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode to passthrough (keyboard capture may persist).");
+				}
+
+				var debugMenuHidden = await OrbitCommandClient
+					.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+					.ConfigureAwait(true);
+				if (!debugMenuHidden)
+				{
+					Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
 				}
 
 				var focusSpoofApplied = await OrbitCommandClient
@@ -217,6 +233,10 @@ namespace Orbit.Services
 							.ConfigureAwait(false);
 
 						await OrbitCommandClient
+							.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+							.ConfigureAwait(false);
+
+						await OrbitCommandClient
 							.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
 							.ConfigureAwait(false);
 
@@ -244,6 +264,21 @@ namespace Orbit.Services
 			var externalHandle = session.ExternalHandle;
 
 			session.UpdateState(SessionState.ShuttingDown, clearError: false);
+
+			if (session.InjectionState == InjectionState.Injected && session.RSProcess != null && !session.RSProcess.HasExited)
+			{
+				try
+				{
+					await OrbitCommandClient
+						.SendUnloadScriptWithRetryAsync(session.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
+						.ConfigureAwait(true);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[Orbit] Failed to request managed script unload for session '{session.Name}': {ex.Message}");
+				}
+			}
+
 			session.UpdateInjectionState(InjectionState.NotReady);
 
 			HideWindowSilently(externalHandle);
@@ -314,16 +349,17 @@ namespace Orbit.Services
 			var processId = process?.Id;
 			var parentProcessIdValue = parentProcess?.Id;
 
-			// Close parent/launcher first if present (outer shell), then the client. This reduces cases where we signal the embedded child window only.
-			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle)>
+			// Close client first, then parent/launcher to avoid orphaning the child process.
+			// We avoid force-killing the launcher to prevent respawn loops/crash flashes.
+			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle, bool allowKill)>
 			{
-				(parentProcess, "launcher", nint.Zero),
-				(process, "client", externalHandle)
+				(process, "client", externalHandle, forceKillOnTimeout),
+				(parentProcess, "launcher", nint.Zero, false)
 			}.Where(p => p.process != null).ToList();
 
 			foreach (var target in shutdownTargets)
 			{
-				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, target.allowKill).ConfigureAwait(true);
 				if (exited)
 				{
 					TryUnregisterProcess(target.process.Id);
@@ -338,7 +374,7 @@ namespace Orbit.Services
 			session.UpdateState(SessionState.Closed, clearError: false);
 		}
 
-		public async Task ShutdownManagedProcessesAsync(CancellationToken cancellationToken = default)
+		public async Task ShutdownManagedProcessesAsync(bool forceKillOnTimeout = false, CancellationToken cancellationToken = default)
 		{
 			var tracked = _managedProcesses.Values.ToList();
 			if (tracked.Count == 0)
@@ -395,7 +431,7 @@ namespace Orbit.Services
 						record.SessionName,
 						DefaultShutdownTimeout,
 						cancellationToken,
-						forceKillOnTimeout: false).ConfigureAwait(true);
+						forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
 				}
 				catch (OperationCanceledException)
 				{
@@ -621,10 +657,10 @@ namespace Orbit.Services
 			if (!string.IsNullOrWhiteSpace(configuredPath))
 			{
 				var expandedPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(configuredPath));
-				if (File.Exists(expandedPath))
+				if (File.Exists(expandedPath) && IsValidInjectorDirectory(Path.GetDirectoryName(expandedPath)))
 					return expandedPath;
 
-				throw new FileNotFoundException($"Injector DLL not found at configured path '{expandedPath}'.", expandedPath);
+				throw new FileNotFoundException($"Injector DLL not found or missing ME runtime assets at configured path '{expandedPath}'.", expandedPath);
 			}
 
 			var baseDirectory = AppContext.BaseDirectory;
@@ -644,7 +680,7 @@ namespace Orbit.Services
 			foreach (var root in probeRoots)
 			{
 				var candidate = Path.GetFullPath(Path.Combine(baseDirectory, root, DefaultInjectorDll));
-				if (File.Exists(candidate))
+				if (File.Exists(candidate) && IsValidInjectorDirectory(Path.GetDirectoryName(candidate)))
 					return candidate;
 
 				if (seenPaths.Add(candidate))
@@ -655,6 +691,23 @@ namespace Orbit.Services
 
 			var message = $"Injector DLL '{DefaultInjectorDll}' could not be located. Probed locations:{Environment.NewLine}- {string.Join(Environment.NewLine + "- ", attempted)}";
 			throw new FileNotFoundException(message, DefaultInjectorDll);
+		}
+
+		private static bool IsValidInjectorDirectory(string? directory)
+		{
+			if (string.IsNullOrWhiteSpace(directory))
+			{
+				return false;
+			}
+
+			var runtimeConfig = Path.Combine(directory, "ME.runtimeconfig.json");
+			var interop = Path.Combine(directory, "csharp_interop.dll");
+			if (File.Exists(runtimeConfig) && File.Exists(interop))
+			{
+				return true;
+			}
+
+			return false;
 		}
 	}
 }

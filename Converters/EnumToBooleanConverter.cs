@@ -17,7 +17,7 @@ namespace Orbit.Converters
 			{
 				if (value is int intValue)
 				{
-					return intValue == Convert.ToInt32(enumParameter, CultureInfo.InvariantCulture);
+					return intValue == System.Convert.ToInt32(enumParameter, CultureInfo.InvariantCulture);
 				}
 
 				return Equals(value, enumParameter);
@@ -36,18 +36,18 @@ namespace Orbit.Converters
 		{
 			if (parameter == null)
 			{
-				return Binding.DoNothing;
+				return System.Windows.Data.Binding.DoNothing;
 			}
 
 			if (value is not true)
 			{
-				return Binding.DoNothing;
+				return System.Windows.Data.Binding.DoNothing;
 			}
 
 			if (parameter is Enum enumParameter)
 			{
 				return targetType == typeof(int)
-					? Convert.ToInt32(enumParameter, CultureInfo.InvariantCulture)
+					? System.Convert.ToInt32(enumParameter, CultureInfo.InvariantCulture)
 					: enumParameter;
 			}
 

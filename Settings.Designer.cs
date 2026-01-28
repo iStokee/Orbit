@@ -577,6 +577,42 @@ namespace Orbit {
 
 		[global::System.Configuration.UserScopedSettingAttribute()]
 		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int OrbitHeaderDensity {
+			get {
+				return ((int)(this["OrbitHeaderDensity"]));
+			}
+			set {
+				this["OrbitHeaderDensity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int GalleryHeaderDensity {
+			get {
+				return ((int)(this["GalleryHeaderDensity"]));
+			}
+			set {
+				this["GalleryHeaderDensity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("0")]
+		public int SessionsHeaderDensity {
+			get {
+				return ((int)(this["SessionsHeaderDensity"]));
+			}
+			set {
+				this["SessionsHeaderDensity"] = value;
+			}
+		}
+
+		[global::System.Configuration.UserScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
 		[global::System.Configuration.DefaultSettingValueAttribute("1")]
 		public int OrbitViewTabHeaderSize {
 			get {

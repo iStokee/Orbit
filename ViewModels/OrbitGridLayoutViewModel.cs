@@ -713,7 +713,6 @@ namespace Orbit.ViewModels
 			_autoFitGridCommand?.NotifyCanExecuteChanged();
 			_balanceRowsCommand?.NotifyCanExecuteChanged();
 			_balanceColumnsCommand?.NotifyCanExecuteChanged();
-			_toggleHeaderCommand?.NotifyCanExecuteChanged();
 		}
 
 		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
