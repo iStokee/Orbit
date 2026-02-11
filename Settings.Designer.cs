@@ -12,7 +12,7 @@ namespace Orbit {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.11.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -82,7 +82,7 @@ namespace Orbit {
                 this["HotReloadScriptPath"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
@@ -94,7 +94,7 @@ namespace Orbit {
                 this["ScriptProfiles"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -178,7 +178,7 @@ namespace Orbit {
                 this["FloatingMenuAutoDirection"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0.9")]
@@ -190,7 +190,7 @@ namespace Orbit {
                 this["FloatingMenuBackgroundOpacity"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -202,7 +202,7 @@ namespace Orbit {
                 this["AutoInjectOnReady"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -214,7 +214,7 @@ namespace Orbit {
                 this["ShowMenuAddSession"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -226,7 +226,7 @@ namespace Orbit {
                 this["ShowMenuInject"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -238,7 +238,7 @@ namespace Orbit {
                 this["ShowMenuSessions"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -250,7 +250,7 @@ namespace Orbit {
                 this["ShowMenuAccountManager"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -262,7 +262,7 @@ namespace Orbit {
                 this["ShowMenuScriptControls"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -274,7 +274,7 @@ namespace Orbit {
                 this["ShowMenuThemeManager"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -286,7 +286,7 @@ namespace Orbit {
                 this["ShowMenuConsole"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -298,7 +298,7 @@ namespace Orbit {
                 this["ShowMenuApiDocumentation"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -310,7 +310,7 @@ namespace Orbit {
                 this["ShowMenuSettings"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -322,7 +322,7 @@ namespace Orbit {
                 this["ShowMenuToolsOverview"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -334,7 +334,7 @@ namespace Orbit {
                 this["ShowMenuSessionGallery"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -358,7 +358,7 @@ namespace Orbit {
                 this["ShowMenuFsmNodeEditor"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -370,7 +370,7 @@ namespace Orbit {
                 this["ShowFloatingMenuOnSessionTabs"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
@@ -382,43 +382,43 @@ namespace Orbit {
                 this["ShowFloatingMenuOnToolTabs"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-		public bool ShowFloatingMenuOnHome {
-			get {
-				return ((bool)(this["ShowFloatingMenuOnHome"]));
-			}
-			set {
-				this["ShowFloatingMenuOnHome"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("MiddleMouse")]
-		public string FloatingMenuQuickToggle {
-			get {
-				return ((string)(this["FloatingMenuQuickToggle"]));
-			}
-			set {
-				this["FloatingMenuQuickToggle"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("80")]
-		public double FloatingMenuDockEdgeThreshold {
-			get {
+        public bool ShowFloatingMenuOnHome {
+            get {
+                return ((bool)(this["ShowFloatingMenuOnHome"]));
+            }
+            set {
+                this["ShowFloatingMenuOnHome"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("MiddleMouse")]
+        public string FloatingMenuQuickToggle {
+            get {
+                return ((string)(this["FloatingMenuQuickToggle"]));
+            }
+            set {
+                this["FloatingMenuQuickToggle"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        public double FloatingMenuDockEdgeThreshold {
+            get {
                 return ((double)(this["FloatingMenuDockEdgeThreshold"]));
             }
             set {
                 this["FloatingMenuDockEdgeThreshold"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("120")]
@@ -431,220 +431,220 @@ namespace Orbit {
             }
         }
         
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0.55")]
-		public double FloatingMenuDockCornerRoundness {
-			get {
-				return ((double)(this["FloatingMenuDockCornerRoundness"]));
-			}
-			set {
-				this["FloatingMenuDockCornerRoundness"] = value;
-			}
-		}
-        
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0.85")]
-		public double FloatingMenuDockEdgeCoverage {
-			get {
-				return ((double)(this["FloatingMenuDockEdgeCoverage"]));
-			}
-			set {
-				this["FloatingMenuDockEdgeCoverage"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0.32")]
-		public double FloatingMenuDockZoneOpacity {
-			get {
-				return ((double)(this["FloatingMenuDockZoneOpacity"]));
-			}
-			set {
-				this["FloatingMenuDockZoneOpacity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("120")]
-		public double FloatingMenuDockCornerHeight {
-			get {
-				return ((double)(this["FloatingMenuDockCornerHeight"]));
-			}
-			set {
-				this["FloatingMenuDockCornerHeight"] = value;
-			}
-		}
-		
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("False")]
-		public bool FloatingMenuShowAllSnapZonesOnClip {
-			get {
-				return ((bool)(this["FloatingMenuShowAllSnapZonesOnClip"]));
-			}
+        [global::System.Configuration.DefaultSettingValueAttribute("0.55")]
+        public double FloatingMenuDockCornerRoundness {
+            get {
+                return ((double)(this["FloatingMenuDockCornerRoundness"]));
+            }
             set {
-				this["FloatingMenuShowAllSnapZonesOnClip"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("True")]
-		public bool ShowFloatingMenuAutoShow {
-			get {
-				return ((bool)(this["ShowFloatingMenuAutoShow"]));
-			}
-			set {
-				this["ShowFloatingMenuAutoShow"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("True")]
-		public bool ShowThemeManagerWelcomeMessage {
-			get {
-				return ((bool)(this["ShowThemeManagerWelcomeMessage"]));
-			}
-			set {
-				this["ShowThemeManagerWelcomeMessage"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("2")]
-		public int OrbitViewGridDensity {
-			get {
-				return ((int)(this["OrbitViewGridDensity"]));
-			}
-			set {
-				this["OrbitViewGridDensity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
-		public string DefaultSessionView {
-			get {
-				return ((string)(this["DefaultSessionView"]));
-			}
-			set {
-				this["DefaultSessionView"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
-		public string SessionLaunchBehavior {
-			get {
-				return ((string)(this["SessionLaunchBehavior"]));
-			}
-			set {
-				this["SessionLaunchBehavior"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("1")]
-		public int OrbitViewCompactness {
-			get {
-				return ((int)(this["OrbitViewCompactness"]));
-			}
-			set {
-				this["OrbitViewCompactness"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int SessionHeaderDensity {
-			get {
-				return ((int)(this["SessionHeaderDensity"]));
-			}
-			set {
-				this["SessionHeaderDensity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int OrbitHeaderDensity {
-			get {
-				return ((int)(this["OrbitHeaderDensity"]));
-			}
-			set {
-				this["OrbitHeaderDensity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int GalleryHeaderDensity {
-			get {
-				return ((int)(this["GalleryHeaderDensity"]));
-			}
-			set {
-				this["GalleryHeaderDensity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("0")]
-		public int SessionsHeaderDensity {
-			get {
-				return ((int)(this["SessionsHeaderDensity"]));
-			}
-			set {
-				this["SessionsHeaderDensity"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("1")]
-		public int OrbitViewTabHeaderSize {
-			get {
-				return ((int)(this["OrbitViewTabHeaderSize"]));
-			}
-			set {
-				this["OrbitViewTabHeaderSize"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("2")]
-		public int OrbitViewBorderThickness {
-			get {
-				return ((int)(this["OrbitViewBorderThickness"]));
-			}
-			set {
-				this["OrbitViewBorderThickness"] = value;
-			}
-		}
-
-		[global::System.Configuration.UserScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("False")]
-		public bool AutoOpenOrbitViewOnStartup {
-			get {
-				return ((bool)(this["AutoOpenOrbitViewOnStartup"]));
-			}
-			set {
-				this["AutoOpenOrbitViewOnStartup"] = value;
-			}
-		}
-	}
+                this["FloatingMenuDockCornerRoundness"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.85")]
+        public double FloatingMenuDockEdgeCoverage {
+            get {
+                return ((double)(this["FloatingMenuDockEdgeCoverage"]));
+            }
+            set {
+                this["FloatingMenuDockEdgeCoverage"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.32")]
+        public double FloatingMenuDockZoneOpacity {
+            get {
+                return ((double)(this["FloatingMenuDockZoneOpacity"]));
+            }
+            set {
+                this["FloatingMenuDockZoneOpacity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("120")]
+        public double FloatingMenuDockCornerHeight {
+            get {
+                return ((double)(this["FloatingMenuDockCornerHeight"]));
+            }
+            set {
+                this["FloatingMenuDockCornerHeight"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FloatingMenuShowAllSnapZonesOnClip {
+            get {
+                return ((bool)(this["FloatingMenuShowAllSnapZonesOnClip"]));
+            }
+            set {
+                this["FloatingMenuShowAllSnapZonesOnClip"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowFloatingMenuAutoShow {
+            get {
+                return ((bool)(this["ShowFloatingMenuAutoShow"]));
+            }
+            set {
+                this["ShowFloatingMenuAutoShow"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowThemeManagerWelcomeMessage {
+            get {
+                return ((bool)(this["ShowThemeManagerWelcomeMessage"]));
+            }
+            set {
+                this["ShowThemeManagerWelcomeMessage"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int OrbitViewGridDensity {
+            get {
+                return ((int)(this["OrbitViewGridDensity"]));
+            }
+            set {
+                this["OrbitViewGridDensity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
+        public string DefaultSessionView {
+            get {
+                return ((string)(this["DefaultSessionView"]));
+            }
+            set {
+                this["DefaultSessionView"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("OrbitView")]
+        public string SessionLaunchBehavior {
+            get {
+                return ((string)(this["SessionLaunchBehavior"]));
+            }
+            set {
+                this["SessionLaunchBehavior"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int OrbitViewCompactness {
+            get {
+                return ((int)(this["OrbitViewCompactness"]));
+            }
+            set {
+                this["OrbitViewCompactness"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int SessionHeaderDensity {
+            get {
+                return ((int)(this["SessionHeaderDensity"]));
+            }
+            set {
+                this["SessionHeaderDensity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int OrbitHeaderDensity {
+            get {
+                return ((int)(this["OrbitHeaderDensity"]));
+            }
+            set {
+                this["OrbitHeaderDensity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int GalleryHeaderDensity {
+            get {
+                return ((int)(this["GalleryHeaderDensity"]));
+            }
+            set {
+                this["GalleryHeaderDensity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int SessionsHeaderDensity {
+            get {
+                return ((int)(this["SessionsHeaderDensity"]));
+            }
+            set {
+                this["SessionsHeaderDensity"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int OrbitViewTabHeaderSize {
+            get {
+                return ((int)(this["OrbitViewTabHeaderSize"]));
+            }
+            set {
+                this["OrbitViewTabHeaderSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int OrbitViewBorderThickness {
+            get {
+                return ((int)(this["OrbitViewBorderThickness"]));
+            }
+            set {
+                this["OrbitViewBorderThickness"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AutoOpenOrbitViewOnStartup {
+            get {
+                return ((bool)(this["AutoOpenOrbitViewOnStartup"]));
+            }
+            set {
+                this["AutoOpenOrbitViewOnStartup"] = value;
+            }
+        }
+    }
 }

@@ -74,6 +74,7 @@ namespace Orbit.Models
 					return;
 				name = value;
 				OnPropertyChanged();
+				OnPropertyChanged(nameof(DisplayName));
 
 				if (_editableName != value)
 				{
@@ -172,6 +173,38 @@ namespace Orbit.Models
 
 				_rsProcess = value;
 				OnPropertyChanged();
+				OnPropertyChanged(nameof(DisplayName));
+			}
+		}
+
+		/// <summary>
+		/// Default user-facing session label. Includes PID when available.
+		/// This keeps tabs distinguishable when multiple clients are running.
+		/// </summary>
+		public string DisplayName
+		{
+			get
+			{
+				var baseName = Name ?? string.Empty;
+				if (string.IsNullOrWhiteSpace(baseName))
+				{
+					baseName = IsExternalScript ? "Script" : "Session";
+				}
+
+				var pid = RSProcess?.Id;
+				if (!pid.HasValue)
+				{
+					return baseName;
+				}
+
+				// Avoid duplicating PID if the user already baked it into the name.
+				var pidToken = pid.Value.ToString();
+				if (baseName.Contains(pidToken, StringComparison.Ordinal))
+				{
+					return baseName;
+				}
+
+				return $"{baseName} (PID {pid.Value})";
 			}
 		}
 

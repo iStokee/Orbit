@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Media;
 using Dragablz;
 using Microsoft.Extensions.DependencyInjection;
+using Orbit.Services;
 using Application = System.Windows.Application;
 
 namespace Orbit
@@ -13,10 +15,12 @@ namespace Orbit
 	public class InterTabClient : IInterTabClient
 	{
 		private readonly IServiceProvider serviceProvider;
+		private readonly TearOffHostRegistry tearOffRegistry;
 
-		public InterTabClient(IServiceProvider serviceProvider)
+		public InterTabClient(IServiceProvider serviceProvider, TearOffHostRegistry tearOffRegistry)
 		{
 			this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			this.tearOffRegistry = tearOffRegistry ?? throw new ArgumentNullException(nameof(tearOffRegistry));
 		}
 
 		/// <summary>
@@ -26,7 +30,35 @@ namespace Orbit
 		public INewTabHost<Window> GetNewHost(IInterTabClient interTabClient, object partition, TabablzControl source)
 		{
 			var view = serviceProvider.GetRequiredService<MainWindow>();
+			var partitionKey = partition?.ToString() ?? string.Empty;
+			var origin = IsOrbitViewSource(source)
+				? TearOffHostRegistry.HostOrigin.OrbitView
+				: TearOffHostRegistry.HostOrigin.MainTabs;
+
+			tearOffRegistry.Register(view, view.SessionTabControl, partitionKey, origin);
 			return new NewTabHost<Window>(view, view.SessionTabControl);
+		}
+
+		private static bool IsOrbitViewSource(TabablzControl? source)
+		{
+			// Orbit View's tab controls live under a Dockablz Layout. Main window tabs do not.
+			return source != null && FindVisualAncestor<Dragablz.Dockablz.Layout>(source) != null;
+		}
+
+		private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
+		{
+			var current = child;
+			while (current != null)
+			{
+				if (current is T typed)
+				{
+					return typed;
+				}
+
+				current = VisualTreeHelper.GetParent(current);
+			}
+
+			return null;
 		}
 
 		/// <summary>

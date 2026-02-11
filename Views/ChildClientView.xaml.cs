@@ -36,6 +36,12 @@ namespace Orbit.Views
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+		[DllImport("user32.dll")]
+		private static extern IntPtr SetFocus(IntPtr hWnd);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
         #endregion
 
 		internal RSForm rsForm;
@@ -49,6 +55,12 @@ namespace Orbit.Views
 		private Size lastRequestedViewportSize = Size.Empty;
 		private Size lastAppliedViewportSize = Size.Empty;
 		private SessionModel? boundSession;
+
+		// When SessionType=ExternalScript we embed an existing HWND inside a WinForms panel.
+		private WF.Panel? externalHostPanel;
+		private IntPtr externalOriginalParent = IntPtr.Zero;
+		private int? externalOriginalStyle;
+		private bool externalStylesApplied;
 
 		private static readonly TimeSpan ResizeThrottleInterval = TimeSpan.FromMilliseconds(50);
 
@@ -181,6 +193,48 @@ namespace Orbit.Views
 					tabControl.SizeChanged -= OnTabControlSizeChanged;
 				}
 
+				// External script windows: restore parent/styles so the window isn't orphaned.
+				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
+				{
+					try
+					{
+						var hwnd = (IntPtr)boundSession.ExternalHandle;
+
+						if (externalStylesApplied && externalOriginalStyle.HasValue)
+						{
+							const int GWL_STYLE = -16;
+							SetWindowLong(hwnd, GWL_STYLE, externalOriginalStyle.Value);
+							externalStylesApplied = false;
+						}
+
+						if (externalOriginalParent != IntPtr.Zero)
+						{
+							SetParent(hwnd, externalOriginalParent);
+						}
+					}
+					catch { /* best effort */ }
+
+					try
+					{
+						RSPanel.Child = null;
+					}
+					catch { /* best effort */ }
+
+					try
+					{
+						externalHostPanel?.Dispose();
+					}
+					catch { /* ignore */ }
+
+					externalHostPanel = null;
+					externalOriginalParent = IntPtr.Zero;
+					externalOriginalStyle = null;
+					hasStarted = false;
+					loadRequested = false;
+					boundSession = null;
+					return;
+				}
+
 				ParkSessionIntoOffscreenHost();
 				if (boundSession != null)
 				{
@@ -217,6 +271,22 @@ namespace Orbit.Views
 
 		public Task ResizeWindowAsync(int width, int height)
 		{
+			if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
+			{
+				try
+				{
+					var hwnd = (IntPtr)boundSession.ExternalHandle;
+					MoveWindow(hwnd, 0, 0, Math.Max(1, width), Math.Max(1, height), true);
+					lock (resizeSync)
+					{
+						lastAppliedViewportSize = new Size(width, height);
+					}
+				}
+				catch { /* best effort */ }
+
+				return Task.CompletedTask;
+			}
+
 			return ScheduleResizeInternal(width, height);
 		}
 
@@ -329,6 +399,31 @@ namespace Orbit.Views
 				return;
 			}
 
+			// External script windows: embed the provided HWND instead of launching a client.
+			if (boundSession?.IsExternalScript == true)
+			{
+				loadRequested = true;
+
+				_ = Dispatcher.InvokeAsync(() =>
+				{
+					try
+					{
+						AttachExternalWindow(boundSession);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"[Orbit] Failed to attach external script window: {ex}");
+					}
+					finally
+					{
+						hasStarted = true;
+						loadRequested = false;
+					}
+				}, DispatcherPriority.Loaded);
+
+				return;
+			}
+
 			loadRequested = true;
 
 			if (!Dispatcher.CheckAccess())
@@ -347,6 +442,53 @@ namespace Orbit.Views
 				{
 					_ = LoadNewSession();
 				}
+			}
+		}
+
+		private void AttachExternalWindow(SessionModel session)
+		{
+			if (session == null || !session.IsExternalScript)
+			{
+				return;
+			}
+
+			var hwnd = (IntPtr)session.ExternalHandle;
+			if (hwnd == IntPtr.Zero)
+			{
+				return;
+			}
+
+			if (externalHostPanel == null || externalHostPanel.IsDisposed)
+			{
+				externalHostPanel = new WF.Panel { Dock = WF.DockStyle.Fill };
+			}
+
+			RSPanel.Child = externalHostPanel;
+
+			var previousParent = SetParent(hwnd, externalHostPanel.Handle);
+			if (externalOriginalParent == IntPtr.Zero)
+			{
+				externalOriginalParent = previousParent;
+			}
+
+			const int GWL_STYLE = -16;
+			const int WS_CHILD = unchecked((int)0x40000000);
+			const int WS_VISIBLE = unchecked((int)0x10000000);
+			const int WS_CLIPSIBLINGS = 0x04000000;
+			const int WS_CLIPCHILDREN = 0x02000000;
+			const int WS_POPUP = unchecked((int)0x80000000);
+
+			var curStyle = GetWindowLong(hwnd, GWL_STYLE);
+			externalOriginalStyle ??= curStyle;
+
+			var newStyle = (curStyle & ~WS_POPUP) | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+			SetWindowLong(hwnd, GWL_STYLE, newStyle);
+			externalStylesApplied = true;
+
+			var viewport = GetHostViewportSize();
+			if (viewport.Width > 0 && viewport.Height > 0)
+			{
+				_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
 			}
 		}
 
@@ -410,6 +552,11 @@ namespace Orbit.Views
 			{
 				// Give focus to the host then the docked window for reliable keyboard input
 				RSPanel?.Focus();
+				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
+				{
+					try { SetFocus((IntPtr)boundSession.ExternalHandle); } catch { /* best effort */ }
+					return;
+				}
 				rsForm?.FocusGameWindow();
 			}
 			catch { /* best effort only */ }
@@ -564,7 +711,8 @@ namespace Orbit.Views
 		{
 			try
 			{
-				Dispatcher.Invoke(() =>
+				// Don't block the UI thread during teardown; best-effort detach.
+				_ = Dispatcher.InvokeAsync(() =>
 				{
 					try
 					{
@@ -577,7 +725,7 @@ namespace Orbit.Views
 					{
 						// Ignore cleanup errors; we're detaching anyway.
 					}
-				});
+				}, DispatcherPriority.Background);
 			}
 			catch
 			{
@@ -610,9 +758,26 @@ namespace Orbit.Views
 			{
 				if (rsForm != null && !rsForm.IsDisposed)
 				{
-					rsForm.Undock(restoreParent, restoreStyles: restoreParent);
-					rsForm.Close();
-					rsForm.Dispose();
+					// WinForms teardown can be expensive; keep it off the WPF UI thread if possible.
+					if (rsForm.InvokeRequired)
+					{
+						rsForm.BeginInvoke(new Action(() =>
+						{
+							try
+							{
+								rsForm.Undock(restoreParent, restoreStyles: restoreParent);
+								rsForm.Close();
+								rsForm.Dispose();
+							}
+							catch { }
+						}));
+					}
+					else
+					{
+						rsForm.Undock(restoreParent, restoreStyles: restoreParent);
+						rsForm.Close();
+						rsForm.Dispose();
+					}
 				}
 			}
 			catch

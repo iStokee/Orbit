@@ -271,7 +271,7 @@ namespace Orbit.Services
 				{
 					await OrbitCommandClient
 						.SendUnloadScriptWithRetryAsync(session.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
-						.ConfigureAwait(true);
+						.ConfigureAwait(false);
 				}
 				catch (Exception ex)
 				{
@@ -359,7 +359,7 @@ namespace Orbit.Services
 
 			foreach (var target in shutdownTargets)
 			{
-				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, target.allowKill).ConfigureAwait(true);
+				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, target.allowKill).ConfigureAwait(false);
 				if (exited)
 				{
 					TryUnregisterProcess(target.process.Id);
@@ -567,7 +567,7 @@ namespace Orbit.Services
 
 					try
 					{
-						await process.WaitForExitAsync(linkedCts.Token).ConfigureAwait(true);
+						await process.WaitForExitAsync(linkedCts.Token).ConfigureAwait(false);
 					}
 					catch (OperationCanceledException)
 					{
@@ -578,7 +578,7 @@ namespace Orbit.Services
 				if (!process.HasExited && forceKillOnTimeout)
 				{
 					process.Kill();
-					await process.WaitForExitAsync(cancellationToken).ConfigureAwait(true);
+					await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 				}
 				else if (!process.HasExited)
 				{

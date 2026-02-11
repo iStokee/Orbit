@@ -132,9 +132,10 @@ namespace Orbit.ViewModels
 		InjectCommand = new AsyncRelayCommand(InjectAsync, CanInject);
 		ShowSessionsCommand = new RelayCommand(ShowSessions, () => Sessions.Count > 0);
 		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey("SessionGallery"));
-		OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
-		MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
-		OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
+	OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
+	MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
+	MoveSessionToIndividualTabsCommand = new RelayCommand<object?>(MoveSessionToIndividualTabs, CanMoveSessionToIndividualTabs);
+	OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
 		OpenScriptManagerCommand = new RelayCommand(OpenScriptManager);
 		OpenFsmNodeEditorCommand = new RelayCommand(OpenFsmNodeEditor);
 		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => this.toolRegistry.Find(AccountManagerToolKey) != null);
@@ -191,6 +192,7 @@ namespace Orbit.ViewModels
 	public IRelayCommand OpenSessionGalleryCommand { get; }
 	public IRelayCommand OpenOrbitViewCommand { get; }
 	public IRelayCommand<object?> MoveTabToOrbitCommand { get; }
+	public IRelayCommand<object?> MoveSessionToIndividualTabsCommand { get; }
 	public IRelayCommand OpenThemeManagerCommand { get; }
 	public IRelayCommand OpenScriptManagerCommand { get; }
 	public IRelayCommand OpenFsmNodeEditorCommand { get; }
@@ -405,9 +407,10 @@ namespace Orbit.ViewModels
 			// Check launch behavior setting
 			var launchBehavior = Settings.Default.SessionLaunchBehavior;
 
-			if (launchBehavior == "OrbitView")
+			if (launchBehavior == "OrbitView" || launchBehavior == "SessionsTabbed")
 			{
-				// Don't add to Tabs - Orbit View will pick it up automatically via Sessions collection
+				// Don't add to Tabs - add to Orbit View workspace explicitly.
+				orbitLayoutState.AddItem(session);
 				SelectedSession = session;
 				// If Orbit View isn't open, open it
 				if (!Tabs.Any(t => t is FrameworkElement fe && fe.GetType().Name.Contains("OrbitGridLayoutView")))
@@ -873,6 +876,7 @@ namespace Orbit.ViewModels
 
 		if (target is SessionModel session)
 		{
+			// Ensure the session isn't simultaneously shown in other session surfaces.
 			if (Tabs.Contains(session))
 			{
 				Tabs.Remove(session);
@@ -910,6 +914,32 @@ namespace Orbit.ViewModels
 	}
 
 	#endregion
+
+	private bool CanMoveSessionToIndividualTabs(object parameter)
+	{
+		var target = parameter ?? SelectedSession;
+		return target is SessionModel session && session != null && !Tabs.Contains(session);
+	}
+
+	private void MoveSessionToIndividualTabs(object parameter)
+	{
+		var target = parameter ?? SelectedSession;
+		if (target is not SessionModel session)
+		{
+			return;
+		}
+
+		orbitLayoutState.RemoveItem(session);
+
+		if (!Tabs.Contains(session))
+		{
+			Tabs.Add(session);
+		}
+
+		SelectedSession = session;
+		SelectedTab = session;
+		CommandManager.InvalidateRequerySuggested();
+	}
 
 	public double FloatingMenuTop
 	{
@@ -2027,6 +2057,9 @@ namespace Orbit.ViewModels
 			}
 			finally
 			{
+				// Ensure the session is removed from any Orbit View workspace state (no-op if not present).
+				orbitLayoutState.RemoveItem(session);
+
 				if (Sessions.Contains(session))
 				{
 					Sessions.Remove(session);

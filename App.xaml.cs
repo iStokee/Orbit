@@ -64,6 +64,7 @@ public partial class App : Application
 		services.AddSingleton<ScriptManagerService>();
 		services.AddSingleton<AccountService>();
 		services.AddSingleton<AutoLoginService>();
+		services.AddSingleton<TearOffHostRegistry>();
 		services.AddSingleton<InterTabClient>();
 		services.AddSingleton<NodeCatalogService>();
 		services.AddSingleton<NodeExecutorRegistry>();
@@ -102,7 +103,8 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool>(sp => new SessionGalleryTool(sp.GetRequiredService<SessionCollectionService>()));
 		services.AddSingleton<IOrbitTool>(sp => new OrbitViewTool(
 			sp.GetRequiredService<SessionCollectionService>(),
-			sp.GetRequiredService<OrbitLayoutStateService>()));
+			sp.GetRequiredService<OrbitLayoutStateService>(),
+			sp.GetRequiredService<TearOffHostRegistry>()));
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.FsmNodeEditorTool>();
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)

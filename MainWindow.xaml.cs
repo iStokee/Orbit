@@ -133,6 +133,18 @@ namespace Orbit
 				return;
 			}
 
+			// If the user closes the "primary" window while other Orbit windows are still open (e.g. after
+			// tearing tabs out), do not treat it as an app shutdown. This avoids closing sessions/tools
+			// that are currently hosted elsewhere.
+			var hasOtherWindows = System.Windows.Application.Current?.Windows?
+				.OfType<Window>()
+				.Any(w => !ReferenceEquals(w, this) && w.IsVisible) == true;
+			if (hasOtherWindows)
+			{
+				base.OnClosing(e);
+				return;
+			}
+
 			if (viewModel.Sessions.Count == 0)
 			{
 				base.OnClosing(e);

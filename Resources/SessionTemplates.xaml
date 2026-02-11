@@ -20,6 +20,22 @@
             Content="{Binding HostControl}" />
     </DataTemplate>
 
+    <!--  Tool Content Template - Host any tool view in a dock-friendly surface  -->
+    <DataTemplate x:Key="ToolContentTemplate">
+        <Border
+            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+            ClipToBounds="True"
+            SnapsToDevicePixels="True">
+            <ContentPresenter
+                Margin="0"
+                MinWidth="0"
+                MinHeight="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Content="{Binding HostControl}" />
+        </Border>
+    </DataTemplate>
+
     <!--  Compact header used by Orbit Grid layout tabs  -->
     <DataTemplate x:Key="OrbitSessionHeaderTemplate" xmlns:local="clr-namespace:Orbit">
         <StackPanel
@@ -41,7 +57,7 @@
                 FontSize="12"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                Text="{Binding Name}" />
+                Text="{Binding DisplayName}" />
         </StackPanel>
     </DataTemplate>
 
@@ -277,15 +293,15 @@
                         </Ellipse.Style>
                     </Ellipse>
                     <Grid Margin="0,0,4,0" VerticalAlignment="Center">
-                        <TextBlock
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Text="{Binding Name}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Opacity" Value="0.7" />
-                                    <Setter Property="Visibility" Value="Visible" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="{Binding DisplayName}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Opacity" Value="0.7" />
+                                        <Setter Property="Visibility" Value="Visible" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsRenaming}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -516,5 +532,17 @@
         x:Key="TabHeaderTemplateSelector"
         SessionHeaderTemplate="{StaticResource SessionHeaderItemTemplate}"
         ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
+
+    <!-- Orbit View: compact session header + tool header, used by programmatic grid shells -->
+    <selectors:HeaderItemTemplateSelector
+        x:Key="OrbitCompactTabHeaderTemplateSelector"
+        SessionHeaderTemplate="{StaticResource OrbitSessionHeaderTemplate}"
+        ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
+
+    <!--  Content selector: session host vs tool host  -->
+    <selectors:TabContentTemplateSelector
+        x:Key="TabContentTemplateSelector"
+        SessionContentTemplate="{StaticResource SessionContentTemplate}"
+        ToolContentTemplate="{StaticResource ToolContentTemplate}" />
 
 </ResourceDictionary>

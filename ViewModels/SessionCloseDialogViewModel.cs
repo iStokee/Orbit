@@ -18,7 +18,7 @@ public class SessionCloseDialogViewModel : INotifyPropertyChanged
 		_session = session ?? throw new ArgumentNullException(nameof(session));
 	}
 
-	public string SessionName => _session.Name ?? "Unknown Session";
+	public string SessionName => _session.DisplayName ?? "Unknown Session";
 	public string ProcessId => _session.RSProcess?.Id.ToString() ?? "N/A";
 	public string SessionType => _session.SessionType.ToString();
 	public string State => _session.State.ToString();

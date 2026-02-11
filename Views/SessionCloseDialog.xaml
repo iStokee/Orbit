@@ -4,17 +4,17 @@
                       xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
                       xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                       xmlns:viewModels="clr-namespace:Orbit.ViewModels"
-                      Title="Close Session"
-                      Width="520"
-                      Height="490"
-                      MinWidth="480"
-                      MinHeight="360"
-                      MaxWidth="700"
-                      MaxHeight="500"
+                      Title="{Binding SessionName, StringFormat=Close Session: {0}}"
+                      Width="560"
+                      Height="560"
+                      MinWidth="520"
+                      MinHeight="520"
+                      MaxWidth="820"
+                      MaxHeight="860"
                       BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                       BorderThickness="1"
                       GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
-                      ResizeMode="NoResize"
+                      ResizeMode="CanResizeWithGrip"
                       ShowInTaskbar="False"
                       WindowStartupLocation="CenterOwner"
                       WindowTitleBrush="{DynamicResource MahApps.Brushes.Accent}"
@@ -47,63 +47,64 @@
         </Style>
     </Controls:MetroWindow.Resources>
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- Header with Icon and Title -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Border
-                Width="48"
-                Height="48"
-                Margin="0,0,16,0"
-                Background="{DynamicResource MahApps.Brushes.Accent}"
-                CornerRadius="24">
-                <Viewbox Margin="12">
-                    <iconPacks:PackIconMaterial
-                        Width="24"
-                        Height="24"
-                        Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                        Kind="Alert" />
-                </Viewbox>
-            </Border>
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock
-                    FontSize="20"
-                    FontWeight="SemiBold"
-                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                    Text="Close this session?" />
-                <TextBlock
-                    Margin="0,4,0,0"
-                    FontSize="12"
-                    Foreground="{DynamicResource MahApps.Brushes.Gray3}"
-                    Text="This action will terminate the session and close the game client." />
+            <!-- Header with Icon and Title -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <Border
+                    Width="48"
+                    Height="48"
+                    Margin="0,0,16,0"
+                    Background="{DynamicResource MahApps.Brushes.Accent}"
+                    CornerRadius="24">
+                    <Viewbox Margin="12">
+                        <iconPacks:PackIconMaterial
+                            Width="24"
+                            Height="24"
+                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                            Kind="Alert" />
+                    </Viewbox>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="20"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Text="Close this session?" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Text="This action will terminate the session and close the game client." />
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
 
-        <!-- Session Information Card -->
-        <Border
-            Grid.Row="1"
-            Margin="0,24,0,0"
-            Padding="20"
-            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
-            BorderThickness="1"
-            CornerRadius="8">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <!-- Session Information Card -->
+            <Border
+                Grid.Row="1"
+                Margin="0,24,0,0"
+                Padding="20"
+                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
                 <!-- Session Name (Spans 2 columns) -->
                 <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,16">
@@ -157,86 +158,87 @@
                         <TextBlock Style="{StaticResource InfoValueStyle}" Text="{Binding InjectionState}" />
                     </StackPanel>
                 </StackPanel>
-            </Grid>
-        </Border>
+                </Grid>
+            </Border>
 
-        <!-- Warning Message -->
-        <Border
-            Grid.Row="2"
-            Margin="0,16,0,0"
-            Padding="16,12"
-            VerticalAlignment="Top"
-            Background="{DynamicResource MahApps.Brushes.Gray9}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-            BorderThickness="1"
-            CornerRadius="6">
-            <StackPanel Orientation="Horizontal">
-                <iconPacks:PackIconMaterial
-                    Width="16"
-                    Height="16"
-                    Margin="0,0,10,0"
-                    VerticalAlignment="Top"
-                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                    Kind="InformationOutline" />
-                <TextBlock
-                    FontSize="12"
-                    Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                    TextWrapping="Wrap">
-                    <Run FontWeight="SemiBold" Text="Important:" />
-                    <Run Text="Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />
-                </TextBlock>
+            <!-- Warning Message -->
+            <Border
+                Grid.Row="2"
+                Margin="0,16,0,0"
+                Padding="16,12"
+                VerticalAlignment="Top"
+                Background="{DynamicResource MahApps.Brushes.Gray9}"
+                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                BorderThickness="1"
+                CornerRadius="6">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial
+                        Width="16"
+                        Height="16"
+                        Margin="0,0,10,0"
+                        VerticalAlignment="Top"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                        Kind="InformationOutline" />
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                        TextWrapping="Wrap">
+                        <Run FontWeight="SemiBold" Text="Important:" />
+                        <Run Text="Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Buttons -->
+            <StackPanel
+                Grid.Row="4"
+                Margin="0,24,0,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <Button
+                    Width="140"
+                    Height="36"
+                    Margin="0,0,12,0"
+                    Click="CancelButton_Click"
+                    Content="Keep Session"
+                    IsCancel="True"
+                    Style="{DynamicResource MahApps.Styles.Button.Square}">
+                    <Button.ContentTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="14"
+                                    Height="14"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    Kind="ArrowLeft" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </Button.ContentTemplate>
+                </Button>
+                <Button
+                    Width="150"
+                    Height="36"
+                    Click="CloseButton_Click"
+                    Content="Close session"
+                    IsDefault="True"
+                    Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                    <Button.ContentTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                    Width="14"
+                                    Height="14"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    Kind="Close" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </Button.ContentTemplate>
+                </Button>
             </StackPanel>
-        </Border>
-
-        <!-- Buttons -->
-        <StackPanel
-            Grid.Row="4"
-            Margin="0,24,0,0"
-            HorizontalAlignment="Right"
-            Orientation="Horizontal">
-            <Button
-                Width="140"
-                Height="36"
-                Margin="0,0,12,0"
-                Click="CancelButton_Click"
-                Content="Keep Session"
-                IsCancel="True"
-                Style="{DynamicResource MahApps.Styles.Button.Square}">
-                <Button.ContentTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
-                                Width="14"
-                                Height="14"
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center"
-                                Kind="ArrowLeft" />
-                            <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </Button.ContentTemplate>
-            </Button>
-            <Button
-                Width="150"
-                Height="36"
-                Click="CloseButton_Click"
-                Content="Close session"
-                IsDefault="True"
-                Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
-                <Button.ContentTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
-                                Width="14"
-                                Height="14"
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center"
-                                Kind="Close" />
-                            <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </Button.ContentTemplate>
-            </Button>
-        </StackPanel>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </Controls:MetroWindow>

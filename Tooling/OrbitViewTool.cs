@@ -14,11 +14,13 @@ namespace Orbit.Tooling
 	{
 		private readonly SessionCollectionService _sessionCollectionService;
 		private readonly OrbitLayoutStateService _layoutStateService;
+		private readonly TearOffHostRegistry _tearOffRegistry;
 
-		public OrbitViewTool(SessionCollectionService sessionCollectionService, OrbitLayoutStateService layoutStateService)
+		public OrbitViewTool(SessionCollectionService sessionCollectionService, OrbitLayoutStateService layoutStateService, TearOffHostRegistry tearOffRegistry)
 		{
 			_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 			_layoutStateService = layoutStateService ?? throw new ArgumentNullException(nameof(layoutStateService));
+			_tearOffRegistry = tearOffRegistry ?? throw new ArgumentNullException(nameof(tearOffRegistry));
 		}
 
 		public string Key => "OrbitView";
@@ -48,7 +50,9 @@ namespace Orbit.Tooling
 			_sessionCollectionService,
 			_layoutStateService,
 			mainVm.InterTabClient,
-			mainVm.CloseSession);
+			_tearOffRegistry,
+			mainVm.CloseSession,
+			session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session));
 
 			return new OrbitGridLayoutView { DataContext = viewModel };
 		}

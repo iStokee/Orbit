@@ -5,6 +5,8 @@ using System.Windows;
 using Orbit.Classes;
 using Orbit.Models;
 using Orbit.Views;
+using Orbit.ViewModels;
+using Application = System.Windows.Application;
 
 namespace Orbit.Services
 {
@@ -14,10 +16,14 @@ namespace Orbit.Services
 	public class ScriptIntegrationService
 	{
 		private readonly SessionCollectionService _sessionCollection;
+		private readonly OrbitLayoutStateService _orbitLayoutState;
 
-		public ScriptIntegrationService(SessionCollectionService sessionCollection)
+		public ScriptIntegrationService(
+			SessionCollectionService sessionCollection,
+			OrbitLayoutStateService orbitLayoutState)
 		{
 			_sessionCollection = sessionCollection ?? throw new ArgumentNullException(nameof(sessionCollection));
+			_orbitLayoutState = orbitLayoutState ?? throw new ArgumentNullException(nameof(orbitLayoutState));
 		}
 
 		/// <summary>
@@ -71,7 +77,8 @@ namespace Orbit.Services
 				SessionType = SessionType.ExternalScript,
 				ExternalHandle = (nint)windowHandle,
 				RSProcess = scriptProcess,
-				HostControl = hostControl
+				HostControl = hostControl,
+				RequireInjectionBeforeDock = false
 			};
 
 			hostControl.DataContext = session;
@@ -85,6 +92,38 @@ namespace Orbit.Services
 			{
 				_sessionCollection.Sessions.Add(session);
 			});
+
+			// Surface the registered window into the active session presentation.
+			// Orbit View no longer auto-synchronizes sessions, so without this the tab could be "registered but invisible".
+			try
+			{
+				var launchBehavior = Orbit.Settings.Default.SessionLaunchBehavior ?? "OrbitView";
+				var mainVm = Application.Current?.Windows
+					.OfType<Orbit.MainWindow>()
+					.FirstOrDefault()
+					?.DataContext as MainWindowViewModel;
+
+				if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal) ||
+					string.Equals(launchBehavior, "SessionsTabbed", StringComparison.Ordinal))
+				{
+					_orbitLayoutState.AddItem(session);
+					mainVm?.OpenOrbitViewCommand?.Execute(null);
+					mainVm?.ActivateSession(session);
+				}
+				else // IndividualTabs/Ask/etc
+				{
+					if (mainVm != null && !mainVm.Tabs.Contains(session))
+					{
+						mainVm.Tabs.Add(session);
+						mainVm.SelectedSession = session;
+						mainVm.SelectedTab = session;
+					}
+				}
+			}
+			catch
+			{
+				// Best-effort only; registration should succeed even if the shell cannot be surfaced.
+			}
 
 			return session.Id;
 		}

@@ -9,6 +9,7 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
+    xmlns:selectors="clr-namespace:Orbit.Selectors"
     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
     <UserControl.Resources>
@@ -17,6 +18,45 @@
         <converters:OrbitViewBorderThicknessConverter x:Key="BorderThicknessConverter" />
         <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+
+        <DataTemplate x:Key="OrbitSessionHeaderWithMenuTemplate" xmlns:local="clr-namespace:Orbit">
+            <Border Padding="8,4">
+                <Border.ContextMenu>
+                    <ContextMenu DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}">
+                        <MenuItem
+                            Header="Undock to Individual Tabs"
+                            Command="{Binding DataContext.MoveToIndividualTabsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <StackPanel
+                    Margin="8,4"
+                    Orientation="Horizontal"
+                    MinHeight="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewTabHeaderSize, Converter={StaticResource TabHeaderSizeConverter}}">
+                    <Ellipse
+                        Width="10"
+                        Height="10"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
+                        Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
+                        StrokeThickness="2"
+                        ToolTip="{Binding StatusSummary}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                        Text="{Binding DisplayName}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Make tab headers type-aware so tools dock into Orbit View cleanly. -->
+        <selectors:HeaderItemTemplateSelector
+            x:Key="OrbitTabHeaderTemplateSelector"
+            SessionHeaderTemplate="{StaticResource OrbitSessionHeaderWithMenuTemplate}"
+            ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
 
         <Style
             x:Key="SessionToolbarButtonStyle"
@@ -568,8 +608,8 @@
                             BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}"
                             BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                             ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            ContentTemplate="{StaticResource SessionContentTemplate}"
-                            ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
+                            ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
+                            ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
                             ShowDefaultAddButton="False"
                             ShowDefaultCloseButton="True">
 
@@ -590,9 +630,8 @@
                     BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                     BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                     ClosingItemCallback="{Binding TabClosingHandler}"
-                    ContentTemplate="{StaticResource SessionContentTemplate}"
-                    ItemTemplate="{StaticResource OrbitSessionHeaderTemplate}"
-                    ItemsSource="{Binding Items}"
+                    ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
+                    ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
                     ShowDefaultAddButton="False"
                     ShowDefaultCloseButton="True">
 

@@ -260,7 +260,8 @@
                 Padding="5"
                 ItemsSource="{Binding Tabs}"
                 SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
-                ShowDefaultCloseButton="True">
+                ShowDefaultCloseButton="True"
+                ContentTemplateSelector="{StaticResource TabContentTemplateSelector}">
 
                 <!--  InterTabController with binding to InterTabClient  -->
                 <dragablz:TabablzControl.InterTabController>
@@ -527,7 +528,7 @@
                                             VerticalAlignment="Center"
                                             FontWeight="SemiBold"
                                             Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                            Text="{Binding Name}">
+                                            Text="{Binding DisplayName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Opacity" Value="0.7" />
@@ -774,14 +775,6 @@
                     </DataTemplate>
                 </dragablz:TabablzControl.CustomHeaderItemTemplate>
 
-                <dragablz:TabablzControl.ContentTemplate>
-                    <DataTemplate>
-                        <ContentControl
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Content="{Binding HostControl}" />
-                    </DataTemplate>
-                </dragablz:TabablzControl.ContentTemplate>
             </dragablz:TabablzControl>
 
         </DockPanel>

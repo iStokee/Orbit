@@ -1,9 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Linq;
 using System.Windows;
-using Orbit.Models;
 using Application = System.Windows.Application;
 
 namespace Orbit.Services
@@ -11,23 +8,17 @@ namespace Orbit.Services
 	/// <summary>
 	/// Shared state for the Orbit layout surface. Maintains the collection fed into the
 	/// Dragablz layout so that multiple views (or reopening the tool) reuse the same items.
-	/// Sessions are synchronized with <see cref="SessionCollectionService"/>; tool tabs are added
-	/// explicitly when they are moved into the Orbit workspace.
+	/// Items are added explicitly when they are moved into the Orbit workspace.
+	///
+	/// Important: sessions are NOT automatically synchronized into Orbit View. Otherwise, opening Orbit View
+	/// would "steal" HostControls from any other session presentation (e.g. Individual Tabs),
+	/// leaving behind orphaned tab headers that are still wired to close the underlying session.
 	/// </summary>
 	public sealed class OrbitLayoutStateService
 	{
-		private readonly SessionCollectionService sessionCollectionService;
-
 		public OrbitLayoutStateService(SessionCollectionService sessionCollectionService)
 		{
-			this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
-
-			foreach (var session in this.sessionCollectionService.Sessions)
-			{
-				AddItemInternal(session);
-			}
-
-			this.sessionCollectionService.Sessions.CollectionChanged += OnSessionsCollectionChanged;
+			_ = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 		}
 
 		/// <summary>
@@ -60,46 +51,6 @@ namespace Orbit.Services
 			}
 
 			ExecuteOnUi(() => Items.Remove(item));
-		}
-
-		private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-		{
-			if (e.Action == NotifyCollectionChangedAction.Reset)
-			{
-				ExecuteOnUi(() =>
-				{
-					for (var i = Items.Count - 1; i >= 0; i--)
-					{
-						if (Items[i] is SessionModel)
-						{
-							Items.RemoveAt(i);
-						}
-					}
-				});
-
-				foreach (var session in sessionCollectionService.Sessions)
-				{
-					AddItemInternal(session);
-				}
-
-				return;
-			}
-
-			if (e.NewItems != null && (e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace))
-			{
-				foreach (var session in e.NewItems.OfType<SessionModel>())
-				{
-					AddItemInternal(session);
-				}
-			}
-
-			if (e.OldItems != null && (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Replace))
-			{
-				foreach (var session in e.OldItems.OfType<SessionModel>())
-				{
-					RemoveItem(session);
-				}
-			}
 		}
 
 		private void AddItemInternal(object item)

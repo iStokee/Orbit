@@ -82,7 +82,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
