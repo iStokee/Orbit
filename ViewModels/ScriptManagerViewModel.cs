@@ -247,6 +247,27 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public bool HasSessions => _sessionCollectionService.Sessions.Count > 0;
 	public bool HasLibraryScripts => _libraryScripts.Count > 0;
 	public string LibraryDirectoryPath => _scriptService.DefaultLibraryPath;
+	public bool ScriptWindowEmbeddingEnabled
+	{
+		get => Settings.Default.ScriptWindowEmbeddingEnabled;
+		set
+		{
+			if (Settings.Default.ScriptWindowEmbeddingEnabled == value)
+			{
+				return;
+			}
+
+			Settings.Default.ScriptWindowEmbeddingEnabled = value;
+			OnPropertyChanged(nameof(ScriptWindowEmbeddingEnabled));
+
+			ConsoleLogService.Instance.Append(
+				value
+					? "[OrbitAPI] Script window embedding enabled."
+					: "[OrbitAPI] Script window embedding disabled.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Info);
+		}
+	}
 
 	public IRelayCommand AddScriptCommand { get; }
 	public IRelayCommand<ScriptProfile?> RemoveScriptCommand { get; }

@@ -17,6 +17,9 @@
     <Setting Name="HotReloadScriptPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="ScriptWindowEmbeddingEnabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
     <Setting Name="ScriptProfiles" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>

@@ -15,6 +15,7 @@ public partial class App : Application
 {
 	private ServiceProvider? _serviceProvider;
 	private ConsolePipeServer? _pipeServer;
+	private OrbitApiPipeServer? _orbitApiPipeServer;
 
 	public IServiceProvider Services =>
 		_serviceProvider ?? throw new InvalidOperationException("Service provider has not been initialized yet.");
@@ -33,6 +34,8 @@ public partial class App : Application
 
 		_pipeServer = _serviceProvider.GetRequiredService<ConsolePipeServer>();
 		_pipeServer.Start();
+		_orbitApiPipeServer = _serviceProvider.GetRequiredService<OrbitApiPipeServer>();
+		_orbitApiPipeServer.Start();
 
 		var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
 		MainWindow = mainWindow;
@@ -44,6 +47,7 @@ public partial class App : Application
 	protected override void OnExit(ExitEventArgs e)
 	{
 		_pipeServer?.Dispose();
+		_orbitApiPipeServer?.Dispose();
 		ConsoleLogService.Instance.StopCapture();
 		Settings.Default.Save();
 
@@ -59,6 +63,7 @@ public partial class App : Application
 	{
 		services.AddSingleton<ConsoleLogService>(_ => ConsoleLogService.Instance);
 		services.AddSingleton<ConsolePipeServer>();
+		services.AddSingleton<OrbitApiPipeServer>();
 
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
 		services.AddSingleton<OrbitLayoutStateService>();

@@ -338,7 +338,7 @@ Scripts can also be loaded directly through MemoryError's ImGui interface.
 
 ## 🔌 OrbitAPI for Script Integration
 
-External scripts can integrate with Orbit via the `OrbitAPI` class.
+External scripts can integrate with Orbit via `Orbit.API.OrbitAPI`.
 
 ### Checking if Orbit is Available
 
@@ -355,7 +355,7 @@ if (OrbitAPI.IsOrbitAvailable())
 using System;
 using System.Windows;
 using System.Windows.Interop;
-using Orbit;
+using Orbit.API;
 
 // Get your WPF window's Win32 handle
 var windowHandle = new WindowInteropHelper(myWpfWindow).Handle;
@@ -391,7 +391,7 @@ public static void Initialize()
     // Try to integrate with Orbit if available
     var windowHandle = new WindowInteropHelper(window).Handle;
 
-    Type? orbitApiType = Type.GetType("Orbit.OrbitAPI, Orbit");
+    Type? orbitApiType = Type.GetType("Orbit.API.OrbitAPI, Orbit");
     if (orbitApiType != null)
     {
         var isAvailableMethod = orbitApiType.GetMethod("IsOrbitAvailable");
@@ -643,7 +643,7 @@ Win32.SetWindowLong(childHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE);
 
 Orbit **references** `csharp_interop.dll` for:
 
-1. **OrbitAPI Integration**: Scripts using OrbitAPI link against csharp_interop
+1. **OrbitAPI Integration**: Scripts can register UI windows via in-process API or the cross-process `OrbitApiBridge` pipe
 2. **Type Definitions**: Shared types between Orbit and scripts
 
 **Reference Setup**:
@@ -664,7 +664,7 @@ Orbit does **not** provide scripting functionality itself - that comes from Memo
 | **Session won't launch** | Check RS3 install path, verify ME DLL exists |
 | **Injection fails** | Run Orbit as Administrator, check antivirus |
 | **Embedded window blank** | Verify RS3 client is windowed mode, not fullscreen |
-| **Script window not embedding** | Ensure OrbitAPI.RegisterScriptWindow was called correctly |
+| **Script window not embedding** | Ensure `OrbitAPI.RegisterScriptWindow(...)` is called and `Embed Script UI` is enabled in Script Manager |
 | **Theme not applying** | Clear theme cache, restart Orbit |
 | **Logs not appearing** | Check console tab is visible, verify log source filter |
 

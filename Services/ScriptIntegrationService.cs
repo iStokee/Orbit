@@ -35,6 +35,11 @@ namespace Orbit.Services
 		/// <returns>The session ID for the registered script window</returns>
 		public Guid RegisterScriptWindow(IntPtr windowHandle, string tabName, int? processId = null)
 		{
+			if (!Orbit.Settings.Default.ScriptWindowEmbeddingEnabled)
+			{
+				throw new InvalidOperationException("Script window embedding is disabled.");
+			}
+
 			if (windowHandle == IntPtr.Zero)
 			{
 				throw new ArgumentException("Window handle cannot be zero", nameof(windowHandle));
@@ -138,7 +143,27 @@ namespace Orbit.Services
 				return false;
 			}
 
-				ExecuteOnUi(() => _sessionCollection.Sessions.Remove(session));
+			ExecuteOnUi(() =>
+			{
+				_orbitLayoutState.RemoveItem(session);
+
+				var mainWindows = Application.Current?.Windows
+					.OfType<Orbit.MainWindow>()
+					.ToList();
+
+				if (mainWindows != null)
+				{
+					foreach (var window in mainWindows)
+					{
+						if (window.DataContext is MainWindowViewModel vm)
+						{
+							vm.Tabs.Remove(session);
+						}
+					}
+				}
+
+				_sessionCollection.Sessions.Remove(session);
+			});
 
 			return true;
 		}

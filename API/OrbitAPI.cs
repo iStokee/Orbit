@@ -1,5 +1,9 @@
 using System;
+using System.IO;
+using System.IO.Pipes;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using Orbit.Services;
 using Orbit.ViewModels;
@@ -11,6 +15,8 @@ namespace Orbit.API
 	/// </summary>
 	public static class OrbitAPI
 	{
+		private const string BridgePipeName = "OrbitApiBridge";
+		private const int BridgeConnectTimeoutMs = 500;
 		private static ScriptIntegrationService _scriptIntegration;
 
 		/// <summary>
@@ -24,26 +30,28 @@ namespace Orbit.API
 		/// <summary>
 		/// Gets the Script Integration service (auto-initialized)
 		/// </summary>
-		private static ScriptIntegrationService ScriptIntegration
+		private static ScriptIntegrationService? TryGetScriptIntegration()
 		{
-			get
+			if (_scriptIntegration != null)
 			{
-				if (_scriptIntegration == null)
-				{
-					// Auto-discover from the first MainWindow if not explicitly initialized
-					var mainWindow = System.Windows.Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
-					if (mainWindow?.DataContext is MainWindowViewModel viewModel)
-					{
-						_scriptIntegration = viewModel.ScriptIntegration;
-					}
-					else
-					{
-						throw new InvalidOperationException(
-							"OrbitAPI is not initialized. Ensure Orbit is running and your script is loaded.");
-					}
-				}
 				return _scriptIntegration;
 			}
+
+			try
+			{
+				var mainWindow = System.Windows.Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
+				if (mainWindow?.DataContext is MainWindowViewModel viewModel)
+				{
+					_scriptIntegration = viewModel.ScriptIntegration;
+					return _scriptIntegration;
+				}
+			}
+			catch
+			{
+				// Out-of-process callers can still use IPC bridge.
+			}
+
+			return null;
 		}
 
 		/// <summary>
@@ -57,7 +65,27 @@ namespace Orbit.API
 		/// <exception cref="InvalidOperationException">Thrown if Orbit is not running</exception>
 		public static Guid RegisterScriptWindow(nint windowHandle, string tabName, int? processId = null)
 		{
-			return ScriptIntegration.RegisterScriptWindow(windowHandle, tabName, processId);
+			var integration = TryGetScriptIntegration();
+			if (integration != null)
+			{
+				return integration.RegisterScriptWindow(windowHandle, tabName, processId);
+			}
+
+			var response = SendBridgeRequest(new
+			{
+				action = "register",
+				windowHandle = windowHandle.ToInt64().ToString(),
+				tabName,
+				processId
+			});
+
+			if (!response.ok || !Guid.TryParse(response.sessionId, out var sessionId))
+			{
+				throw new InvalidOperationException(
+					$"OrbitAPI registration failed via IPC bridge: {response.message ?? "Unknown error"}");
+			}
+
+			return sessionId;
 		}
 
 		/// <summary>
@@ -67,7 +95,19 @@ namespace Orbit.API
 		/// <returns>True if the session was found and removed, false otherwise</returns>
 		public static bool UnregisterScriptWindow(Guid sessionId)
 		{
-			return ScriptIntegration.UnregisterScriptWindow(sessionId);
+			var integration = TryGetScriptIntegration();
+			if (integration != null)
+			{
+				return integration.UnregisterScriptWindow(sessionId);
+			}
+
+			var response = SendBridgeRequest(new
+			{
+				action = "unregister",
+				sessionId = sessionId.ToString()
+			});
+
+			return response.ok;
 		}
 
 		/// <summary>
@@ -77,12 +117,46 @@ namespace Orbit.API
 		{
 			try
 			{
-				return _scriptIntegration != null || System.Windows.Application.Current?.Windows.OfType<MainWindow>().Any() == true;
+				if (_scriptIntegration != null || System.Windows.Application.Current?.Windows.OfType<MainWindow>().Any() == true)
+				{
+					return true;
+				}
+
+				var response = SendBridgeRequest(new { action = "isavailable" });
+				return response.ok && response.available == true;
 			}
 			catch
 			{
 				return false;
 			}
+		}
+
+		private static BridgeResponse SendBridgeRequest(object payload)
+		{
+			using var pipe = new NamedPipeClientStream(".", BridgePipeName, PipeDirection.InOut);
+			pipe.Connect(BridgeConnectTimeoutMs);
+
+			using var writer = new StreamWriter(pipe, Encoding.UTF8, bufferSize: 4096, leaveOpen: true) { AutoFlush = true };
+			using var reader = new StreamReader(pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+
+			var json = JsonSerializer.Serialize(payload);
+			writer.WriteLine(json);
+			var responseLine = reader.ReadLine();
+			if (string.IsNullOrWhiteSpace(responseLine))
+			{
+				return new BridgeResponse { ok = false, message = "No IPC response from Orbit." };
+			}
+
+			var response = JsonSerializer.Deserialize<BridgeResponse>(responseLine);
+			return response ?? new BridgeResponse { ok = false, message = "Invalid IPC response from Orbit." };
+		}
+
+		private sealed class BridgeResponse
+		{
+			public bool ok { get; set; }
+			public string? message { get; set; }
+			public bool? available { get; set; }
+			public string? sessionId { get; set; }
 		}
 	}
 }

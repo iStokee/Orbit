@@ -85,6 +85,18 @@ namespace Orbit {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ScriptWindowEmbeddingEnabled {
+            get {
+                return ((bool)(this["ScriptWindowEmbeddingEnabled"]));
+            }
+            set {
+                this["ScriptWindowEmbeddingEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string ScriptProfiles {
             get {
