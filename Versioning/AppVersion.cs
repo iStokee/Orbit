@@ -4,7 +4,7 @@ namespace Orbit
 {
 	public static class AppVersion
 	{
-		public const string Current = "1.0.4";
+		public const string Current = "1.0.6";
 		public const string InformationalVersion = Current;
 		public const string AssemblyVersion = Current + ".0";
 		public const string FileVersion = AssemblyVersion;

@@ -1,0 +1,50 @@
+<Controls:MetroWindow
+    x:Class="Orbit.Views.LauncherAccountConfigWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
+    Title="Launcher Account Config"
+    Width="860"
+    Height="520"
+    WindowStartupLocation="CenterOwner"
+    mc:Ignorable="d">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Margin="0,0,0,12"
+            Text="Manage Jagex launcher account entries used by Orbit (stored in %USERPROFILE%\MemoryError\env_vars.json)." />
+
+        <DataGrid
+            x:Name="AccountsGrid"
+            Grid.Row="1"
+            AutoGenerateColumns="False"
+            CanUserAddRows="False"
+            IsReadOnly="False"
+            SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Width="70" Binding="{Binding IsSelected}" Header="Use" />
+                <DataGridTextColumn Width="2*" Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Header="Display Name" />
+                <DataGridTextColumn Width="2*" Binding="{Binding CharacterId, UpdateSourceTrigger=PropertyChanged}" Header="Character ID" />
+                <DataGridTextColumn Width="2*" Binding="{Binding SessionId, UpdateSourceTrigger=PropertyChanged}" Header="Session ID" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                <Button Width="90" Margin="0,0,8,0" Click="AddRow_Click" Content="Add" />
+                <Button Width="90" Click="RemoveRow_Click" Content="Remove" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                <Button Width="90" Margin="0,0,8,0" Click="Cancel_Click" Content="Cancel" />
+                <Button Width="90" Click="Save_Click" Content="Save" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Controls:MetroWindow>

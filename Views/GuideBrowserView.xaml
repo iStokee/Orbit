@@ -68,9 +68,7 @@
                     DockPanel.Dock="Left"
                     Orientation="Horizontal">
                     <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                        <iconPacks:PackIconMaterial
-                            Kind="BookOpenVariant"
-                            Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                        <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
                     <StackPanel Margin="12,0,0,0">
                         <TextBlock

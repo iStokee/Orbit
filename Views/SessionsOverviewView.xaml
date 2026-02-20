@@ -82,22 +82,22 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                        <iconPacks:PackIconMaterial Kind="MonitorDashboard" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                        <iconPacks:PackIconMaterial Kind="ViewList" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Session Manager" />
                         <WrapPanel Margin="0,4,0,0" VerticalAlignment="Center">
                             <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
                             </Border>
                             <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
                                 <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
                             </Border>
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts Loaded: {0}'}" />
+                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Accent2}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts: {0}'}" />
                             </Border>
-                            <Border Padding="8,2" Background="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
+                            <Border Padding="8,2" Background="{DynamicResource MahApps.Brushes.Validation5}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.ValidationText5}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
                             </Border>
                         </WrapPanel>
                     </StackPanel>
@@ -179,44 +179,44 @@
                                     </StackPanel>
                                 </Border>
 
-                                <WrapPanel Margin="0,10,0,0" ItemHeight="30" ItemWidth="120" Orientation="Horizontal">
+                                <WrapPanel Margin="0,10,0,0" Orientation="Horizontal">
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.SetActiveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Set Active"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.FocusCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Focus"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Load Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.ReloadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Reload Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.StopScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Stop Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.CloseCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Close"
                                         Foreground="#F44336"
-                                        Style="{StaticResource MahApps.Styles.Button.Flat}" />
+                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                                 </WrapPanel>
                             </StackPanel>
                         </Border>

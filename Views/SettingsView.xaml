@@ -5,6 +5,7 @@
     xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:orbitControls="clr-namespace:Orbit.Views.Controls"
+    xmlns:views="clr-namespace:Orbit.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -52,7 +53,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial Kind="Tune" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                    <iconPacks:PackIconMaterial Kind="Cog" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
                 <StackPanel
@@ -88,6 +89,71 @@
                 </Controls:MetroTabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
+                        <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Border
+                                        Width="32"
+                                        Height="32"
+                                        Margin="0,0,12,0"
+                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        CornerRadius="16"
+                                        Opacity="0.8">
+                                        <iconPacks:PackIconMaterial
+                                            Width="18"
+                                            Height="18"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Kind="PlayCircleOutline" />
+                                    </Border>
+                                    <StackPanel>
+                                        <TextBlock
+                                            FontSize="16"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Text="Client Launch" />
+                                        <TextBlock
+                                            Margin="0,2,0,0"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Opacity="0.75"
+                                            Text="Choose how Orbit starts clients and configure launcher account variables." />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <StackPanel>
+                                    <TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Text="Client Launch Mode" />
+                                    <TextBlock
+                                        Margin="0,4,0,8"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Opacity="0.7"
+                                        Text="Choose how Orbit starts RuneScape clients for new sessions." />
+                                    <StackPanel Orientation="Horizontal">
+                                        <ComboBox
+                                            Width="260"
+                                            HorizontalAlignment="Left"
+                                            SelectedValue="{Binding ClientLaunchMode, Mode=TwoWay}"
+                                            SelectedValuePath="Tag">
+                                            <ComboBoxItem Content="Legacy Executable Paths" Tag="Legacy" />
+                                            <ComboBoxItem Content="Jagex Launcher URI" Tag="Launcher" />
+                                        </ComboBox>
+                                        <Button
+                                            Width="90"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding ConfigureLauncherAccountsCommand}"
+                                            Content="Config" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Update Panel -->
             <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,16,0,16">
                 <StackPanel>
@@ -908,69 +974,6 @@
                 </StackPanel>
             </Border>
 
-            <!-- Menu Buttons -->
-            <Border Style="{StaticResource Orbit.ToolCard}">
-                <StackPanel>
-                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                        <Border
-                            Width="32"
-                            Height="32"
-                            Margin="0,0,12,0"
-                            Background="{DynamicResource MahApps.Brushes.Accent}"
-                            CornerRadius="16"
-                            Opacity="0.8">
-                            <iconPacks:PackIconMaterial
-                                Width="18"
-                                Height="18"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                                Kind="ViewGrid" />
-                        </Border>
-                        <StackPanel>
-                            <TextBlock
-                                FontSize="16"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Text="Menu buttons" />
-                            <TextBlock
-                                Margin="0,2,0,0"
-                                FontSize="12"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Opacity="0.75"
-                                Text="Keep only the quick actions you frequently reach for." />
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Margin="0,18,0,0">
-                        <TextBlock
-                            FontSize="12"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Opacity="0.75"
-                            Text="Manage which tools appear in the floating launcher from the unified dashboard. Built-in utilities and plugins share a single visibility surface there." />
-                        <Button
-                            Margin="0,16,0,0"
-                            Padding="16,8"
-                            HorizontalAlignment="Left"
-                            Command="{Binding OpenToolsOverviewCommand}"
-                            Content="Open Tools Dashboard"
-                            Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
-                            <Button.ContentTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial
-                                            Width="16"
-                                            Height="16"
-                                            Margin="0,0,8,0"
-                                            Kind="ViewDashboard" />
-                                        <TextBlock Text="{Binding}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </Button.ContentTemplate>
-                        </Button>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Controls:MetroTabItem>
@@ -1216,6 +1219,25 @@
             </Border>
                     </StackPanel>
                 </ScrollViewer>
+            </Controls:MetroTabItem>
+
+            <Controls:MetroTabItem Header="Tools &amp; Plugins">
+                <Controls:MetroTabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Kind="ViewDashboard" />
+                            <TextBlock VerticalAlignment="Center" Text="Tools &amp; Plugins" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:MetroTabItem.HeaderTemplate>
+                <Grid Margin="16">
+                    <ContentControl x:Name="ToolsDashboardHost" />
+                </Grid>
             </Controls:MetroTabItem>
 
             <!-- Advanced Tab -->

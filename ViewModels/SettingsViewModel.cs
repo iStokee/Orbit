@@ -64,6 +64,7 @@ namespace Orbit.ViewModels
 			OpenThemeLogCommand = new RelayCommand(OpenThemeLog);
 			ClearThemeLogCommand = new RelayCommand(ClearThemeLog);
 			OpenToolsOverviewCommand = new RelayCommand(() => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
+			ConfigureLauncherAccountsCommand = new RelayCommand(OpenLauncherAccountConfig);
 
 			// Check for updates on startup (silently)
 			_ = CheckForUpdatesAsync(silent: true);
@@ -216,6 +217,7 @@ namespace Orbit.ViewModels
 		public IRelayCommand OpenThemeLogCommand { get; }
 		public IRelayCommand ClearThemeLogCommand { get; }
 		public IRelayCommand OpenToolsOverviewCommand { get; }
+		public IRelayCommand ConfigureLauncherAccountsCommand { get; }
 
 		#endregion
 
@@ -1073,6 +1075,29 @@ namespace Orbit.ViewModels
 		OnPropertyChanged(nameof(ThemeLogFilePath));
 	}
 
+	private void OpenLauncherAccountConfig()
+	{
+		try
+		{
+			var owner = Application.Current?.Windows
+				.OfType<Window>()
+				.FirstOrDefault(w => w.IsActive);
+
+			var window = new Orbit.Views.LauncherAccountConfigWindow();
+			if (owner != null)
+			{
+				window.Owner = owner;
+			}
+
+			window.ShowDialog();
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show($"Failed to open launcher account config: {ex.Message}",
+				"Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+	}
+
 	#endregion
 
 	#region Orbit View Settings
@@ -1090,6 +1115,19 @@ namespace Orbit.ViewModels
 						value,
 						v => Settings.Default.SessionLaunchBehavior = v,
 						nameof(SessionLaunchBehavior));
+				}
+			}
+
+			public string ClientLaunchMode
+			{
+				get => Settings.Default.ClientLaunchMode;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.ClientLaunchMode,
+						value,
+						v => Settings.Default.ClientLaunchMode = v,
+						nameof(ClientLaunchMode));
 				}
 			}
 

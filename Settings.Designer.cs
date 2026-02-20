@@ -349,7 +349,7 @@ namespace Orbit {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool ShowMenuFsmNodeEditor {
             get {
                 return ((bool)(this["ShowMenuFsmNodeEditor"]));
@@ -548,6 +548,30 @@ namespace Orbit {
             }
             set {
                 this["SessionLaunchBehavior"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Legacy")]
+        public string ClientLaunchMode {
+            get {
+                return ((string)(this["ClientLaunchMode"]));
+            }
+            set {
+                this["ClientLaunchMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LauncherSelectedDisplayName {
+            get {
+                return ((string)(this["LauncherSelectedDisplayName"]));
+            }
+            set {
+                this["LauncherSelectedDisplayName"] = value;
             }
         }
         

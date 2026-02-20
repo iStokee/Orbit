@@ -3,9 +3,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using Orbit.Services;
 using static Orbit.Classes.Win32;
 using System.ComponentModel;
 
@@ -13,6 +15,12 @@ namespace Orbit
 {
 	public partial class RSForm : Form
 	{
+		private enum ClientLaunchMode
+		{
+			Legacy,
+			Launcher
+		}
+
 		private string rs2clientWindowTitle;
 		private Process RuneScapeProcess;
 		private Process process;
@@ -28,6 +36,7 @@ namespace Orbit
 		private static readonly TimeSpan WindowHandleTimeout = TimeSpan.FromSeconds(25);
 		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
 		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
+		private static readonly string LauncherUri = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws";
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private uint? originalWindowStyle;
@@ -369,16 +378,19 @@ namespace Orbit
 		{
 			try
 			{
+				var launchMode = ResolveLaunchMode();
+				var launchTarget = ResolveLaunchTarget(launchMode);
+				ApplyConfiguredLauncherAccountEnvironment(launchMode);
 				pDocked = new Process
 				{
 					StartInfo = new ProcessStartInfo
 					{
-						FileName = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws",
+						FileName = launchTarget,
 						UseShellExecute = true
 					}
 				};
 				pDocked.Start();
-				Console.WriteLine($"[Orbit] Launcher process started (PID {pDocked.Id}). Waiting for bootstrap...");
+				Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
 				await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
 				try
 				{
@@ -397,6 +409,29 @@ namespace Orbit
 			}
 		}
 
+		private static void ApplyConfiguredLauncherAccountEnvironment(ClientLaunchMode launchMode)
+		{
+			// JX_* values are only meaningful when launching through the Jagex launcher URI flow.
+			if (launchMode != ClientLaunchMode.Launcher)
+			{
+				return;
+			}
+
+			var selectedDisplayName = Settings.Default.LauncherSelectedDisplayName;
+			if (!LauncherAccountStore.TryGetByDisplayName(selectedDisplayName, out var selected) || selected == null)
+			{
+				return;
+			}
+
+			Environment.SetEnvironmentVariable("JX_ACCESS_TOKEN", string.Empty);
+			Environment.SetEnvironmentVariable("JX_DISPLAY_NAME", selected.DisplayName ?? string.Empty);
+			Environment.SetEnvironmentVariable("JX_CHARACTER_ID", selected.CharacterId ?? string.Empty);
+			Environment.SetEnvironmentVariable("JX_REFRESH_TOKEN", string.Empty);
+			Environment.SetEnvironmentVariable("JX_SESSION_ID", selected.SessionId ?? string.Empty);
+
+			Console.WriteLine($"[Orbit] Applied launcher account environment for '{selected.DisplayName}'.");
+		}
+
 		private async Task FindAndSetRsClientAsync()
 		{
 			if (pDocked == null)
@@ -404,6 +439,7 @@ namespace Orbit
 				throw new InvalidOperationException("Launcher process not initialized.");
 			}
 
+			var launchMode = ResolveLaunchMode();
 			var launcherProcess = pDocked;
 			var launcherPid = launcherProcess.Id;
 			DateTime launcherStartTime;
@@ -416,7 +452,7 @@ namespace Orbit
 				launcherStartTime = DateTime.Now;
 			}
 
-			Console.WriteLine($"[Orbit] Waiting for RuneScape client process spawned by launcher PID {launcherPid}...");
+			Console.WriteLine($"[Orbit] Waiting for RuneScape client process (mode={launchMode}, started PID={launcherPid})...");
 			var stopwatch = Stopwatch.StartNew();
 			var fallbackEnabled = false;
 
@@ -432,36 +468,51 @@ namespace Orbit
 				}
 
 				Process? confirmedClient = null;
-				foreach (var candidate in Process.GetProcessesByName("rs2client"))
+				if (launchMode == ClientLaunchMode.Legacy && string.Equals(launcherProcess.ProcessName, "rs2client", StringComparison.OrdinalIgnoreCase))
 				{
 					try
 					{
-						var candidateParent = GetParentProcess(candidate.Id);
-						if (candidateParent == launcherPid)
-						{
-							confirmedClient = Process.GetProcessById(candidate.Id);
-							break;
-						}
+						confirmedClient = Process.GetProcessById(launcherPid);
+					}
+					catch (Exception)
+					{
+						confirmedClient = null;
+					}
+				}
 
-						if (candidateParent == 0 && fallbackEnabled)
+				if (confirmedClient == null)
+				{
+					foreach (var candidate in Process.GetProcessesByName("rs2client"))
+					{
+						try
 						{
-							try
+							var candidateParent = GetParentProcess(candidate.Id);
+							if (candidateParent == launcherPid)
 							{
-								if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
+								confirmedClient = Process.GetProcessById(candidate.Id);
+								break;
+							}
+
+							if (candidateParent == 0 && fallbackEnabled)
+							{
+								try
 								{
-									confirmedClient = Process.GetProcessById(candidate.Id);
-									break;
+									if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
+									{
+										confirmedClient = Process.GetProcessById(candidate.Id);
+										break;
+									}
+								}
+								catch (Exception)
+								{
+									// Ignore StartTime access failures; continue scanning.
 								}
 							}
-							catch (Exception)
-							{
-								// Ignore StartTime access failures; continue scanning.
-							}
 						}
-					}
-					finally
-					{
-						candidate.Dispose();
+						finally
+						{
+							candidate.Dispose();
+						}
 					}
 				}
 
@@ -470,7 +521,7 @@ namespace Orbit
 					rs2client = confirmedClient;
 					ClientSettings.rs2client = confirmedClient;
 					runescape = launcherProcess;
-					ParentProcessId = launcherProcess?.Id;
+					ParentProcessId = confirmedClient.Id == launcherPid ? null : launcherProcess?.Id;
 					try
 					{
 						JagWindow = FindWindowEx(confirmedClient.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
@@ -510,11 +561,78 @@ namespace Orbit
 				await Task.Delay(ProcessPollInterval).ConfigureAwait(false);
 			}
 
+			if (launchMode == ClientLaunchMode.Legacy && !launcherProcess.HasExited)
+			{
+				Console.WriteLine("[Orbit] Falling back to started process as dock target for legacy mode.");
+				rs2client = launcherProcess;
+				ClientSettings.rs2client = launcherProcess;
+				runescape = launcherProcess;
+				ParentProcessId = null;
+				rs2ClientID = launcherProcess.Id;
+				ClientSettings.rs2cPID = launcherProcess.Id;
+				runescapeProcessID = launcherPid;
+				ClientSettings.runescapePID = launcherPid;
+				pDocked = launcherProcess;
+				processReadyTcs.TrySetResult(launcherProcess);
+				return;
+			}
+
 			var message = "[Orbit] RuneScape client process could not be located within the allotted timeout.";
 			Console.WriteLine(message);
 			var timeoutException = new TimeoutException(message);
 			processReadyTcs.TrySetException(timeoutException);
 			throw timeoutException;
+		}
+
+		private static ClientLaunchMode ResolveLaunchMode()
+		{
+			var configured = Settings.Default.ClientLaunchMode;
+			if (string.Equals(configured, "Launcher", StringComparison.OrdinalIgnoreCase))
+			{
+				return ClientLaunchMode.Launcher;
+			}
+
+			return ClientLaunchMode.Legacy;
+		}
+
+		private static string ResolveLaunchTarget(ClientLaunchMode launchMode)
+		{
+			if (launchMode == ClientLaunchMode.Launcher)
+			{
+				return LauncherUri;
+			}
+
+			var legacyPath = ResolveLegacyClientPath();
+			if (!string.IsNullOrWhiteSpace(legacyPath))
+			{
+				return legacyPath;
+			}
+
+			throw new FileNotFoundException(
+				"[Orbit] Legacy launch mode is enabled but no RuneScape executable could be resolved. " +
+				"Switch Client Launch Mode to 'Launcher' in Settings or install a supported client path.");
+		}
+
+		private static string ResolveLegacyClientPath()
+		{
+			var candidates = new[]
+			{
+				@"C:\Program Files (x86)\Jagex Launcher\Games\RuneScape\RuneScape.exe",
+				@"C:\Program Files\Jagex\RuneScape Launcher\RuneScape.exe",
+				@"C:\ProgramData\Jagex\launcher\rs2client.exe",
+				@"C:\Program Files (x86)\Steam\steamapps\common\RuneScape\bin\win64\RuneScape.exe",
+				@"C:\Program Files (x86)\Steam\steamapps\common\RuneScape\launcher\rs2client.exe"
+			};
+
+			foreach (var candidate in candidates)
+			{
+				if (System.IO.File.Exists(candidate))
+				{
+					return candidate;
+				}
+			}
+
+			return string.Empty;
 		}
 
 		private async Task WaitForAndSetDockingWindowAsync()

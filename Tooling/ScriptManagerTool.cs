@@ -19,7 +19,7 @@ public sealed class ScriptManagerTool : IOrbitTool
 
     public string DisplayName => "Script Manager";
 
-    public PackIconMaterialKind Icon => PackIconMaterialKind.CodeBraces;
+    public PackIconMaterialKind Icon => PackIconMaterialKind.FileCodeOutline;
 
     public FrameworkElement CreateView(object? context = null)
     {

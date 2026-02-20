@@ -211,7 +211,7 @@
                                         <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
                                             <Border
                                                 Padding="6,2"
-                                                Background="{Binding IsPlugin, Converter={StaticResource BooleanToAccentBrushConverter}}"
+                                                Background="{DynamicResource MahApps.Brushes.Accent}"
                                                 CornerRadius="2">
                                                 <TextBlock
                                                     FontSize="10"

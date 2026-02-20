@@ -1313,7 +1313,7 @@
                                     Style="{StaticResource FloatingMenuButtonStyle}"
                                     ToolTip="Script Controls"
                                     Visibility="{Binding ShowMenuScriptControls, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="CodeBraces" />
+                                    <iconPacks:PackIconMaterial Kind="FileCodeOutline" />
                                 </Button>
                                 <Button
                                     Command="{Binding OpenThemeManagerCommand}"
@@ -1342,13 +1342,6 @@
                                     ToolTip="Settings"
                                     Visibility="{Binding ShowMenuSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="Cog" />
-                                </Button>
-                                <Button
-                                    Command="{Binding OpenToolsOverviewCommand}"
-                                    Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="Tools Management"
-                                    Visibility="{Binding ShowMenuToolsOverview, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="Tools" />
                                 </Button>
                                 <Button
                                     Command="{Binding OpenFsmNodeEditorCommand}"

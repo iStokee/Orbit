@@ -173,6 +173,14 @@
                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
             </Style>
 
+            <Style x:Key="Orbit.ToolHeaderGameIcon" TargetType="iconPacks:PackIconGameIcons">
+                <Setter Property="Width" Value="26" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            </Style>
+
             <Style x:Key="Orbit.ToolHeaderIconPath" TargetType="Path">
                 <Setter Property="Width" Value="26" />
                 <Setter Property="Height" Value="26" />

@@ -84,7 +84,7 @@
     <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="ShowMenuFsmNodeEditor" Type="System.Boolean" Scope="User">
-    <Value Profile="(Default)">True</Value>
+    <Value Profile="(Default)">False</Value>
   </Setting>
   <Setting Name="ShowFloatingMenuOnSessionTabs" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
@@ -133,6 +133,12 @@
   </Setting>
   <Setting Name="SessionLaunchBehavior" Type="System.String" Scope="User">
     <Value Profile="(Default)">OrbitView</Value>
+  </Setting>
+  <Setting Name="ClientLaunchMode" Type="System.String" Scope="User">
+    <Value Profile="(Default)">Legacy</Value>
+  </Setting>
+  <Setting Name="LauncherSelectedDisplayName" Type="System.String" Scope="User">
+    <Value Profile="(Default)" />
   </Setting>
   <Setting Name="OrbitViewCompactness" Type="System.Int32" Scope="User">
     <Value Profile="(Default)">1</Value>

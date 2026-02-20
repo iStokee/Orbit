@@ -21,7 +21,7 @@
                         </Grid.ColumnDefinitions>
 
                         <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                            <iconPacks:PackIconMaterial Kind="Tools" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                            <iconPacks:PackIconMaterial Kind="ViewDashboard" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                         </Border>
 
                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
