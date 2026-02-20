@@ -7,6 +7,7 @@ using System.IO;
 using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using Orbit.Models;
 using Orbit.Services;
 using static Orbit.Classes.Win32;
 using System.ComponentModel;
@@ -417,9 +418,25 @@ namespace Orbit
 				return;
 			}
 
+			LauncherAccountModel? selected = null;
 			var selectedDisplayName = Settings.Default.LauncherSelectedDisplayName;
-			if (!LauncherAccountStore.TryGetByDisplayName(selectedDisplayName, out var selected) || selected == null)
+
+			// Preferred: rotate through all accounts checked in launcher config (multi-account support).
+			if (LauncherAccountStore.TryGetNextSelected(out var roundRobinAccount) && roundRobinAccount != null)
 			{
+				selected = roundRobinAccount;
+				Console.WriteLine($"[Orbit][Launcher] Multi-account round-robin selected '{selected.DisplayName}'.");
+			}
+			else if (LauncherAccountStore.TryGetByDisplayName(selectedDisplayName, out var configuredSingle) && configuredSingle != null)
+			{
+				// Backward-compatible fallback: single selected display name.
+				selected = configuredSingle;
+				Console.WriteLine($"[Orbit][Launcher] Falling back to single selected account '{selected.DisplayName}'.");
+			}
+
+			if (selected == null)
+			{
+				Console.WriteLine("[Orbit][Launcher] No configured launcher account found (SELECTED list empty and no fallback display name). Launching with current launcher context.");
 				return;
 			}
 
@@ -429,7 +446,7 @@ namespace Orbit
 			Environment.SetEnvironmentVariable("JX_REFRESH_TOKEN", string.Empty);
 			Environment.SetEnvironmentVariable("JX_SESSION_ID", selected.SessionId ?? string.Empty);
 
-			Console.WriteLine($"[Orbit] Applied launcher account environment for '{selected.DisplayName}'.");
+			Console.WriteLine($"[Orbit][Launcher] Applied JX env vars for '{selected.DisplayName}' (CharacterId='{selected.CharacterId}', SessionId='{selected.SessionId}').");
 		}
 
 		private async Task FindAndSetRsClientAsync()

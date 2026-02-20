@@ -6,14 +6,14 @@ namespace Orbit
 	{
 		public const string Current = "1.0.6";
 		public const string InformationalVersion = Current;
-		public const string AssemblyVersion = Current + ".0";
+		public const string AssemblyVersion = Current + ".1";
 		public const string FileVersion = AssemblyVersion;
 
 		private static readonly Version _parsed;
 
 		static AppVersion()
 		{
-			if (!Version.TryParse(Current, out var parsed))
+			if (!Version.TryParse(AssemblyVersion, out var parsed))
 			{
 				parsed = new Version(0, 0, 0, 0);
 			}
@@ -22,6 +22,6 @@ namespace Orbit
 		}
 
 		public static Version Parsed => _parsed;
-		public static string Display => Current;
+		public static string Display => AssemblyVersion;
 	}
 }

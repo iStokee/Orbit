@@ -116,11 +116,10 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 	{
 		AccountsGrid.CommitEdit();
 
-		var selected = _accounts.FirstOrDefault(a => a.IsSelected && !string.IsNullOrWhiteSpace(a.DisplayName));
-		foreach (var account in _accounts.Where(a => !ReferenceEquals(a, selected)))
-		{
-			account.IsSelected = false;
-		}
+		var selectedAccounts = _accounts
+			.Where(a => a.IsSelected && !string.IsNullOrWhiteSpace(a.DisplayName))
+			.ToList();
+		var primarySelected = selectedAccounts.FirstOrDefault();
 
 		var normalized = _accounts
 			.Where(a => !string.IsNullOrWhiteSpace(a.DisplayName))
@@ -128,12 +127,13 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 			{
 				DisplayName = a.DisplayName.Trim(),
 				CharacterId = (a.CharacterId ?? string.Empty).Trim(),
-				SessionId = (a.SessionId ?? string.Empty).Trim()
+				SessionId = (a.SessionId ?? string.Empty).Trim(),
+				IsSelected = a.IsSelected
 			})
 			.ToList();
 
 		LauncherAccountStore.Save(normalized);
-		Settings.Default.LauncherSelectedDisplayName = selected?.DisplayName?.Trim() ?? string.Empty;
+		Settings.Default.LauncherSelectedDisplayName = primarySelected?.DisplayName?.Trim() ?? string.Empty;
 		Settings.Default.Save();
 
 		DialogResult = true;

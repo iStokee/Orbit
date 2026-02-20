@@ -2,6 +2,7 @@ using Orbit.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Linq;
 using System.Text.Json;
 
@@ -10,6 +11,7 @@ namespace Orbit.Services;
 public static class LauncherAccountStore
 {
 	private const string EnvVarsFileName = "env_vars.json";
+	private static int _roundRobinCounter = -1;
 
 	public static IReadOnlyList<LauncherAccountModel> Load()
 	{
@@ -46,7 +48,8 @@ public static class LauncherAccountStore
 				{
 					DisplayName = displayName,
 					CharacterId = ReadString(item, "JX_CHARACTER_ID"),
-					SessionId = ReadString(item, "JX_SESSION_ID")
+					SessionId = ReadString(item, "JX_SESSION_ID"),
+					IsSelected = ReadBool(item, "SELECTED") || ReadBool(item, "selected")
 				});
 			}
 
@@ -70,7 +73,8 @@ public static class LauncherAccountStore
 				JX_DISPLAY_NAME = a.DisplayName.Trim(),
 				JX_CHARACTER_ID = (a.CharacterId ?? string.Empty).Trim(),
 				JX_REFRESH_TOKEN = string.Empty,
-				JX_SESSION_ID = (a.SessionId ?? string.Empty).Trim()
+				JX_SESSION_ID = (a.SessionId ?? string.Empty).Trim(),
+				SELECTED = a.IsSelected
 			})
 			.ToList();
 
@@ -93,6 +97,28 @@ public static class LauncherAccountStore
 		return account != null;
 	}
 
+	public static IReadOnlyList<LauncherAccountModel> LoadSelected()
+	{
+		return Load()
+			.Where(a => a.IsSelected && !string.IsNullOrWhiteSpace(a.DisplayName))
+			.ToList();
+	}
+
+	public static bool TryGetNextSelected(out LauncherAccountModel? account)
+	{
+		account = null;
+		var selected = LoadSelected();
+		if (selected.Count == 0)
+		{
+			return false;
+		}
+
+		var next = Interlocked.Increment(ref _roundRobinCounter);
+		var index = (next & int.MaxValue) % selected.Count;
+		account = selected[index];
+		return true;
+	}
+
 	public static string GetMemoryErrorDirectory()
 	{
 		var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -109,5 +135,15 @@ public static class LauncherAccountStore
 		}
 
 		return value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : string.Empty;
+	}
+
+	private static bool ReadBool(JsonElement item, string propertyName)
+	{
+		if (!item.TryGetProperty(propertyName, out var value))
+		{
+			return false;
+		}
+
+		return value.ValueKind == JsonValueKind.True || (value.ValueKind == JsonValueKind.String && bool.TryParse(value.GetString(), out var parsed) && parsed);
 	}
 }

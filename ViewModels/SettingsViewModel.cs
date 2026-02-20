@@ -293,7 +293,7 @@ namespace Orbit.ViewModels
 				if (updateInfo.HasUpdate)
 				{
 					HasUpdate = true;
-					AvailableVersion = $"{updateInfo.RemoteVersion.Major}.{updateInfo.RemoteVersion.Minor}.{updateInfo.RemoteVersion.Build}";
+					AvailableVersion = updateInfo.RemoteVersion.ToString();
 					UpdateStatusText = $"Update available: v{AvailableVersion}";
 					UpdateStatusIcon = PackIconMaterialKind.Update;
 					CanInstallUpdate = true;
