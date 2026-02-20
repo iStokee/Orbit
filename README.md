@@ -47,6 +47,8 @@ For script integration, see [OrbitAPI](#-orbitapi-for-script-integration).
 Launch and manage multiple RuneScape 3 instances:
 
 - **Create Sessions**: Launch new RS3 clients with auto-injection
+- **Launch Mode Control**: Choose `Legacy Executable Paths` or `Jagex Launcher URI` in **Settings → General → Client Launch**
+- **Launcher Account Config**: Configure launcher account env vars from the same General section via `Config`
 - **Embedded Windows**: Game windows embedded directly in Orbit tabs
 - **Process Monitoring**: Track client state, health, and injection status
 - **Auto-Injection**: Optionally inject ME automatically when clients are ready
@@ -114,7 +116,7 @@ It renders Markdown with Orbit's theme and includes status hints for missing or 
 
 **How to Access**:
 1. Click the **book icon** (📖) in Orbit's floating menu
-2. Or go to Menu Settings → Enable/disable the "Guide" button
+2. Or toggle the **Guide** button visibility in **Settings → Floating Menu**
 
 **Architecture**:
 - Markdown-first renderer backed by [`Markdig`](https://github.com/xoofx/markdig) + [`Markdig.Wpf`](https://github.com/xoofx/markdig)
@@ -160,6 +162,8 @@ services.AddSingleton<IOrbitTool, MyCustomTool>();
 - **Script Manager**: Script library and hot reload
 - **Account Manager**: Account credentials management
 - **Guide**: Orbiters Guide documentation hub
+- **Tools & Plugins Dashboard**: Embedded management surface available as a dedicated tab in **Settings**
+- **Orbit Builder (FSM Node Editor)**: Registered but hidden from floating menu by default
 
 **Tool Registry**:
 ```csharp
@@ -174,14 +178,14 @@ Tools are:
 - **Discoverable**: Registered via DI and discovered at runtime
 - **Reusable**: Can be opened multiple times or across sessions
 - **Integrated**: Appear as tabs with consistent styling
-- **Configurable**: Can be shown/hidden via Settings
+- **Configurable**: Floating menu visibility is managed from Settings and the Tools & Plugins dashboard
 
 **Adding Custom Tools**:
 1. Create a class implementing `IOrbitTool`
 2. Implement `CreateView()` to return your WPF UserControl
 3. Register in `App.xaml.cs` with DI: `services.AddSingleton<IOrbitTool, YourTool>()`
 4. Add command/method to `MainWindowViewModel` to open it
-5. Add UI button (optional) in `MainWindow.xaml` floating menu
+5. Optionally expose it in the floating menu and/or manage visibility through Tools & Plugins
 
 
 ## 🔨 Building
