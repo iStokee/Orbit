@@ -438,7 +438,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ScriptManager" => "Browse and manage script library",
             "Console" => "View unified logs from Orbit, ME, and scripts",
             "FsmNodeEditor" => "Visual editor and runner for FSM-based automations",
-            "ApiDocumentation" => "Open the Orbiters Guide documentation hub",
+            "ApiDocumentation" => "Open the Orbit documentation hub",
             "ToolsOverview" => "Manage registered tools and their visibility",
             "PluginManager" => "Load and manage dynamic plugin tools",
             "Settings" => "Configure Orbit application settings",

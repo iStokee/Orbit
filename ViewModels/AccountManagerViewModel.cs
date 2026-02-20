@@ -15,7 +15,7 @@ using Application = System.Windows.Application;
 
 namespace Orbit.ViewModels
 {
-	public class AccountManagerViewModel : ObservableObject
+	public class AccountManagerViewModel : ObservableObject, IDisposable
 	{
 		private readonly AccountService _accountService;
 		private readonly SessionCollectionService _sessionCollectionService;
@@ -30,6 +30,7 @@ namespace Orbit.ViewModels
 		private SessionModel? _selectedSession;
 		private bool _isLoggingIn;
 		private string _loginStatusMessage = string.Empty;
+		private bool _disposed;
 
 		public ObservableCollection<AccountModel> Accounts => _accountService.Accounts;
 
@@ -389,5 +390,30 @@ private void ResetNewPassword()
 	}
 
 public event EventHandler? PasswordReset;
+
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			_loginCts?.Cancel();
+			_loginCts?.Dispose();
+			_loginCts = null;
+
+			_newPassword?.Dispose();
+			_newPassword = new SecureString();
+
+			_accountService.Accounts.CollectionChanged -= OnAccountsCollectionChanged;
+			Sessions.CollectionChanged -= OnSessionsCollectionChanged;
+			_sessionCollectionService.PropertyChanged -= OnSessionServicePropertyChanged;
+
+			foreach (var account in _accountService.Accounts)
+			{
+				account.PropertyChanged -= OnAccountPropertyChanged;
+			}
+		}
+		}
 	}
-}

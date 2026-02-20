@@ -10,6 +10,12 @@ public partial class SessionsOverviewView : UserControl
     {
         InitializeComponent();
         DataContext = vm;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        // Unloaded can fire during tab reparenting/tear-off; do not dispose view model here.
+        Unloaded -= OnUnloaded;
     }
 }
-

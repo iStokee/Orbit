@@ -225,13 +225,7 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                        <iconPacks:PackIconMaterial
-                            Width="35"
-                            Height="35"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Kind="ViewGrid" />
+                        <iconPacks:PackIconMaterial Kind="ViewGrid" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
 
                     <StackPanel
@@ -239,15 +233,10 @@
                         Margin="12,0,0,0"
                         VerticalAlignment="Center">
                         <TextBlock
-                            FontSize="22"
-                            FontWeight="Bold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Style="{StaticResource Orbit.ToolHeaderTitle}"
                             Text="Orbit View" />
                         <TextBlock
-                            Margin="0,4,0,0"
-                            FontSize="12"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Opacity="0.85"
+                            Style="{StaticResource Orbit.ToolHeaderSubtitle}"
                             Text="Live session grid - Drag to edges to split" />
                         <TextBlock
                             Margin="0,4,0,0"
@@ -610,6 +599,7 @@
                             ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
                             ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
+                            SelectionChanged="OrbitTabControl_SelectionChanged"
                             ShowDefaultAddButton="False"
                             ShowDefaultCloseButton="True">
 
@@ -632,6 +622,7 @@
                     ClosingItemCallback="{Binding TabClosingHandler}"
                     ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
                     ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
+                    SelectionChanged="OrbitTabControl_SelectionChanged"
                     ShowDefaultAddButton="False"
                     ShowDefaultCloseButton="True">
 

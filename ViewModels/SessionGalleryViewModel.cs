@@ -22,7 +22,7 @@ namespace Orbit.ViewModels
 	/// <summary>
 	/// ViewModel for the Session Gallery View - displays thumbnails of all sessions in a grid
 	/// </summary>
-	public class SessionGalleryViewModel : INotifyPropertyChanged
+	public class SessionGalleryViewModel : INotifyPropertyChanged, IDisposable
 	{
 		private static readonly TimeSpan TimerInterval = TimeSpan.FromSeconds(1);
 		private const double RefreshIntervalToleranceSeconds = 0.2;
@@ -35,7 +35,8 @@ namespace Orbit.ViewModels
 		private bool _autoRefreshEnabled = true;
 		private double _globalRefreshIntervalSeconds = 5;
 		private bool _allowSessionOverrides = true;
-		private CancellationTokenSource _refreshCancellationTokenSource;
+		private CancellationTokenSource _refreshCancellationTokenSource = new();
+		private bool _disposed;
 		private bool _useCustomThumbnailSize = false;
 		private double _customThumbnailSize = 300;
 		private const double ThumbnailCardPadding = 8;
@@ -269,8 +270,9 @@ namespace Orbit.ViewModels
 		/// </summary>
 		private async Task RefreshAllThumbnailsAsync()
 		{
-			_refreshCancellationTokenSource?.Cancel();
-			_refreshCancellationTokenSource = new CancellationTokenSource();
+			var previousCts = Interlocked.Exchange(ref _refreshCancellationTokenSource, new CancellationTokenSource());
+			previousCts?.Cancel();
+			previousCts?.Dispose();
 			var token = _refreshCancellationTokenSource.Token;
 
 			var targetSessions = Sessions.ToList();
@@ -282,6 +284,9 @@ namespace Orbit.ViewModels
 		/// </summary>
 		private async Task RefreshDueThumbnailsAsync()
 		{
+			if (_disposed)
+				return;
+
 			var snapshot = Sessions.ToList();
 			var dueSessions = snapshot
 				.Where(ShouldRefreshSession)
@@ -603,6 +608,9 @@ namespace Orbit.ViewModels
 
 		private void RequestRefreshCheck()
 		{
+			if (_disposed)
+				return;
+
 			_ = RefreshDueThumbnailsAsync();
 		}
 
@@ -612,6 +620,25 @@ namespace Orbit.ViewModels
 
 		[DllImport("user32.dll")]
 		private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+		public void Dispose()
+		{
+			if (_disposed)
+				return;
+
+			_disposed = true;
+			_refreshTimer.Stop();
+			Sessions.CollectionChanged -= OnSessionsCollectionChanged;
+
+			foreach (var session in Sessions.ToList())
+			{
+				DetachSession(session);
+			}
+
+			_refreshCancellationTokenSource.Cancel();
+			_refreshCancellationTokenSource.Dispose();
+			_refreshSemaphore.Dispose();
+		}
 
 		public event PropertyChangedEventHandler PropertyChanged;
 

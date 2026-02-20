@@ -149,30 +149,18 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                        <iconPacks:PackIconMaterial
-                            Width="35"
-                            Height="35"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Kind="ViewModule" />
+                        <iconPacks:PackIconMaterial Kind="ViewModule" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
                     <StackPanel
                         Grid.Column="1"
                         Margin="12,0,0,0"
                         VerticalAlignment="Center">
                         <TextBlock
-                            FontSize="22"
-                            FontWeight="Bold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Style="{StaticResource Orbit.ToolHeaderTitle}"
                             Text="Gallery View" />
-                        <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                            <TextBlock
-                                FontSize="12"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                Opacity="0.85"
-                                Text="{Binding Sessions.Count, StringFormat='{}{0} Sessions'}" />
-                        </StackPanel>
+                        <TextBlock
+                            Style="{StaticResource Orbit.ToolHeaderSubtitle}"
+                            Text="{Binding Sessions.Count, StringFormat='{}{0} Sessions'}" />
                     </StackPanel>
                 </Grid>
 

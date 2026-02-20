@@ -11,11 +11,18 @@ internal sealed class ConsolePipeServer : IDisposable
 {
 	private const string PipeName = "MESharpConsole";
 	private readonly CancellationTokenSource _cts = new();
+	private readonly object _pipeSync = new();
 	private Task? _listenerTask;
+	private NamedPipeServerStream? _activePipe;
 	private bool _disposed;
 
 	public void Start()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
 		_listenerTask ??= Task.Run(ListenAsync, _cts.Token);
 	}
 
@@ -25,39 +32,90 @@ internal sealed class ConsolePipeServer : IDisposable
 
 		while (!token.IsCancellationRequested)
 		{
-			using var pipe = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
-				PipeTransmissionMode.Message, PipeOptions.Asynchronous);
-
 			try
 			{
-				await pipe.WaitForConnectionAsync(token).ConfigureAwait(false);
-			}
-			catch (OperationCanceledException)
-			{
-				break;
-			}
+				using var pipe = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
+					PipeTransmissionMode.Message, PipeOptions.Asynchronous);
+				using var cancelRegistration = token.Register(static state =>
+				{
+					try
+					{
+						((NamedPipeServerStream)state!).Dispose();
+					}
+					catch
+					{
+						// Ignore cancellation disposal races.
+					}
+				}, pipe);
+				SetActivePipe(pipe);
 
-			using var reader = new StreamReader(pipe, Encoding.UTF8);
-
-			while (!token.IsCancellationRequested && pipe.IsConnected)
-			{
-				string? line;
 				try
 				{
-					line = await reader.ReadLineAsync().ConfigureAwait(false);
+					await pipe.WaitForConnectionAsync(token).ConfigureAwait(false);
 				}
-				catch (IOException)
+				catch (OperationCanceledException)
+				{
+					break;
+				}
+				catch (ObjectDisposedException) when (token.IsCancellationRequested)
+				{
+					break;
+				}
+				catch (IOException) when (token.IsCancellationRequested)
 				{
 					break;
 				}
 
-				if (line is null)
-				{
-					break;
-				}
+				using var reader = new StreamReader(pipe, Encoding.UTF8);
 
-				ProcessRemoteLine(line);
+				while (!token.IsCancellationRequested && pipe.IsConnected)
+				{
+					string? line;
+					try
+					{
+						line = await reader.ReadLineAsync().ConfigureAwait(false);
+					}
+					catch (IOException)
+					{
+						break;
+					}
+					catch (ObjectDisposedException) when (token.IsCancellationRequested)
+					{
+						break;
+					}
+
+					if (line is null)
+					{
+						break;
+					}
+
+					ProcessRemoteLine(line);
+				}
 			}
+			catch (Exception) when (!token.IsCancellationRequested)
+			{
+				// Keep the listener alive if a malformed message or transient pipe failure occurs.
+				try
+				{
+					await Task.Delay(100, token).ConfigureAwait(false);
+				}
+				catch (OperationCanceledException)
+				{
+					break;
+				}
+			}
+			finally
+			{
+				SetActivePipe(null);
+			}
+		}
+	}
+
+	private void SetActivePipe(NamedPipeServerStream? pipe)
+	{
+		lock (_pipeSync)
+		{
+			_activePipe = pipe;
 		}
 	}
 
@@ -103,6 +161,19 @@ internal sealed class ConsolePipeServer : IDisposable
 		catch (ObjectDisposedException)
 		{
 			// already torn down
+		}
+
+		lock (_pipeSync)
+		{
+			try
+			{
+				_activePipe?.Dispose();
+			}
+			catch
+			{
+				// best-effort cancel of blocked IO
+			}
+			_activePipe = null;
 		}
 
 		try

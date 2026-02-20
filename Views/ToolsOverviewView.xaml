@@ -8,13 +8,12 @@
              mc:Ignorable="d"
              d:DesignHeight="800" d:DesignWidth="1000">
 
-    <Grid Margin="24">
+    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <!-- Header -->
-                <Border Style="{StaticResource Orbit.ToolHeader}"
-                       Margin="0,0,0,24">
+                <Border Style="{StaticResource Orbit.ToolHeader}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -22,23 +21,14 @@
                         </Grid.ColumnDefinitions>
 
                         <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                            <iconPacks:PackIconMaterial Kind="Tools"
-                                                       Margin="10,10,0,0"
-                                                       Width="35"
-                                                       Height="35"
-                                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                            <iconPacks:PackIconMaterial Kind="Tools" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                         </Border>
 
                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Tools Management"
-                                      FontSize="22"
-                                      FontWeight="Bold"
-                                      Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                      Style="{StaticResource Orbit.ToolHeaderTitle}" />
                             <TextBlock Text="Manage Orbit tools and their visibility in the floating menu"
-                                      FontSize="12"
-                                      Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                      Opacity="0.85"
-                                      Margin="0,6,0,0" />
+                                      Style="{StaticResource Orbit.ToolHeaderSubtitle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -129,45 +119,40 @@
                 </Border>
 
                 <!-- Info Card -->
-                <Border Style="{StaticResource Orbit.ToolCard}"
-                       Margin="0,16,0,0"
-                       Background="{DynamicResource MahApps.Brushes.Accent}"
-                       BorderBrush="{DynamicResource MahApps.Brushes.Accent2}">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <iconPacks:PackIconMaterial Kind="InformationOutline"
-                                                       Width="20"
-                                                       Height="20"
-                                                       Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                                                       VerticalAlignment="Center" />
-                            <TextBlock Text="About Tools"
-                                      FontSize="16"
-                                      FontWeight="SemiBold"
-                                      Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                                      Margin="12,0,0,0"
-                                      VerticalAlignment="Center" />
+                <Expander
+                    Margin="0,16,0,0"
+                    Header="About Tools"
+                    IsExpanded="False">
+                    <Border
+                        Style="{StaticResource Orbit.ToolCard}"
+                        Margin="0,8,0,0"
+                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Accent2}">
+                        <StackPanel>
+                            <TextBlock
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                FontSize="13"
+                                Opacity="0.95"
+                                TextWrapping="Wrap">
+                                <Run Text="Orbit uses an extensible tool system that allows plugins to be discovered and loaded at runtime. Tools can be:" />
+                                <LineBreak />
+                                <LineBreak />
+                                <Run Text="• " FontWeight="Bold" />
+                                <Run Text="Built-in" FontWeight="SemiBold" />
+                                <Run Text=" - Core functionality like Session Management, Theme Manager, and the Documentation Guide" />
+                                <LineBreak />
+                                <Run Text="• " FontWeight="Bold" />
+                                <Run Text="External" FontWeight="SemiBold" />
+                                <Run Text=" - Third-party tools registered via Dependency Injection" />
+                                <LineBreak />
+                                <LineBreak />
+                                <Run Text="Developers can create custom tools by implementing " />
+                                <Run FontFamily="Consolas" FontWeight="SemiBold" Text="IOrbitTool" />
+                                <Run Text=" and registering them in App.xaml.cs." />
+                            </TextBlock>
                         </StackPanel>
-
-                        <TextBlock Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                                  FontSize="13"
-                                  TextWrapping="Wrap"
-                                  Opacity="0.95">
-                            <Run Text="Orbit uses an extensible tool system that allows plugins to be discovered and loaded at runtime. Tools can be:" />
-                            <LineBreak /><LineBreak />
-                            <Run Text="• " FontWeight="Bold" />
-                            <Run Text="Built-in" FontWeight="SemiBold" />
-                            <Run Text=" - Core functionality like Session Management, Theme Manager, and the Orbiters Guide" />
-                            <LineBreak />
-                            <Run Text="• " FontWeight="Bold" />
-                            <Run Text="External" FontWeight="SemiBold" />
-                            <Run Text=" - Third-party tools registered via Dependency Injection" />
-                            <LineBreak /><LineBreak />
-                            <Run Text="Developers can create custom tools by implementing " />
-                            <Run Text="IOrbitTool" FontFamily="Consolas" FontWeight="SemiBold" />
-                            <Run Text=" and registering them in App.xaml.cs." />
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </Expander>
 
             </StackPanel>
         </ScrollViewer>

@@ -61,40 +61,24 @@
         <!--  Header  -->
         <Border
             Grid.Row="0"
-            Margin="0,0,0,16"
-            Padding="24,20"
-            Background="{StaticResource GuideHeaderBrush}"
-            CornerRadius="12">
+            Style="{StaticResource Orbit.ToolHeader}">
             <DockPanel>
                 <StackPanel
                     VerticalAlignment="Center"
                     DockPanel.Dock="Left"
                     Orientation="Horizontal">
-                    <Border
-                        Width="56"
-                        Height="56"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Background="#1FFFFFFF"
-                        CornerRadius="12">
+                    <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                         <iconPacks:PackIconMaterial
-                            Width="32"
-                            Height="32"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Foreground="White"
-                            Kind="BookOpenVariant" />
+                            Kind="BookOpenVariant"
+                            Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
-                    <StackPanel Margin="16,0,0,0">
+                    <StackPanel Margin="12,0,0,0">
                         <TextBlock
-                            FontSize="24"
-                            FontWeight="SemiBold"
-                            Foreground="White"
-                            Text="An Orbiter's Guide to the Application" />
+                            Style="{StaticResource Orbit.ToolHeaderTitle}"
+                            Text="Orbit Documentation" />
                         <TextBlock
-                            Margin="0,4,0,0"
-                            Foreground="#CCFFFFFF"
-                            Text="Don't panic—this is your hitchhiker's manual for everything Orbit." />
+                            Style="{StaticResource Orbit.ToolHeaderSubtitle}"
+                            Text="User workflows, contributor guidance, API references, and systems documentation." />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel
@@ -105,7 +89,7 @@
                         Padding="16,8"
                         Command="{Binding RefreshCommand}"
                         Style="{StaticResource MahApps.Styles.Button}"
-                        ToolTip="Reload the current chapter">
+                        ToolTip="Reload the current document">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Refresh" />
                             <TextBlock Margin="8,0,0,0" Text="Refresh" />
@@ -142,66 +126,90 @@
                 CornerRadius="12"
                 Effect="{StaticResource GuideCardShadow}">
                 <StackPanel>
-                    <TextBlock
-                        FontSize="16"
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                        Text="Chapters" />
-                    <TextBlock
-                        Margin="0,2,0,16"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray6}"
-                        Text="Pick a chapter to explore Orbit's systems." />
-                    <ListBox
+                    <Expander
+                        IsExpanded="True"
                         Background="Transparent"
                         BorderThickness="0"
-                        ItemContainerStyle="{StaticResource GuideChapterItemContainerStyle}"
-                        ItemsSource="{Binding Sections}"
-                        SelectedItem="{Binding SelectedSection, Mode=TwoWay}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type viewModels:GuideSection}">
-                                <Border>
-                                    <Border.Style>
-                                        <Style BasedOn="{StaticResource GuideChapterBorderStyle}" TargetType="Border">
-                                            <Setter Property="Tag" Value="{x:Null}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                    <Setter Property="Tag" Value="Selected" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Border
-                                            Width="36"
-                                            Height="36"
-                                            VerticalAlignment="Center"
-                                            Background="{DynamicResource MahApps.Brushes.Gray8}"
-                                            CornerRadius="8">
-                                            <iconPacks:PackIconMaterial
-                                                Width="20"
-                                                Height="20"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                                Kind="{Binding Icon}" />
+                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                        FontWeight="SemiBold"
+                        Header="Guides">
+                        <StackPanel Margin="0,10,0,0">
+                            <TextBlock
+                                Margin="0,0,0,12"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                FontWeight="Normal"
+                                Text="Select a guide section to load." />
+                            <ListBox
+                                Background="Transparent"
+                                BorderThickness="0"
+                                ItemContainerStyle="{StaticResource GuideChapterItemContainerStyle}"
+                                ItemsSource="{Binding Sections}"
+                                SelectedItem="{Binding SelectedSection, Mode=TwoWay}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type viewModels:GuideSection}">
+                                        <Border>
+                                            <Border.Style>
+                                                <Style BasedOn="{StaticResource GuideChapterBorderStyle}" TargetType="Border">
+                                                    <Setter Property="Tag" Value="{x:Null}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                            <Setter Property="Tag" Value="Selected" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border
+                                                    Width="36"
+                                                    Height="36"
+                                                    VerticalAlignment="Center"
+                                                    Background="{DynamicResource MahApps.Brushes.Gray8}"
+                                                    CornerRadius="8">
+                                                    <iconPacks:PackIconMaterial
+                                                        Width="20"
+                                                        Height="20"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                                        Kind="{Binding Icon}" />
+                                                </Border>
+                                                <StackPanel Margin="12,0,0,0">
+                                                    <TextBlock
+                                                        FontSize="15"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                                        Text="{Binding Title}" />
+                                                    <TextBlock
+                                                        Margin="0,2,0,0"
+                                                        Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                                        Text="{Binding Description}"
+                                                        TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
                                         </Border>
-                                        <StackPanel Margin="12,0,0,0">
-                                            <TextBlock
-                                                FontSize="15"
-                                                FontWeight="SemiBold"
-                                                Foreground="{DynamicResource MahApps.Brushes.Text}"
-                                                Text="{Binding Title}" />
-                                            <TextBlock
-                                                Margin="0,2,0,0"
-                                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
-                                                Text="{Binding Description}"
-                                                TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Expander>
+                    <Expander
+                        Margin="0,12,0,0"
+                        IsExpanded="False"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                        FontWeight="SemiBold"
+                        Header="Tips">
+                        <StackPanel Margin="0,10,0,0">
+                            <TextBlock
+                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                Text="Use Refresh after pulling doc updates." />
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                Text="Use Open Folder to edit docs in-place." />
+                        </StackPanel>
+                    </Expander>
                 </StackPanel>
             </Border>
 
@@ -217,6 +225,8 @@
                         x:Name="DocumentViewer"
                         Margin="0"
                         Document="{Binding CurrentDocument}"
+                        IsToolBarVisible="False"
+                        VerticalContentAlignment="Top"
                         VerticalScrollBarVisibility="Auto" />
                     <Border
                         Panel.ZIndex="2"

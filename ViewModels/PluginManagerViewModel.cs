@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -14,11 +15,13 @@ using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace Orbit.ViewModels;
 
-public class PluginManagerViewModel : INotifyPropertyChanged
+public class PluginManagerViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly PluginManager _pluginManager;
     private string _statusMessage = "Ready";
     private bool _isLoading;
+    private bool _disposed;
+    private readonly SemaphoreSlim _operationGate = new(1, 1);
 
     public ObservableCollection<PluginItemViewModel> Plugins { get; }
 
@@ -64,6 +67,22 @@ public class PluginManagerViewModel : INotifyPropertyChanged
 
     private async Task LoadPluginAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _operationGate.WaitAsync();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        try
+        {
         var dialog = new OpenFileDialog
         {
             Title = "Select Plugin DLL",
@@ -86,7 +105,7 @@ public class PluginManagerViewModel : INotifyPropertyChanged
                         ? $"Plugin '{result.Metadata!.DisplayName}' hot-reloaded successfully"
                         : $"Plugin '{result.Metadata!.DisplayName}' loaded successfully";
 
-                    await RefreshPluginsAsync();
+                    await RefreshPluginsCoreAsync();
                 }
                 else
                 {
@@ -104,9 +123,40 @@ public class PluginManagerViewModel : INotifyPropertyChanged
                 IsLoading = false;
             }
         }
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     private async Task RefreshPluginsAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _operationGate.WaitAsync();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        try
+        {
+            await RefreshPluginsCoreAsync();
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    private async Task RefreshPluginsCoreAsync()
     {
         IsLoading = true;
         StatusMessage = "Refreshing plugins...";
@@ -137,6 +187,22 @@ public class PluginManagerViewModel : INotifyPropertyChanged
 
     private async Task AutoLoadAllAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _operationGate.WaitAsync();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        try
+        {
         IsLoading = true;
         StatusMessage = "Auto-loading plugins...";
 
@@ -144,7 +210,7 @@ public class PluginManagerViewModel : INotifyPropertyChanged
         {
             var count = await _pluginManager.AutoLoadPluginsAsync();
             StatusMessage = $"Auto-loaded {count} plugin(s)";
-            await RefreshPluginsAsync();
+            await RefreshPluginsCoreAsync();
         }
         catch (Exception ex)
         {
@@ -155,15 +221,37 @@ public class PluginManagerViewModel : INotifyPropertyChanged
         {
             IsLoading = false;
         }
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     private void OnPluginStatusChanged(object? sender, PluginStatusChangedEventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         Application.Current?.Dispatcher.InvokeAsync(() =>
         {
             StatusMessage = e.Message;
             _ = RefreshPluginsAsync();
         });
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _pluginManager.PluginStatusChanged -= OnPluginStatusChanged;
+        _operationGate.Dispose();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

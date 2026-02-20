@@ -513,7 +513,15 @@ namespace Orbit.ViewModels
 
 	private void OpenFsmNodeEditor()
 	{
-		TryOpenToolByKey(FsmNodeEditorToolKey);
+		if (TryOpenToolByKey(FsmNodeEditorToolKey))
+		{
+			return;
+		}
+
+		ConsoleLog.Append(
+			"[Orbit] Orbit Builder plugin is not loaded. Load it from Tools > Unified Tools Manager > Auto-load or Import Plugin.",
+			ConsoleLogSource.Orbit,
+			ConsoleLogLevel.Warning);
 	}
 
 		private void OpenAccountManager()
@@ -556,19 +564,25 @@ namespace Orbit.ViewModels
 	/// Dragablz callback invoked when a tab close button is pressed. Session tabs route through the full shutdown
 	/// pipeline while tool tabs simply disappear.
 	/// </summary>
-	public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
-	{
-		if (args.DragablzItem.DataContext is SessionModel session)
+		public void TabControl_ClosingItemHandler(ItemActionCallbackArgs<TabablzControl> args)
 		{
-			args.Cancel();
-			_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
-			return;
-		}
+			if (args.DragablzItem.DataContext is SessionModel session)
+			{
+				args.Cancel();
+				_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
+				return;
+			}
 
-		var removedItem = args.DragablzItem.DataContext;
-		Tabs.Remove(removedItem);
-		HandleTabRemoval(removedItem);
-	}
+			var removedItem = args.DragablzItem.DataContext;
+			if (removedItem is Models.ToolTabItem toolItem &&
+				string.Equals(toolItem.Key, "OrbitView", StringComparison.Ordinal))
+			{
+				RestoreOrbitWorkspaceToTabs();
+			}
+			DisposeToolItem(removedItem);
+			Tabs.Remove(removedItem);
+			HandleTabRemoval(removedItem);
+		}
 
 		private bool CanInject() => SelectedSession?.IsInjectable == true;
 
@@ -698,7 +712,7 @@ namespace Orbit.ViewModels
             OpenOrFocusToolTab(
                 key: SettingsToolKey,
                 name: "Settings",
-                controlFactory: () => new Views.SettingsView(),
+                controlFactory: () => new Views.SettingsView(new SettingsViewModel()),
                 icon: PackIconMaterialKind.Cog);
         }
     }
@@ -811,6 +825,12 @@ namespace Orbit.ViewModels
 	private bool TryAdoptToolFromOtherWindow(string key, out Models.ToolTabItem? adopted)
 	{
 		adopted = null;
+		if (string.Equals(key, "OrbitView", StringComparison.Ordinal))
+		{
+			// Orbit View carries window-specific callbacks in its view model.
+			// Recreate it per window rather than adopting a live instance from another shell.
+			return false;
+		}
 
 		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
 		foreach (var window in windows)
@@ -2153,8 +2173,8 @@ namespace Orbit.ViewModels
 		UpdateFloatingMenuVisibilityForCurrentTab();
 	}
 
-	private void HandleTabRemoval(object removedItem)
-	{
+		private void HandleTabRemoval(object removedItem)
+		{
 		if (Tabs.Count == 0)
 		{
 				SelectedTab = null;
@@ -2168,7 +2188,67 @@ namespace Orbit.ViewModels
 				SelectedTab = Tabs[0];
 			}
 
-			UpdateFloatingMenuVisibilityForCurrentTab();
+				UpdateFloatingMenuVisibilityForCurrentTab();
+			}
+
+		private static void DisposeToolItem(object? item)
+		{
+			if (item is not Models.ToolTabItem tool || tool.HostControl == null)
+			{
+				return;
+			}
+
+			try
+			{
+				if (tool.HostControl.DataContext is IDisposable disposable &&
+					disposable is not MainWindowViewModel)
+				{
+					disposable.Dispose();
+				}
+			}
+			catch
+			{
+				// Best effort cleanup.
+			}
+		}
+
+		private void RestoreOrbitWorkspaceToTabs()
+		{
+			var workspaceItems = orbitLayoutState.Items.ToList();
+			if (workspaceItems.Count == 0)
+			{
+				return;
+			}
+
+			foreach (var item in workspaceItems)
+			{
+				switch (item)
+				{
+					case SessionModel session:
+						orbitLayoutState.RemoveItem(session);
+						if (!Tabs.Contains(session))
+						{
+							Tabs.Add(session);
+						}
+						break;
+					case Models.ToolTabItem tool:
+						if (string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal))
+						{
+							continue;
+						}
+
+						orbitLayoutState.RemoveItem(tool);
+						if (tool.HostControl != null && !ReferenceEquals(tool.HostControl.DataContext, this))
+						{
+							tool.HostControl.DataContext = this;
+						}
+						if (!Tabs.Contains(tool))
+						{
+							Tabs.Add(tool);
+						}
+						break;
+				}
+			}
 		}
 
 		private void OnSessionsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -2226,6 +2306,12 @@ namespace Orbit.ViewModels
 		{
 			if (_disposed) return;
 			_disposed = true;
+
+			// Dispose active tool view models owned by this window.
+			foreach (var tool in Tabs.OfType<Models.ToolTabItem>().ToList())
+			{
+				DisposeToolItem(tool);
+			}
 
 			// Unsubscribe from collection events
 			try

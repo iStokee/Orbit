@@ -202,7 +202,7 @@ namespace Orbit.ViewModels
 				"ThemeManager" => "Customize themes, accents, and appearance",
 				"ScriptManager" => "Browse and manage script library",
 				"Console" => "View unified logs from Orbit, ME, and scripts",
-				"ApiDocumentation" => "Open the Orbiters Guide documentation hub",
+				"ApiDocumentation" => "Open the Orbit documentation hub",
 				"ToolsOverview" => "Manage registered tools and their visibility",
 				"FsmNodeEditor" => "Design and run finite state machine scripts visually",
 				"Settings" => "Configure Orbit application settings",

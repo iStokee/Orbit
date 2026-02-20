@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -20,10 +23,12 @@ namespace Orbit.ViewModels
 	/// <summary>
 	/// ViewModel for the Settings view with auto-update functionality
 	/// </summary>
-	public class SettingsViewModel : INotifyPropertyChanged
+	public class SettingsViewModel : INotifyPropertyChanged, IDisposable
 	{
 		private readonly GitHubReleaseChecker _releaseChecker = new GitHubReleaseChecker();
 		private readonly UpdateManager _updateManager = new UpdateManager();
+		private readonly CancellationTokenSource _lifetimeCts = new();
+		private bool _disposed;
 
 		private string _currentVersion;
 		private string _availableVersion;
@@ -181,8 +186,14 @@ namespace Orbit.ViewModels
 			get => _canInstallUpdate;
 			set
 			{
+				if (_canInstallUpdate == value)
+				{
+					return;
+				}
+
 				_canInstallUpdate = value;
 				OnPropertyChanged();
+				InstallUpdateCommand.NotifyCanExecuteChanged();
 			}
 		}
 
@@ -212,7 +223,10 @@ namespace Orbit.ViewModels
 
 		private async Task CheckForUpdatesAsync(bool silent = false)
 		{
-			if (IsCheckingForUpdates) return;
+			if (_disposed || IsCheckingForUpdates)
+			{
+				return;
+			}
 
 			try
 			{
@@ -239,8 +253,13 @@ namespace Orbit.ViewModels
 				var updateInfo = await _releaseChecker.CheckAsync(
 					expectedAssetName: UpdateConfig.DefaultAssetName,
 					expectedAuthor: ExpectedGitHubAuthor,
-					includePrereleases: false
+					includePrereleases: false,
+					cancellationToken: _lifetimeCts.Token
 				);
+				if (_disposed || _lifetimeCts.IsCancellationRequested)
+				{
+					return;
+				}
 
 				// Update last checked timestamp
 				_lastChecked = DateTime.Now;
@@ -303,6 +322,10 @@ namespace Orbit.ViewModels
 						silent ? ConsoleLogLevel.Debug : ConsoleLogLevel.Info);
 				}
 			}
+			catch (OperationCanceledException)
+			{
+				// View disposed or operation canceled.
+			}
 			catch (Exception ex)
 			{
 				ConsoleLogService.Instance.Append(
@@ -329,7 +352,10 @@ namespace Orbit.ViewModels
 			}
 			finally
 			{
-				IsCheckingForUpdates = false;
+				if (!_disposed)
+				{
+					IsCheckingForUpdates = false;
+				}
 			}
 		}
 
@@ -366,7 +392,10 @@ namespace Orbit.ViewModels
 
 		private async Task InstallUpdateAsync()
 		{
-			if (!HasUpdate || IsDownloading) return;
+			if (_disposed || !HasUpdate || IsDownloading)
+			{
+				return;
+			}
 
 			try
 			{
@@ -401,8 +430,18 @@ namespace Orbit.ViewModels
 
 				var updateInfo = await _releaseChecker.CheckAsync(
 					expectedAssetName: UpdateConfig.DefaultAssetName,
-					expectedAuthor: ExpectedGitHubAuthor
+					expectedAuthor: ExpectedGitHubAuthor,
+					cancellationToken: _lifetimeCts.Token
 				);
+				if (_disposed || _lifetimeCts.IsCancellationRequested)
+				{
+					return;
+				}
+
+				if (!string.IsNullOrWhiteSpace(updateInfo.ErrorMessage))
+				{
+					throw new Exception(updateInfo.ErrorMessage);
+				}
 
 				if (!updateInfo.HasUpdate || string.IsNullOrEmpty(updateInfo.DownloadUrl))
 				{
@@ -444,8 +483,13 @@ namespace Orbit.ViewModels
 				_downloadedZipPath = await _updateManager.DownloadUpdateAsync(
 					updateInfo.DownloadUrl,
 					updateInfo.AssetName,
-					progress
+					progress,
+					_lifetimeCts.Token
 				);
+				if (_disposed || _lifetimeCts.IsCancellationRequested)
+				{
+					return;
+				}
 
 				ConsoleLogService.Instance.Append(
 					$"[Update] ✓ Download complete: {_downloadedZipPath}",
@@ -539,6 +583,10 @@ namespace Orbit.ViewModels
 						ConsoleLogLevel.Info);
 				}
 			}
+			catch (OperationCanceledException)
+			{
+				// View disposed or operation canceled.
+			}
 			catch (Exception ex)
 			{
 				UpdateStatusText = "Update failed";
@@ -572,9 +620,12 @@ namespace Orbit.ViewModels
 			}
 			finally
 			{
-				IsDownloading = false;
-				IsDownloadIndeterminate = false;
-				DownloadProgress = 0;
+				if (!_disposed)
+				{
+					IsDownloading = false;
+					IsDownloadIndeterminate = false;
+					DownloadProgress = 0;
+				}
 			}
 		}
 
@@ -587,12 +638,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.AutoInjectOnReady;
 		set
 		{
-			if (Settings.Default.AutoInjectOnReady == value) return;
-			if (!TryApplyToMain(vm => vm.AutoInjectOnReady = value))
-			{
-				Settings.Default.AutoInjectOnReady = value;
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.AutoInjectOnReady,
+				value,
+				v => Settings.Default.AutoInjectOnReady = v,
+				nameof(AutoInjectOnReady),
+				(vm, v) => vm.AutoInjectOnReady = v);
 		}
 	}
 
@@ -608,10 +659,11 @@ namespace Orbit.ViewModels
 		get => Settings.Default.ShowFloatingMenuAutoShow;
 		set
 		{
-			if (Settings.Default.ShowFloatingMenuAutoShow == value) return;
-			Settings.Default.ShowFloatingMenuAutoShow = value;
-			Settings.Default.Save();
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.ShowFloatingMenuAutoShow,
+				value,
+				v => Settings.Default.ShowFloatingMenuAutoShow = v,
+				nameof(ShowFloatingMenuAutoShow));
 		}
 	}
 
@@ -620,12 +672,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.ShowFloatingMenuOnHome;
 		set
 		{
-			if (Settings.Default.ShowFloatingMenuOnHome == value) return;
-			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnHome = value))
-			{
-				Settings.Default.ShowFloatingMenuOnHome = value;
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.ShowFloatingMenuOnHome,
+				value,
+				v => Settings.Default.ShowFloatingMenuOnHome = v,
+				nameof(ShowFloatingMenuOnHome),
+				(vm, v) => vm.ShowFloatingMenuOnHome = v);
 		}
 	}
 
@@ -634,12 +686,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.ShowFloatingMenuOnSessionTabs;
 		set
 		{
-			if (Settings.Default.ShowFloatingMenuOnSessionTabs == value) return;
-			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnSessionTabs = value))
-			{
-				Settings.Default.ShowFloatingMenuOnSessionTabs = value;
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.ShowFloatingMenuOnSessionTabs,
+				value,
+				v => Settings.Default.ShowFloatingMenuOnSessionTabs = v,
+				nameof(ShowFloatingMenuOnSessionTabs),
+				(vm, v) => vm.ShowFloatingMenuOnSessionTabs = v);
 		}
 	}
 
@@ -648,12 +700,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.ShowFloatingMenuOnToolTabs;
 		set
 		{
-			if (Settings.Default.ShowFloatingMenuOnToolTabs == value) return;
-			if (!TryApplyToMain(vm => vm.ShowFloatingMenuOnToolTabs = value))
-			{
-				Settings.Default.ShowFloatingMenuOnToolTabs = value;
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.ShowFloatingMenuOnToolTabs,
+				value,
+				v => Settings.Default.ShowFloatingMenuOnToolTabs = v,
+				nameof(ShowFloatingMenuOnToolTabs),
+				(vm, v) => vm.ShowFloatingMenuOnToolTabs = v);
 		}
 	}
 
@@ -669,11 +721,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0.3, 1);
 			if (Math.Abs(FloatingMenuOpacity - normalized) < 0.01)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuOpacity = normalized))
-			{
-				Settings.Default.FloatingMenuOpacity = normalized;
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuOpacity,
+				normalized,
+				v => Settings.Default.FloatingMenuOpacity = v,
+				nameof(FloatingMenuOpacity),
+				(vm, v) => vm.FloatingMenuOpacity = v);
 		}
 	}
 
@@ -689,11 +743,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0.2, 1);
 			if (Math.Abs(FloatingMenuBackgroundOpacity - normalized) < 0.01)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuBackgroundOpacity = normalized))
-			{
-				Settings.Default.FloatingMenuBackgroundOpacity = normalized;
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuBackgroundOpacity,
+				normalized,
+				v => Settings.Default.FloatingMenuBackgroundOpacity = v,
+				nameof(FloatingMenuBackgroundOpacity),
+				(vm, v) => vm.FloatingMenuBackgroundOpacity = v);
 		}
 	}
 
@@ -709,11 +765,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0.5, 8);
 			if (Math.Abs(FloatingMenuInactivitySeconds - normalized) < 0.05)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuInactivitySeconds = normalized))
-			{
-				Settings.Default.FloatingMenuInactivitySeconds = normalized;
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuInactivitySeconds,
+				normalized,
+				v => Settings.Default.FloatingMenuInactivitySeconds = v,
+				nameof(FloatingMenuInactivitySeconds),
+				(vm, v) => vm.FloatingMenuInactivitySeconds = v);
 		}
 	}
 
@@ -722,12 +780,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.FloatingMenuAutoDirection;
 		set
 		{
-			if (Settings.Default.FloatingMenuAutoDirection == value) return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuAutoDirection = value))
-			{
-				Settings.Default.FloatingMenuAutoDirection = value;
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuAutoDirection,
+				value,
+				v => Settings.Default.FloatingMenuAutoDirection = v,
+				nameof(FloatingMenuAutoDirection),
+				(vm, v) => vm.FloatingMenuAutoDirection = v);
 		}
 	}
 
@@ -742,12 +800,12 @@ namespace Orbit.ViewModels
 		}
 		set
 		{
-			if (FloatingMenuDirection == value) return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDirection = value))
-			{
-				Settings.Default.FloatingMenuDirection = value.ToString();
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				FloatingMenuDirection,
+				value,
+				v => Settings.Default.FloatingMenuDirection = v.ToString(),
+				nameof(FloatingMenuDirection),
+				(vm, v) => vm.FloatingMenuDirection = v);
 		}
 	}
 
@@ -759,12 +817,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 40, 200);
 			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeThreshold - normalized) < 0.1)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockEdgeThreshold = normalized))
-			{
-				Settings.Default.FloatingMenuDockEdgeThreshold = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockEdgeThreshold,
+				normalized,
+				v => Settings.Default.FloatingMenuDockEdgeThreshold = v,
+				nameof(FloatingMenuDockEdgeThreshold),
+				(vm, v) => vm.FloatingMenuDockEdgeThreshold = v);
 		}
 	}
 
@@ -776,13 +835,14 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 60, 250);
 			if (Math.Abs(Settings.Default.FloatingMenuDockCornerThreshold - normalized) < 0.1)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerThreshold = normalized))
-			{
-				Settings.Default.FloatingMenuDockCornerThreshold = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
-			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockCornerThreshold,
+				normalized,
+				v => Settings.Default.FloatingMenuDockCornerThreshold = v,
+				nameof(FloatingMenuDockCornerThreshold),
+				(vm, v) => vm.FloatingMenuDockCornerThreshold = v,
+				() => OnPropertyChanged(nameof(FloatingMenuDockCornerRadius)));
 		}
 	}
 
@@ -794,13 +854,14 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 60, 250);
 			if (Math.Abs(Settings.Default.FloatingMenuDockCornerHeight - normalized) < 0.1)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerHeight = normalized))
-			{
-				Settings.Default.FloatingMenuDockCornerHeight = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
-			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockCornerHeight,
+				normalized,
+				v => Settings.Default.FloatingMenuDockCornerHeight = v,
+				nameof(FloatingMenuDockCornerHeight),
+				(vm, v) => vm.FloatingMenuDockCornerHeight = v,
+				() => OnPropertyChanged(nameof(FloatingMenuDockCornerRadius)));
 		}
 	}
 
@@ -812,13 +873,14 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0d, 1d);
 			if (Math.Abs(Settings.Default.FloatingMenuDockCornerRoundness - normalized) < 0.01)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockCornerRoundness = normalized))
-			{
-				Settings.Default.FloatingMenuDockCornerRoundness = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
-			OnPropertyChanged(nameof(FloatingMenuDockCornerRadius));
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockCornerRoundness,
+				normalized,
+				v => Settings.Default.FloatingMenuDockCornerRoundness = v,
+				nameof(FloatingMenuDockCornerRoundness),
+				(vm, v) => vm.FloatingMenuDockCornerRoundness = v,
+				() => OnPropertyChanged(nameof(FloatingMenuDockCornerRadius)));
 		}
 	}
 
@@ -830,12 +892,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0.05d, 0.95d);
 			if (Math.Abs(Settings.Default.FloatingMenuDockEdgeCoverage - normalized) < 0.005)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockEdgeCoverage = normalized))
-			{
-				Settings.Default.FloatingMenuDockEdgeCoverage = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockEdgeCoverage,
+				normalized,
+				v => Settings.Default.FloatingMenuDockEdgeCoverage = v,
+				nameof(FloatingMenuDockEdgeCoverage),
+				(vm, v) => vm.FloatingMenuDockEdgeCoverage = v);
 		}
 	}
 
@@ -847,12 +910,13 @@ namespace Orbit.ViewModels
 			var normalized = Math.Clamp(value, 0.05d, 0.9d);
 			if (Math.Abs(Settings.Default.FloatingMenuDockZoneOpacity - normalized) < 0.005)
 				return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuDockZoneOpacity = normalized))
-			{
-				Settings.Default.FloatingMenuDockZoneOpacity = normalized;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
+
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuDockZoneOpacity,
+				normalized,
+				v => Settings.Default.FloatingMenuDockZoneOpacity = v,
+				nameof(FloatingMenuDockZoneOpacity),
+				(vm, v) => vm.FloatingMenuDockZoneOpacity = v);
 		}
 	}
 
@@ -861,13 +925,12 @@ namespace Orbit.ViewModels
 		get => ParseFloatingMenuQuickToggleMode(Settings.Default.FloatingMenuQuickToggle);
 		set
 		{
-			if (FloatingMenuQuickToggleMode == value) return;
-			if (!TryApplyToMain(vm => vm.FloatingMenuQuickToggleMode = value))
-			{
-				Settings.Default.FloatingMenuQuickToggle = value.ToString();
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				FloatingMenuQuickToggleMode,
+				value,
+				v => Settings.Default.FloatingMenuQuickToggle = v.ToString(),
+				nameof(FloatingMenuQuickToggleMode),
+				(vm, v) => vm.FloatingMenuQuickToggleMode = v);
 		}
 	}
 
@@ -876,13 +939,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.FloatingMenuShowAllSnapZonesOnClip;
 		set
 		{
-			if (Settings.Default.FloatingMenuShowAllSnapZonesOnClip == value) return;
-			if (!TryApplyToMain(vm => vm.ShowAllSnapZonesOnClip = value))
-			{
-				Settings.Default.FloatingMenuShowAllSnapZonesOnClip = value;
-				Settings.Default.Save();
-			}
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuShowAllSnapZonesOnClip,
+				value,
+				v => Settings.Default.FloatingMenuShowAllSnapZonesOnClip = v,
+				nameof(ShowAllSnapZonesOnClip),
+				(vm, v) => vm.ShowAllSnapZonesOnClip = v);
 		}
 	}
 
@@ -921,11 +983,12 @@ namespace Orbit.ViewModels
 		get => Settings.Default.ShowThemeManagerWelcomeMessage;
 		set
 		{
-			if (Settings.Default.ShowThemeManagerWelcomeMessage == value) return;
-			Settings.Default.ShowThemeManagerWelcomeMessage = value;
-			TryApplyToMain(vm => vm.UpdateFloatingMenuWelcomeHint(value));
-			Settings.Default.Save();
-			OnPropertyChanged();
+			ApplyAndPersist(
+				Settings.Default.ShowThemeManagerWelcomeMessage,
+				value,
+				v => Settings.Default.ShowThemeManagerWelcomeMessage = v,
+				nameof(ShowThemeManagerWelcomeMessage),
+				(vm, v) => vm.UpdateFloatingMenuWelcomeHint(v));
 		}
 	}
 
@@ -943,7 +1006,11 @@ namespace Orbit.ViewModels
 
 		void Execute()
 		{
-			if (app.MainWindow?.DataContext is MainWindowViewModel vm)
+			foreach (var vm in app.Windows
+				.OfType<Window>()
+				.Select(w => w.DataContext)
+				.OfType<MainWindowViewModel>()
+				.Distinct())
 			{
 				action(vm);
 				handled = true;
@@ -1013,92 +1080,98 @@ namespace Orbit.ViewModels
 		/// <summary>
 		/// Where new sessions should dock when launched
 		/// </summary>
-		public string SessionLaunchBehavior
-		{
-			get => Settings.Default.SessionLaunchBehavior;
-			set
+			public string SessionLaunchBehavior
 			{
-				if (Settings.Default.SessionLaunchBehavior == value) return;
-				Settings.Default.SessionLaunchBehavior = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.SessionLaunchBehavior;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.SessionLaunchBehavior,
+						value,
+						v => Settings.Default.SessionLaunchBehavior = v,
+						nameof(SessionLaunchBehavior));
+				}
 			}
-		}
 
 		/// <summary>
 		/// Grid density for Orbit View (1=Single, 2=Standard, 3=Dense)
 		/// </summary>
-		public int OrbitViewGridDensity
-		{
-			get => Settings.Default.OrbitViewGridDensity;
-			set
+			public int OrbitViewGridDensity
 			{
-				if (Settings.Default.OrbitViewGridDensity == value) return;
-				Settings.Default.OrbitViewGridDensity = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.OrbitViewGridDensity;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.OrbitViewGridDensity,
+						value,
+						v => Settings.Default.OrbitViewGridDensity = v,
+						nameof(OrbitViewGridDensity));
+				}
 			}
-		}
 
 		/// <summary>
 		/// UI spacing compactness (0=Minimal, 1=Moderate, 2=Maximum)
 		/// </summary>
-		public int OrbitViewCompactness
-		{
-			get => Settings.Default.OrbitViewCompactness;
-			set
+			public int OrbitViewCompactness
 			{
-				if (Settings.Default.OrbitViewCompactness == value) return;
-				Settings.Default.OrbitViewCompactness = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.OrbitViewCompactness;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.OrbitViewCompactness,
+						value,
+						v => Settings.Default.OrbitViewCompactness = v,
+						nameof(OrbitViewCompactness));
+				}
 			}
-		}
 
 		/// <summary>
 		/// Tab header size (0=Compact, 1=Standard, 2=Comfortable)
 		/// </summary>
-		public int OrbitViewTabHeaderSize
-		{
-			get => Settings.Default.OrbitViewTabHeaderSize;
-			set
+			public int OrbitViewTabHeaderSize
 			{
-				if (Settings.Default.OrbitViewTabHeaderSize == value) return;
-				Settings.Default.OrbitViewTabHeaderSize = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.OrbitViewTabHeaderSize;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.OrbitViewTabHeaderSize,
+						value,
+						v => Settings.Default.OrbitViewTabHeaderSize = v,
+						nameof(OrbitViewTabHeaderSize));
+				}
 			}
-		}
 
 		/// <summary>
 		/// Border thickness for grid cells (0=None, 1=Minimal, 2=Standard)
 		/// </summary>
-		public int OrbitViewBorderThickness
-		{
-			get => Settings.Default.OrbitViewBorderThickness;
-			set
+			public int OrbitViewBorderThickness
 			{
-				if (Settings.Default.OrbitViewBorderThickness == value) return;
-				Settings.Default.OrbitViewBorderThickness = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.OrbitViewBorderThickness;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.OrbitViewBorderThickness,
+						value,
+						v => Settings.Default.OrbitViewBorderThickness = v,
+						nameof(OrbitViewBorderThickness));
+				}
 			}
-		}
 
 		/// <summary>
 		/// Auto-open Orbit View on startup
 		/// </summary>
-		public bool AutoOpenOrbitViewOnStartup
-		{
-			get => Settings.Default.AutoOpenOrbitViewOnStartup;
-			set
+			public bool AutoOpenOrbitViewOnStartup
 			{
-				if (Settings.Default.AutoOpenOrbitViewOnStartup == value) return;
-				Settings.Default.AutoOpenOrbitViewOnStartup = value;
-				Settings.Default.Save();
-				OnPropertyChanged();
+				get => Settings.Default.AutoOpenOrbitViewOnStartup;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.AutoOpenOrbitViewOnStartup,
+						value,
+						v => Settings.Default.AutoOpenOrbitViewOnStartup = v,
+						nameof(AutoOpenOrbitViewOnStartup));
+				}
 			}
-		}
 
 		#endregion
 
@@ -1106,9 +1179,50 @@ namespace Orbit.ViewModels
 
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+	protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		#endregion
+
+		private void ApplyAndPersist<T>(
+			T currentValue,
+			T newValue,
+			Action<T> assignSetting,
+			string propertyName,
+			Action<MainWindowViewModel, T>? applyToWindow = null,
+			Action? afterApply = null)
+		{
+			if (EqualityComparer<T>.Default.Equals(currentValue, newValue))
+			{
+				return;
+			}
+
+			var handled = false;
+			if (applyToWindow != null)
+			{
+				handled = TryApplyToMain(vm => applyToWindow(vm, newValue));
+			}
+
+			if (!handled)
+			{
+				assignSetting(newValue);
+			}
+
+			Settings.Default.Save();
+			OnPropertyChanged(propertyName);
+			afterApply?.Invoke();
+		}
+
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			_lifetimeCts.Cancel();
+			_lifetimeCts.Dispose();
+		}
 	}
 }

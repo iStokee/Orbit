@@ -28,7 +28,7 @@
         </Grid.RowDefinitions>
 
         <!--  Header  -->
-        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}" Margin="0,0,0,10">
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -36,15 +36,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <Grid>
-                        <iconPacks:PackIconMaterial
-                            Width="35"
-                            Height="35"
-                            Margin="10,10,0,0"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Kind="Palette" />
-
-                    </Grid>
+                    <iconPacks:PackIconMaterial Kind="Palette" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
                 <StackPanel
@@ -52,15 +44,10 @@
                     Margin="12,0,0,0"
                     VerticalAlignment="Center">
                     <TextBlock
-                        FontSize="24"
-                        FontWeight="Bold"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Style="{StaticResource Orbit.ToolHeaderTitle}"
                         Text="Theme Customization" />
                     <TextBlock
-                        Margin="0,4,0,0"
-                        FontSize="13"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Opacity="0.95"
+                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
                         Text="Transform Orbit's appearance with built-in themes or design your own custom palette" />
                 </StackPanel>
             </Grid>

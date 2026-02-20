@@ -13,6 +13,7 @@
 
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PlatformTarget>x64</PlatformTarget>
+    <BaseOutputPath>..\Build\</BaseOutputPath>
 
   </PropertyGroup>
 
@@ -30,6 +31,14 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
@@ -108,9 +117,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="csharp_interop">
-      <HintPath>..\..\ME\x64\Build_DLL\csharp_interop.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\C#\csharp_interop\csharp_interop.csproj" />
   </ItemGroup>
 
 </Project>

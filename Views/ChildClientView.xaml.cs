@@ -54,7 +54,8 @@ namespace Orbit.Views
 		private Size lastMeasuredViewportSize = Size.Empty;
 		private Size lastRequestedViewportSize = Size.Empty;
 		private Size lastAppliedViewportSize = Size.Empty;
-		private SessionModel? boundSession;
+			private SessionModel? boundSession;
+			private TabablzControl? attachedTabControl;
 
 		// When SessionType=ExternalScript we embed an existing HWND inside a WinForms panel.
 		private WF.Panel? externalHostPanel;
@@ -159,20 +160,31 @@ namespace Orbit.Views
 		// Removed: }
 		}
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-			RestoreSessionFromParking();
+	        private void OnLoaded(object sender, RoutedEventArgs e)
+	        {
+				RestoreSessionFromParking();
 
 			// FIXED: Start session loading AFTER visual tree is ready
 			// Only load if we haven't started yet (avoid re-loading on tab switch)
 			EnsureSessionLoading();
 
-            if (Parent is TabItem parentTab && parentTab.Parent is TabablzControl tabControl)
-            {
-                tabControl.SizeChanged += OnTabControlSizeChanged;
-                // Prefer host size when available
-                if (RSPanel?.ActualWidth > 0 && RSPanel?.ActualHeight > 0)
-                {
+				var tabControl = ResolveOwningTabControl();
+	            if (tabControl != null)
+	            {
+					if (!ReferenceEquals(attachedTabControl, tabControl))
+					{
+						if (attachedTabControl != null)
+						{
+							attachedTabControl.SizeChanged -= OnTabControlSizeChanged;
+						}
+
+						attachedTabControl = tabControl;
+						attachedTabControl.SizeChanged += OnTabControlSizeChanged;
+					}
+
+	                // Prefer host size when available
+	                if (RSPanel?.ActualWidth > 0 && RSPanel?.ActualHeight > 0)
+	                {
 					var snapshot = new Size(RSPanel.ActualWidth, RSPanel.ActualHeight);
 					lastMeasuredViewportSize = snapshot;
                     _ = ResizeWindowAsync((int)Math.Round(snapshot.Width), (int)Math.Round(snapshot.Height));
@@ -186,12 +198,13 @@ namespace Orbit.Views
             }
         }
 
-			private void OnUnloaded(object sender, RoutedEventArgs e)
-			{
-				if (Parent is TabItem parentTab && parentTab.Parent is TabablzControl tabControl)
+				private void OnUnloaded(object sender, RoutedEventArgs e)
 				{
-					tabControl.SizeChanged -= OnTabControlSizeChanged;
-				}
+					if (attachedTabControl != null)
+					{
+						attachedTabControl.SizeChanged -= OnTabControlSizeChanged;
+						attachedTabControl = null;
+					}
 
 				// External script windows: restore parent/styles so the window isn't orphaned.
 				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
@@ -235,13 +248,9 @@ namespace Orbit.Views
 					return;
 				}
 
-				ParkSessionIntoOffscreenHost();
-				if (boundSession != null)
-				{
-				// Removed: boundSession.PropertyChanged -= Session_PropertyChanged;
-					boundSession = null;
+					// Do not park/reset during normal tab switching. Keeping the host attached avoids
+					// SetParent churn and visible blink when users bounce between tabs.
 				}
-			}
 
         private async void OnTabControlSizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -569,9 +578,9 @@ namespace Orbit.Views
 				return;
 			}
 
-			if (e.NewValue is bool isVisible)
-			{
-				if (isVisible)
+				if (e.NewValue is bool isVisible)
+				{
+					if (isVisible)
 				{
 					RestoreSessionFromParking();
 					var viewport = GetHostViewportSize();
@@ -580,18 +589,19 @@ namespace Orbit.Views
 						lastMeasuredViewportSize = viewport;
 						_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
 					}
-				}
-				else
-				{
-					var viewport = GetHostViewportSize();
-					if (viewport.Width > 0 && viewport.Height > 0)
-					{
-						lastMeasuredViewportSize = viewport;
 					}
-					ParkSessionIntoOffscreenHost();
 				}
 			}
-		}
+
+			private TabablzControl? ResolveOwningTabControl()
+			{
+				if (Parent is TabItem tabItem && tabItem.Parent is TabablzControl tabControl)
+				{
+					return tabControl;
+				}
+
+				return null;
+			}
 
 		private static bool AreClose(Size left, Size right)
 		{

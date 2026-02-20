@@ -12,6 +12,7 @@
     d:DesignHeight="600"
     d:DesignWidth="800"
     Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    Unloaded="OnUnloaded"
     mc:Ignorable="d">
     <UserControl.Resources>
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
@@ -26,7 +27,6 @@
         <!--  Header  -->
         <Border
             Grid.Row="0"
-            Margin="0,0,0,24"
             Style="{StaticResource Orbit.ToolHeader}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -35,12 +35,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial
-                        Width="35"
-                        Height="35"
-                        Margin="10,10,0,0"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Kind="Puzzle" />
+                    <iconPacks:PackIconMaterial Kind="Puzzle" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
                 <StackPanel
@@ -48,15 +43,10 @@
                     Margin="12,0,0,0"
                     VerticalAlignment="Center">
                     <TextBlock
-                        FontSize="22"
-                        FontWeight="Bold"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Style="{StaticResource Orbit.ToolHeaderTitle}"
                         Text="Plugin Manager" />
                     <TextBlock
-                        Margin="0,6,0,0"
-                        FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Opacity="0.85"
+                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
                         Text="Load, reload, and manage Orbit plugins with hot reload support" />
                 </StackPanel>
             </Grid>

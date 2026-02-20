@@ -1,10 +1,9 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Orbit.Models;
 using Orbit.ViewModels;
-using ListView = System.Windows.Controls.ListView;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace Orbit.Views;
@@ -23,7 +22,7 @@ public partial class ScriptManagerPanel : UserControl
 
     private void OnScriptDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not ListView { SelectedItem: ScriptProfile profile })
+        if (sender is not Selector { SelectedItem: ScriptProfile profile })
         {
             return;
         }
@@ -36,9 +35,6 @@ public partial class ScriptManagerPanel : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        if (DataContext is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        // Unloaded can fire during tab reparenting/tear-off; do not dispose view model here.
     }
 }

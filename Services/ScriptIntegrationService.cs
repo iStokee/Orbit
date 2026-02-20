@@ -87,11 +87,8 @@ namespace Orbit.Services
 			session.UpdateState(SessionState.ClientReady);
 			session.UpdateInjectionState(InjectionState.NotReady); // Scripts don't need injection
 
-			// Add to session collection (this will trigger UI updates)
-			System.Windows.Application.Current.Dispatcher.Invoke(() =>
-			{
-				_sessionCollection.Sessions.Add(session);
-			});
+				// Add to session collection (this will trigger UI updates)
+				ExecuteOnUi(() => _sessionCollection.Sessions.Add(session));
 
 			// Surface the registered window into the active session presentation.
 			// Orbit View no longer auto-synchronizes sessions, so without this the tab could be "registered but invisible".
@@ -141,10 +138,7 @@ namespace Orbit.Services
 				return false;
 			}
 
-			System.Windows.Application.Current.Dispatcher.Invoke(() =>
-			{
-				_sessionCollection.Sessions.Remove(session);
-			});
+				ExecuteOnUi(() => _sessionCollection.Sessions.Remove(session));
 
 			return true;
 		}
@@ -152,10 +146,22 @@ namespace Orbit.Services
 		/// <summary>
 		/// Gets the process ID that owns the specified window
 		/// </summary>
-		private int GetProcessIdFromWindow(IntPtr hwnd)
-		{
-			Win32.GetWindowThreadProcessId(hwnd, out uint processId);
-			return (int)processId;
+			private int GetProcessIdFromWindow(IntPtr hwnd)
+			{
+				Win32.GetWindowThreadProcessId(hwnd, out uint processId);
+				return (int)processId;
+			}
+
+			private static void ExecuteOnUi(Action action)
+			{
+				var dispatcher = Application.Current?.Dispatcher;
+				if (dispatcher == null || dispatcher.CheckAccess())
+				{
+					action();
+					return;
+				}
+
+				dispatcher.Invoke(action);
+			}
 		}
 	}
-}

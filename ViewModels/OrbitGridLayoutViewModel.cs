@@ -16,6 +16,7 @@ using Dragablz.Dockablz;
 using Orbit.Converters;
 using Orbit.Models;
 using Orbit.Services;
+using Orbit.Views;
 using Orbit;
 using Application = System.Windows.Application;
 using Orientation = System.Windows.Controls.Orientation;
@@ -27,7 +28,7 @@ namespace Orbit.ViewModels
 	/// ViewModel for Orbit View - Unified live session grid layout using Dragablz Layout.Branch()
 	/// Replaces the legacy GridLayoutBuilder approach.
 	/// </summary>
-	public class OrbitGridLayoutViewModel : INotifyPropertyChanged
+	public class OrbitGridLayoutViewModel : INotifyPropertyChanged, IDisposable
 	{
 		private sealed class ReferenceEqualityComparer : IEqualityComparer<object>
 		{
@@ -57,6 +58,7 @@ namespace Orbit.ViewModels
 		private int _currentColumns = 1;
 		private string _suggestedGridLabel = "Suggested: 1 x 1";
 		private DispatcherTimer? _workspaceReconcileTimer;
+		private bool _disposed;
 
 	public OrbitGridLayoutViewModel(
 		SessionCollectionService sessionCollectionService,
@@ -73,7 +75,7 @@ namespace Orbit.ViewModels
 		_closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
 		_moveToIndividualTabs = moveToIndividualTabs ?? throw new ArgumentNullException(nameof(moveToIndividualTabs));
 
-			Items.CollectionChanged += OnWorkspaceItemsChanged;
+			CollectionChangedEventManager.AddHandler(Items, OnWorkspaceItemsChanged);
 
 			MoveToIndividualTabsCommand = new RelayCommand<object?>(o =>
 			{
@@ -208,8 +210,37 @@ namespace Orbit.ViewModels
 		/// </summary>
 		public void SetLayoutControl(Layout layout)
 		{
+			if (layout == null)
+			{
+				throw new ArgumentNullException(nameof(layout));
+			}
+
+			if (ReferenceEquals(_sessionLayout, layout))
+			{
+				EnsureWorkspaceReconcileHooked();
+				RefreshCommandStates();
+				return;
+			}
+
+			DetachLayoutControl();
 			_sessionLayout = layout;
 			EnsureWorkspaceReconcileHooked();
+			RefreshCommandStates();
+		}
+
+		public void DetachLayoutControl()
+		{
+			if (_sessionLayout != null)
+			{
+				_sessionLayout.LayoutUpdated -= SessionLayout_LayoutUpdated;
+				_sessionLayout = null;
+			}
+
+			if (_workspaceReconcileTimer != null)
+			{
+				_workspaceReconcileTimer.Stop();
+			}
+
 			RefreshCommandStates();
 		}
 
@@ -226,11 +257,7 @@ namespace Orbit.ViewModels
 				{
 					Interval = TimeSpan.FromMilliseconds(200)
 				};
-				_workspaceReconcileTimer.Tick += (_, __) =>
-				{
-					_workspaceReconcileTimer.Stop();
-					ReconcileWorkspaceState();
-				};
+				_workspaceReconcileTimer.Tick += WorkspaceReconcileTimer_Tick;
 			}
 
 			// Debounce reconciliation after layout changes (drag/drop, branch consolidation, etc.).
@@ -240,6 +267,11 @@ namespace Orbit.ViewModels
 
 		private void SessionLayout_LayoutUpdated(object? sender, EventArgs e)
 		{
+			if (_disposed)
+			{
+				return;
+			}
+
 			if (_workspaceReconcileTimer == null)
 			{
 				return;
@@ -247,6 +279,12 @@ namespace Orbit.ViewModels
 
 			_workspaceReconcileTimer.Stop();
 			_workspaceReconcileTimer.Start();
+		}
+
+		private void WorkspaceReconcileTimer_Tick(object? sender, EventArgs e)
+		{
+			_workspaceReconcileTimer?.Stop();
+			ReconcileWorkspaceState();
 		}
 
 			private void ReconcileWorkspaceState()
@@ -416,6 +454,8 @@ namespace Orbit.ViewModels
 						}
 					}
 				}
+
+				EnsureSelectedSessionsAreActive(allControls);
 			}
 
 		/// <summary>
@@ -518,18 +558,7 @@ namespace Orbit.ViewModels
 					}
 				}
 
-				foreach (var session in allItems.OfType<SessionModel>())
-				{
-					var host = session.HostControl;
-					if (host == null)
-						continue;
-
-					var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
-					dispatcher?.InvokeAsync(() =>
-					{
-						host.EnsureActiveAfterLayout();
-					}, DispatcherPriority.Background);
-				}
+				EnsureSelectedSessionsAreActive(allCellControls);
 
 				_currentRows = rows;
 				_currentColumns = cols;
@@ -746,10 +775,61 @@ namespace Orbit.ViewModels
 			RefreshCommandStates();
 		}
 
+		private static void EnsureSelectedSessionsAreActive(IEnumerable<TabablzControl> tabControls)
+		{
+			if (tabControls == null)
+			{
+				return;
+			}
+
+			var seenHosts = new HashSet<ChildClientView>();
+			ChildClientView? focusTarget = null;
+
+			foreach (var control in tabControls)
+			{
+				if (control?.SelectedItem is not SessionModel session || session.HostControl == null)
+				{
+					continue;
+				}
+
+				var host = session.HostControl;
+				if (!seenHosts.Add(host))
+				{
+					continue;
+				}
+
+				var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
+				dispatcher?.InvokeAsync(() =>
+				{
+					host.EnsureActiveAfterLayout();
+				}, DispatcherPriority.Background);
+
+				if (focusTarget == null && (control.IsKeyboardFocusWithin || control.IsMouseOver))
+				{
+					focusTarget = host;
+				}
+			}
+
+			if (focusTarget == null)
+			{
+				return;
+			}
+
+			var focusDispatcher = focusTarget.Dispatcher ?? Application.Current?.Dispatcher;
+			focusDispatcher?.InvokeAsync(() =>
+			{
+				var hostWindow = Window.GetWindow(focusTarget);
+				if (hostWindow?.IsActive == true)
+				{
+					focusTarget.FocusEmbeddedClient();
+				}
+			}, DispatcherPriority.Input);
+		}
+
 	private bool CanCreateGrid() => _sessionLayout != null;
 
-		private void HandleTabClosing(ItemActionCallbackArgs<TabablzControl> args)
-		{
+			private void HandleTabClosing(ItemActionCallbackArgs<TabablzControl> args)
+			{
 			if (args == null)
 				return;
 
@@ -765,61 +845,83 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			// Handle tool/other tab close - remove from Items collection
-			// This prevents empty tab shells from being left behind
-			if (Items.Contains(item))
-			{
-				Application.Current.Dispatcher.BeginInvoke(() =>
+				// Handle tool/other tab close - remove from Items collection
+				// This prevents empty tab shells from being left behind
+				DisposeToolItem(item);
+				if (Items.Contains(item))
 				{
-					Items.Remove(item);
+					Application.Current.Dispatcher.BeginInvoke(() =>
+					{
+						Items.Remove(item);
 					RefreshCommandStates();
 				}, DispatcherPriority.Background);
 			}
 		}
 
-		private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-		{
-			if (_sessionLayout != null && e != null)
+			private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
 			{
-				if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
+				if (_sessionLayout != null && e != null)
 				{
-					if (e.NewItems != null)
+					if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
 					{
-						foreach (var item in e.NewItems.Cast<object>())
+						if (e.NewItems != null)
 						{
-							AddItemToLayout(item);
+							foreach (var item in e.NewItems.Cast<object>())
+							{
+								AddItemToLayout(item);
+							}
+						}
+					}
+
+					if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
+					{
+						if (e.OldItems != null)
+						{
+							foreach (var item in e.OldItems.Cast<object>())
+							{
+								RemoveItemFromLayout(item);
+							}
+						}
+					}
+
+					if (e.Action == NotifyCollectionChangedAction.Reset)
+					{
+						// Best-effort: ensure branched tab controls are cleared so they don't retain stale references.
+						foreach (var control in GetAllTabControls(_sessionLayout).ToList())
+						{
+							if (control.ItemsSource == null)
+							{
+								control.Items.Clear();
+								CollapseIfEmpty(control);
+							}
 						}
 					}
 				}
 
-				if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
-				{
-					if (e.OldItems != null)
-					{
-						foreach (var item in e.OldItems.Cast<object>())
-						{
-							RemoveItemFromLayout(item);
-						}
-					}
-				}
-
-				if (e.Action == NotifyCollectionChangedAction.Reset)
-				{
-					// Best-effort: ensure branched tab controls are cleared so they don't retain stale references.
-					foreach (var control in GetAllTabControls(_sessionLayout).ToList())
-					{
-						if (control.ItemsSource == null)
-						{
-							control.Items.Clear();
-							CollapseIfEmpty(control);
-						}
-					}
-				}
+				RefreshCommandStates();
+				UpdateSuggestedGridLabel();
 			}
 
-			RefreshCommandStates();
-			UpdateSuggestedGridLabel();
-		}
+			private static void DisposeToolItem(object item)
+			{
+				if (item is not ToolTabItem tool || tool.HostControl == null)
+				{
+					return;
+				}
+
+				try
+				{
+					if (tool.HostControl.DataContext is IDisposable disposable &&
+						disposable is not MainWindowViewModel)
+					{
+						disposable.Dispose();
+					}
+				}
+				catch
+				{
+					// Best effort cleanup.
+				}
+			}
 
 		public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -966,5 +1068,23 @@ namespace Orbit.ViewModels
 
 		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			CollectionChangedEventManager.RemoveHandler(Items, OnWorkspaceItemsChanged);
+			DetachLayoutControl();
+
+			if (_workspaceReconcileTimer != null)
+			{
+				_workspaceReconcileTimer.Tick -= WorkspaceReconcileTimer_Tick;
+				_workspaceReconcileTimer = null;
+			}
+		}
 	}
 }

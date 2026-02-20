@@ -68,6 +68,13 @@ public class PluginManager
                 statusMessage
             ));
         }
+        else
+        {
+            PluginStatusChanged?.Invoke(this, new PluginStatusChangedEventArgs(
+                result.Metadata,
+                PluginStatus.Error,
+                $"Failed to load plugin: {result.ErrorMessage ?? "Unknown error"}"));
+        }
 
         return result;
     }
@@ -77,15 +84,27 @@ public class PluginManager
     /// </summary>
     public async Task<bool> UnloadPluginAsync(string pluginPath)
     {
+        var metadata = _loader.LoadedPlugins.FirstOrDefault(p =>
+            string.Equals(p.PluginPath, pluginPath, StringComparison.OrdinalIgnoreCase));
+
         var success = await _loader.UnloadPluginAsync(pluginPath);
 
         if (success)
         {
             PluginStatusChanged?.Invoke(this, new PluginStatusChangedEventArgs(
-                null,
+                metadata,
                 PluginStatus.Unloaded,
-                $"Plugin unloaded successfully"
+                metadata != null
+                    ? $"Plugin '{metadata.DisplayName}' unloaded successfully"
+                    : "Plugin unloaded successfully"
             ));
+        }
+        else if (metadata != null)
+        {
+            PluginStatusChanged?.Invoke(this, new PluginStatusChangedEventArgs(
+                metadata,
+                PluginStatus.Error,
+                $"Failed to unload plugin '{metadata.DisplayName}'."));
         }
 
         return success;

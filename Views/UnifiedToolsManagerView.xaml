@@ -16,7 +16,7 @@
         <converters:BooleanToAccentBrushConverter x:Key="BooleanToAccentBrushConverter" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
-    <Grid>
+    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -33,26 +33,15 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial
-                        Width="32"
-                        Height="32"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
-                        Kind="ViewDashboard" />
+                    <iconPacks:PackIconMaterial Kind="ViewDashboard" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock
-                        FontSize="22"
-                        FontWeight="Bold"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Style="{StaticResource Orbit.ToolHeaderTitle}"
                         Text="Tools &amp; Plugins Dashboard" />
                     <TextBlock
-                        Margin="0,6,0,0"
-                        FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Opacity="0.85"
+                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
                         Text="Discover built-in utilities, manage plugin lifecycle, and curate quick access for scripters." />
                 </StackPanel>
             </Grid>

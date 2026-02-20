@@ -16,7 +16,7 @@ using Markdig.Wpf;
 namespace Orbit.ViewModels;
 
 /// <summary>
-/// View model backing the Orbiters Guide browser. Handles document navigation,
+/// View model backing the Orbit documentation browser. Handles document navigation,
 /// markdown rendering, and lightweight status messaging.
 /// </summary>
 public class GuideBrowserViewModel : INotifyPropertyChanged
@@ -25,7 +25,7 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 	private readonly string _docsRoot;
 	private FlowDocument? _currentDocument;
 	private GuideSection? _selectedSection;
-	private string _statusMessage = "Select a chapter to begin.";
+	private string _statusMessage = "Select a document to begin.";
 	private bool _isLoading;
 
 	public event PropertyChangedEventHandler? PropertyChanged;
@@ -98,22 +98,22 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 
 		Sections.Add(new GuideSection(
 			"overview",
-			"Launchpad",
-			"Start here for the complete tour of Orbit.",
+			"Documentation Hub",
+			"Index and quick routing for all Orbit documentation.",
 			"README.md",
 			PackIconMaterialKind.BookOpenPageVariant));
 
 		Sections.Add(new GuideSection(
-			"flight-school",
-			"Flight School",
-			"Pilot Orbit day-to-day: setup, layouts, script workflows.",
+			"user-guide",
+			"User Guide",
+			"Daily operations: setup, sessions, layouts, and scripts.",
 			"UserGuide.md",
 			PackIconMaterialKind.RocketLaunch));
 
 		Sections.Add(new GuideSection(
 			"contributors",
-			"Contributor Field Manual",
-			"Environment setup, coding style, testing, and releases.",
+			"Contributor Guide",
+			"Development workflow, coding standards, testing, and release flow.",
 			"ContributorGuide.md",
 			PackIconMaterialKind.Tools));
 
@@ -149,7 +149,7 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 		}
 
 		IsLoading = true;
-		StatusMessage = $"Loading “{SelectedSection.Title}”…";
+		StatusMessage = $"Loading {SelectedSection.Title}...";
 
 		try
 		{
@@ -167,7 +167,7 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 
 			ApplyDocumentStyling(flowDocument);
 			CurrentDocument = flowDocument;
-			StatusMessage = $"Showing {SelectedSection.Title}";
+			StatusMessage = $"Showing {SelectedSection.Title}.";
 		}
 		catch (Exception ex)
 		{
@@ -182,8 +182,10 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 
 	private void ApplyDocumentStyling(FlowDocument document)
 	{
-        document.PagePadding = new Thickness(32, 24, 32, 48);
+        document.PagePadding = new Thickness(36, 28, 36, 52);
         document.FontSize = 14;
+        document.LineHeight = 22;
+        document.ColumnWidth = 920;
         document.FontFamily = new System.Windows.Media.FontFamily("Segoe UI");
         document.TextAlignment = TextAlignment.Left;
         document.Background = System.Windows.Media.Brushes.Transparent;
@@ -252,7 +254,7 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 		{
 			Inlines =
 			{
-				new Run("The requested guide chapter could not be found.") { FontWeight = FontWeights.SemiBold },
+				new Run("The requested guide document could not be found.") { FontWeight = FontWeights.SemiBold },
 				new LineBreak(),
 				new LineBreak(),
 				new Run(path)

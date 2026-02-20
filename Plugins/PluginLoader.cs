@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using Orbit.Tooling;
 
@@ -15,8 +16,9 @@ namespace Orbit.Plugins;
 /// </summary>
 public class PluginLoader
 {
-    private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new();
+    private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
+    private readonly SemaphoreSlim _operationGate = new(1, 1);
 
     /// <summary>
     /// Event raised when a plugin is loaded.
@@ -48,38 +50,60 @@ public class PluginLoader
     /// </summary>
     public async Task<PluginLoadResult> LoadPluginAsync(string pluginPath)
     {
-        if (!File.Exists(pluginPath))
-        {
-            return PluginLoadResult.CreateFailure($"Plugin file not found: {pluginPath}");
-        }
-
+        await _operationGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            // Calculate file hash for change detection
-            string fileHash = await CalculateFileHashAsync(pluginPath);
+            if (string.IsNullOrWhiteSpace(pluginPath))
+            {
+                return PluginLoadResult.CreateFailure("Plugin path is required.");
+            }
 
+            string normalizedPath;
+            try
+            {
+                normalizedPath = NormalizePluginPath(pluginPath);
+            }
+            catch (Exception ex)
+            {
+                return PluginLoadResult.CreateFailure($"Invalid plugin path: {ex.Message}");
+            }
+
+            if (!File.Exists(normalizedPath))
+            {
+                return PluginLoadResult.CreateFailure($"Plugin file not found: {normalizedPath}");
+            }
+
+            // Calculate file hash for change detection
+            string fileHash = await CalculateFileHashAsync(normalizedPath);
+            LoadedPlugin? existingPlugin;
             lock (_lock)
             {
-                // Check if plugin is already loaded
-                if (_loadedPlugins.TryGetValue(pluginPath, out var existingPlugin))
-                {
-                    // If file hasn't changed, just return success
-                    if (existingPlugin.Metadata.FileHash == fileHash)
-                    {
-                        return PluginLoadResult.CreateSuccess(existingPlugin.Metadata, wasReloaded: false);
-                    }
+                _loadedPlugins.TryGetValue(normalizedPath, out existingPlugin);
+            }
 
-                    // File changed - hot reload
-                    return HotReloadPlugin(pluginPath, fileHash);
+            // Check if plugin is already loaded
+            if (existingPlugin != null)
+            {
+                // If file hasn't changed, just return success
+                if (existingPlugin.Metadata.FileHash == fileHash)
+                {
+                    return PluginLoadResult.CreateSuccess(existingPlugin.Metadata, wasReloaded: false);
                 }
 
-                // Load new plugin
-                return LoadNewPlugin(pluginPath, fileHash);
+                // File changed - hot reload
+                return HotReloadPlugin(normalizedPath, fileHash);
             }
+
+            // Load new plugin
+            return LoadNewPlugin(normalizedPath, fileHash);
         }
         catch (Exception ex)
         {
             return PluginLoadResult.CreateFailure($"Failed to load plugin: {ex.Message}");
+        }
+        finally
+        {
+            _operationGate.Release();
         }
     }
 
@@ -88,35 +112,64 @@ public class PluginLoader
     /// </summary>
     public async Task<bool> UnloadPluginAsync(string pluginPath)
     {
-        LoadedPlugin? plugin;
-
-        lock (_lock)
-        {
-            if (!_loadedPlugins.TryGetValue(pluginPath, out plugin))
-            {
-                return false; // Not loaded
-            }
-
-            _loadedPlugins.Remove(pluginPath);
-        }
-
+        await _operationGate.WaitAsync().ConfigureAwait(false);
         try
         {
+            if (string.IsNullOrWhiteSpace(pluginPath))
+            {
+                return false;
+            }
+
+            string normalizedPath;
+            try
+            {
+                normalizedPath = NormalizePluginPath(pluginPath);
+            }
+            catch
+            {
+                return false;
+            }
+            LoadedPlugin? plugin;
+
+            lock (_lock)
+            {
+                if (!_loadedPlugins.TryGetValue(normalizedPath, out plugin))
+                {
+                    return false; // Not loaded
+                }
+            }
+
             // Call plugin's OnUnload
-            plugin.Instance.OnUnload();
+            try
+            {
+                plugin.Instance.OnUnload();
+            }
+            catch (Exception ex)
+            {
+                // Continue unloading even if plugin cleanup throws.
+                Console.WriteLine($"Plugin OnUnload threw exception: {ex.Message}");
+            }
+
+            var contextWeakRef = plugin.WeakRef;
+            var metadata = plugin.Metadata;
+
+            // Remove from registry before unload/GC polling to drop strong references quickly.
+            lock (_lock)
+            {
+                _loadedPlugins.Remove(normalizedPath);
+            }
 
             // Unload the context
             plugin.Context.Unload();
+            plugin = null;
 
-            // Wait for GC to collect
-            for (int i = 0; i < 10 && plugin.WeakRef.IsAlive; i++)
+            // Wait briefly for collectible context to unload
+            for (int i = 0; i < 10 && contextWeakRef.IsAlive; i++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 await Task.Delay(100);
             }
-
-            var metadata = plugin.Metadata;
             metadata.IsLoaded = false;
 
             PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(metadata));
@@ -127,6 +180,10 @@ public class PluginLoader
         {
             Console.WriteLine($"Error unloading plugin {pluginPath}: {ex.Message}");
             return false;
+        }
+        finally
+        {
+            _operationGate.Release();
         }
     }
 
@@ -230,8 +287,6 @@ public class PluginLoader
             WeakRef = new WeakReference(context)
         };
 
-        _loadedPlugins[pluginPath] = loadedPlugin;
-
         // Call OnLoad
         try
         {
@@ -239,9 +294,19 @@ public class PluginLoader
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Plugin OnLoad threw exception: {ex.Message}");
+            try
+            {
+                context.Unload();
+            }
+            catch
+            {
+                // best effort cleanup after failed init
+            }
+
+            return PluginLoadResult.CreateFailure($"Plugin OnLoad failed: {ex.Message}");
         }
 
+        _loadedPlugins[pluginPath] = loadedPlugin;
         PluginLoaded?.Invoke(this, new PluginLoadedEventArgs(metadata, pluginInstance));
 
         return PluginLoadResult.CreateSuccess(metadata, wasReloaded: false);
@@ -251,7 +316,7 @@ public class PluginLoader
     {
         // Unload old version
         var oldPlugin = _loadedPlugins[pluginPath];
-        string key = oldPlugin.Metadata.Key;
+        var oldMetadata = oldPlugin.Metadata;
 
         try
         {
@@ -264,6 +329,8 @@ public class PluginLoader
 
         oldPlugin.Context.Unload();
         _loadedPlugins.Remove(pluginPath);
+        oldMetadata.IsLoaded = false;
+        PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(oldMetadata));
 
         // Trigger GC
         GC.Collect();
@@ -277,6 +344,11 @@ public class PluginLoader
         }
 
         return result;
+    }
+
+    private static string NormalizePluginPath(string pluginPath)
+    {
+        return Path.GetFullPath(pluginPath.Trim());
     }
 
     private async Task<string> CalculateFileHashAsync(string filePath)

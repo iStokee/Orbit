@@ -29,10 +29,14 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	private readonly ScriptManagerService _scriptService;
 	private readonly SessionCollectionService _sessionCollectionService;
 	private readonly ObservableCollection<ScriptProfile> _favorites;
-private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
+	private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
+	private readonly ObservableCollection<ScriptProfile> _browserScripts = new();
 	private ScriptProfile? _selectedScript;
 	private string _hotReloadScriptPath = string.Empty;
 	private SessionModel? _targetSession;
+	private bool _isScriptCommandInFlight;
+	private ScriptBrowserFilter _selectedFilter = ScriptBrowserFilter.All;
+	private ScriptBrowserLayout _selectedLayout = ScriptBrowserLayout.List;
 
 	/// <summary>
 	/// Convenience constructor used by XAML design-time. Creates service instances on demand.
@@ -69,6 +73,12 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 			RecentScriptsView.Filter = ShouldIncludeInRecents;
 		}
 
+		BrowserScriptsView = CollectionViewSource.GetDefaultView(_browserScripts);
+		if (BrowserScriptsView != null)
+		{
+			BrowserScriptsView.Filter = ShouldIncludeInBrowser;
+		}
+
 		// Track session changes so tooling stays in sync when sessions open/close
 		_sessionCollectionService.PropertyChanged += OnSessionCollectionPropertyChanged;
 		_sessionCollectionService.Sessions.CollectionChanged += OnSessionsCollectionChanged;
@@ -78,6 +88,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		ToggleFavoriteCommand = new RelayCommand<ScriptProfile?>(ToggleFavorite, profile => profile != null);
 		LoadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, false), CanExecuteScriptCommand);
 		ReloadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, true), CanExecuteScriptCommand);
+		StopScriptCommand = new RelayCommand(async () => await StopScriptAsync(), CanStopScript);
 		ClearMissingCommand = new RelayCommand(ClearMissing);
 
 		_hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
@@ -91,12 +102,16 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 
 		RefreshFavorites();
 		RefreshLibraryScripts();
+		RefreshBrowserScripts();
 		RecentScriptsView?.Refresh();
+		UpdateCommandStates();
 	}
 
 	public ICollectionView RecentScriptsView { get; private set; } = null!;
+	public ICollectionView BrowserScriptsView { get; private set; } = null!;
 
 	public ObservableCollection<ScriptProfile> LibraryScripts => _libraryScripts;
+	public ObservableCollection<ScriptProfile> BrowserScripts => _browserScripts;
 
 	public ObservableCollection<ScriptProfile> Favorites => _favorites;
 
@@ -159,11 +174,74 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 			if (ReferenceEquals(_targetSession, value))
 				return;
 
+			if (_targetSession != null)
+			{
+				_targetSession.PropertyChanged -= OnTargetSessionPropertyChanged;
+			}
+
 			_targetSession = value;
+			if (_targetSession != null)
+			{
+				_targetSession.PropertyChanged += OnTargetSessionPropertyChanged;
+			}
+
 			_sessionCollectionService.GlobalHotReloadTargetSession = value;
 			OnPropertyChanged(nameof(TargetSession));
+			OnPropertyChanged(nameof(TargetSessionScriptStatus));
+			OnPropertyChanged(nameof(TargetSessionActiveScriptName));
+			OnPropertyChanged(nameof(TargetSessionHasActiveScript));
+			OnPropertyChanged(nameof(TargetSessionLastChangedDisplay));
+			UpdateCommandStates();
 		}
 	}
+
+	public string TargetSessionScriptStatus => TargetSession?.ScriptRuntimeStatus ?? "No session selected";
+	public string TargetSessionActiveScriptName => TargetSession?.ActiveScriptName ?? "None";
+	public bool TargetSessionHasActiveScript => TargetSession?.HasActiveScript == true;
+	public string TargetSessionLastChangedDisplay => TargetSession?.ScriptLastChangedAt?.ToString("g") ?? "N/A";
+
+	public ScriptBrowserFilter SelectedFilter
+	{
+		get => _selectedFilter;
+		set
+		{
+			if (_selectedFilter == value)
+				return;
+
+			_selectedFilter = value;
+			OnPropertyChanged(nameof(SelectedFilter));
+			OnPropertyChanged(nameof(IsAllFilter));
+			OnPropertyChanged(nameof(IsLibraryFilter));
+			OnPropertyChanged(nameof(IsFavoritesFilter));
+			OnPropertyChanged(nameof(IsRecentsFilter));
+			OnPropertyChanged(nameof(IsMissingFilter));
+			BrowserScriptsView?.Refresh();
+		}
+	}
+
+	public ScriptBrowserLayout SelectedLayout
+	{
+		get => _selectedLayout;
+		set
+		{
+			if (_selectedLayout == value)
+				return;
+
+			_selectedLayout = value;
+			OnPropertyChanged(nameof(SelectedLayout));
+			OnPropertyChanged(nameof(IsListLayout));
+			OnPropertyChanged(nameof(IsTileLayout));
+		}
+	}
+
+	public bool IsListLayout => _selectedLayout == ScriptBrowserLayout.List;
+	public bool IsTileLayout => _selectedLayout == ScriptBrowserLayout.Tiles;
+
+	public bool IsAllFilter => _selectedFilter == ScriptBrowserFilter.All;
+	public bool IsLibraryFilter => _selectedFilter == ScriptBrowserFilter.Library;
+	public bool IsFavoritesFilter => _selectedFilter == ScriptBrowserFilter.Favorites;
+	public bool IsRecentsFilter => _selectedFilter == ScriptBrowserFilter.Recents;
+	public bool IsMissingFilter => _selectedFilter == ScriptBrowserFilter.Missing;
 
 	public bool HasFavorites => _favorites.Count > 0;
 	public bool HasSessions => _sessionCollectionService.Sessions.Count > 0;
@@ -175,6 +253,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 	public IRelayCommand<ScriptProfile?> ToggleFavoriteCommand { get; }
 	public IRelayCommand<ScriptProfile?> LoadScriptCommand { get; }
 	public IRelayCommand<ScriptProfile?> ReloadScriptCommand { get; }
+	public IRelayCommand StopScriptCommand { get; }
 	public IRelayCommand ClearMissingCommand { get; }
 
 	public event PropertyChangedEventHandler? PropertyChanged;
@@ -259,6 +338,11 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 	/// </summary>
     private async Task LoadScriptAsync(ScriptProfile? profile, bool isReload)
     {
+		if (_isScriptCommandInFlight)
+		{
+			return;
+		}
+
 		var resolvedProfile = ResolveExecutableProfile(profile);
 		if (resolvedProfile == null)
 		{
@@ -280,17 +364,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		RecentScriptsView?.Refresh();
 
 		// Resolve the hot reload target, preferring the shared target but falling back to the global selection.
-		var targetSession = TargetSession;
-		if (targetSession == null)
-		{
-			var fallback = _sessionCollectionService.GlobalSelectedSession
-				?? _sessionCollectionService.Sessions.FirstOrDefault();
-			if (fallback != null)
-			{
-				TargetSession = fallback;
-				targetSession = fallback;
-			}
-		}
+		var targetSession = ResolveOrSelectTargetSession();
 
 		if (targetSession == null)
 		{
@@ -313,32 +387,48 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		var pid = targetSession.RSProcess?.Id;
 
 		var verb = isReload ? "reload" : "load";
+		targetSession.SetScriptRuntimePending(isReload ? "Reloading script" : "Loading script");
 		ConsoleLogService.Instance.Append(
 			$"[ScriptManager] Requesting {verb} for '{tracked.Name}' to session '{targetSession.Name}' (PID {pid})",
 			ConsoleLogSource.Orbit,
 			ConsoleLogLevel.Info);
 
-		var runtimeReady = await OrbitCommandClient
-			.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-			.ConfigureAwait(false);
-		if (!runtimeReady)
+		try
 		{
-			ConsoleLogService.Instance.Append(
-				$"[ScriptManager] Unable to start ME .NET runtime for session '{targetSession.Name}'. Load may fail.",
-				ConsoleLogSource.Orbit,
-				ConsoleLogLevel.Warning);
+			_isScriptCommandInFlight = true;
+			UpdateCommandStates();
+
+			var runtimeReady = await OrbitCommandClient
+				.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+				.ConfigureAwait(true);
+			if (!runtimeReady)
+			{
+				ConsoleLogService.Instance.Append(
+					$"[ScriptManager] Unable to start ME .NET runtime for session '{targetSession.Name}'. Load may fail.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+			}
+
+			var success = pid.HasValue
+				? await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, pid.Value, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+				: await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
+
+			if (!success)
+			{
+				targetSession.SetScriptRuntimeError($"Failed to {verb} '{tracked.Name}'.");
+				ConsoleLogService.Instance.Append(
+					$"[ScriptManager] Failed to send {verb} command for '{tracked.Name}'. Check if MESharp is running.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+				return;
+			}
+
+			targetSession.SetScriptLoaded(tracked.FilePath);
 		}
-
-		var success = pid.HasValue
-			? await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, pid.Value, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-			: await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
-
-		if (!success)
+		finally
 		{
-			ConsoleLogService.Instance.Append(
-				$"[ScriptManager] Failed to send {verb} command for '{tracked.Name}'. Check if MESharp is running.",
-				ConsoleLogSource.Orbit,
-				ConsoleLogLevel.Warning);
+			_isScriptCommandInFlight = false;
+			UpdateCommandStates();
 		}
 		// Note: success=true only means the command was sent, not that the script loaded.
 		// Check the MESharp console for actual script loading results.
@@ -346,12 +436,90 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 
 	private bool CanExecuteScriptCommand(ScriptProfile? profile)
 	{
+		if (_isScriptCommandInFlight)
+		{
+			return false;
+		}
+
 		if (profile?.FileExists == true)
 		{
 			return true;
 		}
 
 		return !string.IsNullOrWhiteSpace(HotReloadScriptPath) && File.Exists(HotReloadScriptPath);
+	}
+
+	private bool CanStopScript()
+	{
+		if (_isScriptCommandInFlight)
+		{
+			return false;
+		}
+
+		var target = TargetSession;
+		return target != null &&
+			target.InjectionState == InjectionState.Injected &&
+			target.RSProcess != null;
+	}
+
+	private async Task StopScriptAsync()
+	{
+		if (_isScriptCommandInFlight)
+		{
+			return;
+		}
+
+		var targetSession = ResolveOrSelectTargetSession();
+		if (targetSession == null)
+		{
+			ConsoleLogService.Instance.Append(
+				"[ScriptManager] No session available. Start or select a session before stopping scripts.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
+		if (targetSession.InjectionState != InjectionState.Injected || targetSession.RSProcess == null)
+		{
+			targetSession.SetScriptRuntimeError("Session is not injected.");
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Session '{targetSession.Name}' is not injected. Inject MESharp before stopping scripts.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
+		targetSession.SetScriptRuntimePending("Stopping script");
+		try
+		{
+			_isScriptCommandInFlight = true;
+			UpdateCommandStates();
+
+			var success = await OrbitCommandClient
+				.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+				.ConfigureAwait(true);
+
+			if (!success)
+			{
+				targetSession.SetScriptRuntimeError("Failed to stop script.");
+				ConsoleLogService.Instance.Append(
+					$"[ScriptManager] Failed to stop script for session '{targetSession.Name}'.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+				return;
+			}
+
+			targetSession.SetScriptStopped();
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Stopped script for session '{targetSession.Name}'.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Info);
+		}
+		finally
+		{
+			_isScriptCommandInFlight = false;
+			UpdateCommandStates();
+		}
 	}
 
 	private ScriptProfile? ResolveExecutableProfile(ScriptProfile? profile)
@@ -380,6 +548,25 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		return null;
 	}
 
+	private SessionModel? ResolveOrSelectTargetSession()
+	{
+		var targetSession = TargetSession;
+		if (targetSession != null)
+		{
+			return targetSession;
+		}
+
+		var fallback = _sessionCollectionService.GlobalSelectedSession
+			?? _sessionCollectionService.Sessions.FirstOrDefault();
+		if (fallback != null)
+		{
+			TargetSession = fallback;
+			targetSession = fallback;
+		}
+
+		return targetSession;
+	}
+
 	private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 	{
 		OnPropertyChanged(nameof(HasSessions));
@@ -395,6 +582,8 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		{
 			TargetSession = _sessionCollectionService.Sessions.FirstOrDefault();
 		}
+
+		UpdateCommandStates();
 	}
 
 	private void OnSessionCollectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -404,8 +593,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 			var sharedTarget = _sessionCollectionService.GlobalHotReloadTargetSession;
 			if (!ReferenceEquals(_targetSession, sharedTarget))
 			{
-				_targetSession = sharedTarget;
-				OnPropertyChanged(nameof(TargetSession));
+				TargetSession = sharedTarget;
 			}
 		}
 		else if (e.PropertyName == nameof(SessionCollectionService.GlobalSelectedSession) && _targetSession == null)
@@ -415,6 +603,22 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 			{
 				TargetSession = fallback;
 			}
+		}
+	}
+
+	private void OnTargetSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName == nameof(SessionModel.ScriptRuntimeStatus) ||
+			e.PropertyName == nameof(SessionModel.ActiveScriptPath) ||
+			e.PropertyName == nameof(SessionModel.ScriptLastChangedAt) ||
+			e.PropertyName == nameof(SessionModel.InjectionState) ||
+			e.PropertyName == nameof(SessionModel.RSProcess))
+		{
+			OnPropertyChanged(nameof(TargetSessionScriptStatus));
+			OnPropertyChanged(nameof(TargetSessionActiveScriptName));
+			OnPropertyChanged(nameof(TargetSessionHasActiveScript));
+			OnPropertyChanged(nameof(TargetSessionLastChangedDisplay));
+			UpdateCommandStates();
 		}
 	}
 
@@ -456,6 +660,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		}
 
 		OnPropertyChanged(nameof(HasFavorites));
+		RefreshBrowserScripts();
 	}
 
 	private bool ShouldIncludeInRecents(object obj)
@@ -483,6 +688,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		}
 
 		OnPropertyChanged(nameof(HasLibraryScripts));
+		RefreshBrowserScripts();
 	}
 
 	private void OnRecentScriptsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -509,6 +715,7 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		}
 
 		RecentScriptsView?.Refresh();
+		RefreshBrowserScripts();
 	}
 
 	/// <summary>
@@ -542,7 +749,73 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 		if (e.PropertyName == nameof(ScriptProfile.HideFromRecents))
 		{
 			RecentScriptsView?.Refresh();
+			RefreshBrowserScripts();
 		}
+	}
+
+	private void RefreshBrowserScripts()
+	{
+		var merged = new Dictionary<string, ScriptProfile>(StringComparer.OrdinalIgnoreCase);
+
+		void addRange(IEnumerable<ScriptProfile> source)
+		{
+			foreach (var script in source)
+			{
+				if (script == null || string.IsNullOrWhiteSpace(script.FilePath))
+					continue;
+
+				if (!merged.ContainsKey(script.FilePath))
+				{
+					merged.Add(script.FilePath, script);
+				}
+			}
+		}
+
+		addRange(_libraryScripts);
+		addRange(_scriptService.RecentScripts);
+		addRange(_favorites);
+
+			var ordered = merged.Values
+				.OrderByDescending(s => s.LastUsed)
+				.ThenBy(s => s.Name)
+				.ToList();
+
+		_browserScripts.Clear();
+		foreach (var script in ordered)
+		{
+			_browserScripts.Add(script);
+		}
+
+		BrowserScriptsView?.Refresh();
+	}
+
+	private bool ShouldIncludeInBrowser(object obj)
+	{
+		if (obj is not ScriptProfile script)
+			return false;
+
+		var inLibrary = _libraryScripts.Any(p => string.Equals(p.FilePath, script.FilePath, StringComparison.OrdinalIgnoreCase));
+		var inRecents = _scriptService.RecentScripts.Any(p =>
+			!p.HideFromRecents &&
+			string.Equals(p.FilePath, script.FilePath, StringComparison.OrdinalIgnoreCase));
+		var isFavorite = _favorites.Any(p => string.Equals(p.FilePath, script.FilePath, StringComparison.OrdinalIgnoreCase));
+		var isMissing = !script.FileExists;
+
+		return _selectedFilter switch
+		{
+			ScriptBrowserFilter.Library => inLibrary,
+			ScriptBrowserFilter.Favorites => isFavorite,
+			ScriptBrowserFilter.Recents => inRecents,
+			ScriptBrowserFilter.Missing => isMissing,
+			_ => true
+		};
+	}
+
+	private void UpdateCommandStates()
+	{
+		LoadScriptCommand.NotifyCanExecuteChanged();
+		ReloadScriptCommand.NotifyCanExecuteChanged();
+		StopScriptCommand.NotifyCanExecuteChanged();
 	}
 
 	protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -552,6 +825,10 @@ private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 	{
 		_sessionCollectionService.PropertyChanged -= OnSessionCollectionPropertyChanged;
 		_sessionCollectionService.Sessions.CollectionChanged -= OnSessionsCollectionChanged;
+		if (_targetSession != null)
+		{
+			_targetSession.PropertyChanged -= OnTargetSessionPropertyChanged;
+		}
 		_scriptService.RecentScripts.CollectionChanged -= OnRecentScriptsChanged;
 		_scriptService.RecentScripts.CollectionChanged -= OnRecentScriptsCollectionChanged;
 		foreach (var profile in _scriptService.RecentScripts)

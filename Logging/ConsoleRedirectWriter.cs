@@ -86,6 +86,26 @@ internal sealed class ConsoleRedirectWriter : TextWriter
 		_fallback?.WriteLine(value);
 	}
 
+	public override void Flush()
+	{
+		lock (_sync)
+		{
+			FlushBufferNoLock();
+		}
+
+		_fallback?.Flush();
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			Flush();
+		}
+
+		base.Dispose(disposing);
+	}
+
 	private void AppendStringNoLock(string value)
 	{
 		int start = 0;

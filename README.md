@@ -109,9 +109,8 @@ Secure credential storage:
 
 ### 6. 📘 Orbiters Guide Hub
 
-An in-app handbook styled like a well-loved field guide. It curates:
-
-The guide renders Markdown with Orbit's theme, includes quick status hints, and embraces the "Don't panic" Hitchhiker tone (though probably a bit too much)
+An in-app documentation hub for operating Orbit, troubleshooting issues, and extending the app.
+It renders Markdown with Orbit's theme and includes status hints for missing or invalid content.
 
 **How to Access**:
 1. Click the **book icon** (📖) in Orbit's floating menu
@@ -124,7 +123,7 @@ The guide renders Markdown with Orbit's theme, includes quick status hints, and 
 - Status footer highlights load issues (missing files, parse errors)
 
 **Use Cases**:
-- Give operators a friendly experience
+- Help operators run Orbit effectively day to day
 - Onboard contributors with a single linkable handbook
 - Surface API docs alongside architectural context and historical research
 - Provide quick actions for refreshing or opening the docs folder for edits

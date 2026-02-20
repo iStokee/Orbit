@@ -12,7 +12,7 @@ public sealed class SessionsOverviewTool : IOrbitTool
 
     public string DisplayName => "Sessions";
 
-    public PackIconMaterialKind Icon => PackIconMaterialKind.ViewList;
+    public PackIconMaterialKind Icon => PackIconMaterialKind.MonitorDashboard;
 
     public FrameworkElement CreateView(object? context = null)
     {

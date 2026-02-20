@@ -18,7 +18,25 @@ namespace Orbit.Services
 		public AccountService()
 		{
 			_accounts = new ObservableCollection<AccountModel>();
-			_accountsFilePath = Path.Combine(AppContext.BaseDirectory, AccountsFileName);
+			var legacyPath = Path.Combine(AppContext.BaseDirectory, AccountsFileName);
+			var dataDir = Path.Combine(
+				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				"MemoryError",
+				"Orbit");
+			Directory.CreateDirectory(dataDir);
+			_accountsFilePath = Path.Combine(dataDir, AccountsFileName);
+
+			if (!File.Exists(_accountsFilePath) && File.Exists(legacyPath))
+			{
+				try
+				{
+					File.Copy(legacyPath, _accountsFilePath, overwrite: false);
+				}
+				catch
+				{
+					// Best effort migration; continue with whichever path is available.
+				}
+			}
 			LoadAccounts();
 		}
 

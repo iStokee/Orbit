@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
@@ -26,6 +27,9 @@ namespace Orbit.Models
 		private nint _renderSurfaceHandle;
 		private bool _gallerySizeOverrideEnabled;
 		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
+		private string? _activeScriptPath;
+		private string _scriptRuntimeStatus = "No script loaded";
+		private DateTime? _scriptLastChangedAt;
 
 		public SessionModel()
 		{
@@ -258,6 +262,51 @@ namespace Orbit.Models
 			State != SessionState.Closed &&
 			InjectionState != InjectionState.Failed;
 
+		public string? ActiveScriptPath
+		{
+			get => _activeScriptPath;
+			private set
+			{
+				if (string.Equals(_activeScriptPath, value, StringComparison.OrdinalIgnoreCase))
+					return;
+
+				_activeScriptPath = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(ActiveScriptName));
+				OnPropertyChanged(nameof(HasActiveScript));
+			}
+		}
+
+		public string ActiveScriptName => string.IsNullOrWhiteSpace(_activeScriptPath)
+			? "None"
+			: Path.GetFileNameWithoutExtension(_activeScriptPath);
+
+		public bool HasActiveScript => !string.IsNullOrWhiteSpace(_activeScriptPath);
+
+		public string ScriptRuntimeStatus
+		{
+			get => _scriptRuntimeStatus;
+			private set
+			{
+				if (string.Equals(_scriptRuntimeStatus, value, StringComparison.Ordinal))
+					return;
+				_scriptRuntimeStatus = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public DateTime? ScriptLastChangedAt
+		{
+			get => _scriptLastChangedAt;
+			private set
+			{
+				if (_scriptLastChangedAt == value)
+					return;
+				_scriptLastChangedAt = value;
+				OnPropertyChanged();
+			}
+		}
+
 
 		public void UpdateState(SessionState state, bool clearError = true)
 		{
@@ -282,6 +331,32 @@ namespace Orbit.Models
 			LastError = exception?.Message ?? "Unknown error";
 			InjectionState = InjectionState.Failed;
 			UpdateState(SessionState.ClientReady, clearError: false);
+		}
+
+		public void SetScriptRuntimePending(string action)
+		{
+			ScriptRuntimeStatus = string.IsNullOrWhiteSpace(action) ? "Working..." : $"{action}...";
+			ScriptLastChangedAt = DateTime.Now;
+		}
+
+		public void SetScriptLoaded(string scriptPath)
+		{
+			ActiveScriptPath = scriptPath;
+			ScriptRuntimeStatus = $"Loaded: {ActiveScriptName}";
+			ScriptLastChangedAt = DateTime.Now;
+		}
+
+		public void SetScriptStopped()
+		{
+			ActiveScriptPath = null;
+			ScriptRuntimeStatus = "No script loaded";
+			ScriptLastChangedAt = DateTime.Now;
+		}
+
+		public void SetScriptRuntimeError(string message)
+		{
+			ScriptRuntimeStatus = string.IsNullOrWhiteSpace(message) ? "Script command failed" : $"Error: {message}";
+			ScriptLastChangedAt = DateTime.Now;
 		}
 
 		public void KillProcess()

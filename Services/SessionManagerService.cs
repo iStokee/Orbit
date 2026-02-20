@@ -279,6 +279,7 @@ namespace Orbit.Services
 				}
 			}
 
+			session.SetScriptStopped();
 			session.UpdateInjectionState(InjectionState.NotReady);
 
 			HideWindowSilently(externalHandle);
@@ -653,44 +654,19 @@ namespace Orbit.Services
 
 		private static string ResolveInjectorPath()
 		{
-			var configuredPath = Environment.GetEnvironmentVariable("ORBIT_INJECTOR_PATH");
-			if (!string.IsNullOrWhiteSpace(configuredPath))
-			{
-				var expandedPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(configuredPath));
-				if (File.Exists(expandedPath) && IsValidInjectorDirectory(Path.GetDirectoryName(expandedPath)))
-					return expandedPath;
-
-				throw new FileNotFoundException($"Injector DLL not found or missing ME runtime assets at configured path '{expandedPath}'.", expandedPath);
-			}
-
 			var baseDirectory = AppContext.BaseDirectory;
-			var probeRoots = new[]
+			var candidate = Path.GetFullPath(Path.Combine(baseDirectory, DefaultInjectorDll));
+			if (File.Exists(candidate) && IsValidInjectorDirectory(Path.GetDirectoryName(candidate)))
 			{
-				".",
-				"..",
-				"../..",
-				"../../..",
-				"../../../..",
-				"../../../../ME/x64/Build_DLL",
-				"../../../../ME/MemoryError/x64/Build_DLL"
-			};
-
-			var attempted = new List<string>();
-			var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			foreach (var root in probeRoots)
-			{
-				var candidate = Path.GetFullPath(Path.Combine(baseDirectory, root, DefaultInjectorDll));
-				if (File.Exists(candidate) && IsValidInjectorDirectory(Path.GetDirectoryName(candidate)))
-					return candidate;
-
-				if (seenPaths.Add(candidate))
-				{
-					attempted.Add(candidate);
-				}
+				return candidate;
 			}
 
-			var message = $"Injector DLL '{DefaultInjectorDll}' could not be located. Probed locations:{Environment.NewLine}- {string.Join(Environment.NewLine + "- ", attempted)}";
-			throw new FileNotFoundException(message, DefaultInjectorDll);
+			var runtimeConfig = Path.Combine(baseDirectory, "ME.runtimeconfig.json");
+			var interop = Path.Combine(baseDirectory, "csharp_interop.dll");
+			var message =
+				$"Injector DLL '{DefaultInjectorDll}' must exist in Orbit launch directory '{baseDirectory}' with required runtime assets. " +
+				$"Expected files: '{candidate}', '{runtimeConfig}', '{interop}'.";
+			throw new FileNotFoundException(message, candidate);
 		}
 
 		private static bool IsValidInjectorDirectory(string? directory)

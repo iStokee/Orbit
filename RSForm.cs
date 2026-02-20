@@ -541,12 +541,12 @@ namespace Orbit
 				if (_dockedHandle != IntPtr.Zero)
 				{
 					ClientSettings.gameHandle = _dockedHandle;
-					try
-					{
-						var clientProcess = Process.GetProcessById(rs2ClientID);
-						rsWindow = FindWindowEx(clientProcess.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
-						ClientSettings.jagOpenGL = rsWindow != IntPtr.Zero ? rsWindow : _dockedHandle;
-					}
+						try
+						{
+							using var clientProcess = Process.GetProcessById(rs2ClientID);
+							rsWindow = FindWindowEx(clientProcess.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
+							ClientSettings.jagOpenGL = rsWindow != IntPtr.Zero ? rsWindow : _dockedHandle;
+						}
 					catch (Exception)
 					{
 						ClientSettings.jagOpenGL = _dockedHandle;
@@ -704,12 +704,12 @@ namespace Orbit
 				int width = panel_DockPanel.Width + 16;
 				int height = panel_DockPanel.Height + 40;
 
-				await Task.Factory.StartNew(() =>
-				{
-					// Force the docked window to top within the panel and refresh frame
-					const int SWP_SHOWWINDOW = 0x0040;
-					const int SWP_FRAMECHANGED = 0x0020;
-					SetWindowPos(handle, IntPtr.Zero, -8, -32, width, height, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+					await Task.Run(() =>
+					{
+						// Force the docked window to top within the panel and refresh frame
+						const int SWP_SHOWWINDOW = 0x0040;
+						const int SWP_FRAMECHANGED = 0x0020;
+						SetWindowPos(handle, IntPtr.Zero, -8, -32, width, height, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
 					Console.WriteLine("Moved window");
 				});
 			}

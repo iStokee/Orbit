@@ -64,6 +64,9 @@
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="SelectionMode" Value="Extended" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
             <Setter Property="ItemTemplate" Value="{StaticResource ConsoleEntryTemplate}" />
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
@@ -98,21 +101,14 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial
-                        Margin="10,10,0,0"
-                        Width="35"
-                        Height="35"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Kind="Console" />
+                    <iconPacks:PackIconMaterial Kind="Console" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock
                             VerticalAlignment="Center"
-                            FontSize="22"
-                            FontWeight="Bold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Style="{StaticResource Orbit.ToolHeaderTitle}"
                             Text="Console Output" />
                         <Border
                             Margin="12,2,0,0"
@@ -129,10 +125,7 @@
                         </Border>
                     </StackPanel>
                     <TextBlock
-                        Margin="0,4,0,0"
-                        FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                        Opacity="0.85"
+                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
                         Text="Live logs from scripts, injectors, and native subsystems." />
                 </StackPanel>
 

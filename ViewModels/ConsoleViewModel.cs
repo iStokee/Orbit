@@ -65,14 +65,80 @@ public sealed class ConsoleViewModel : INotifyPropertyChanged
 
 	private void UpdateSourceStatistics(object? sender, NotifyCollectionChangedEventArgs? e)
 	{
-		if (ConsoleLog?.Entries == null) return;
-
-		foreach (var sourceInfo in _sources)
+		if (ConsoleLog?.Entries == null)
 		{
-			var entries = ConsoleLog.Entries.Where(entry => entry.Source == sourceInfo.Source).ToList();
-			sourceInfo.Count = entries.Count;
-			sourceInfo.ErrorCount = entries.Count(entry => entry.Level == ConsoleLogLevel.Error);
-			sourceInfo.WarningCount = entries.Count(entry => entry.Level == ConsoleLogLevel.Warning);
+			return;
+		}
+
+		// Initial load or non-incremental changes (Reset/Move/Replace) -> full recompute.
+		if (e == null || e.Action is NotifyCollectionChangedAction.Reset or NotifyCollectionChangedAction.Move or NotifyCollectionChangedAction.Replace)
+		{
+			foreach (var sourceInfo in _sources)
+			{
+				var entries = ConsoleLog.Entries.Where(entry => entry.Source == sourceInfo.Source).ToList();
+				sourceInfo.Count = entries.Count;
+				sourceInfo.ErrorCount = entries.Count(entry => entry.Level is ConsoleLogLevel.Error or ConsoleLogLevel.Critical);
+				sourceInfo.WarningCount = entries.Count(entry => entry.Level == ConsoleLogLevel.Warning);
+			}
+			return;
+		}
+
+		if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+		{
+			foreach (var raw in e.NewItems)
+			{
+				if (raw is not ConsoleLogEntry entry)
+				{
+					continue;
+				}
+
+				var sourceInfo = _sources.FirstOrDefault(s => s.Source == entry.Source);
+				if (sourceInfo == null)
+				{
+					continue;
+				}
+
+				sourceInfo.Count++;
+				if (entry.Level is ConsoleLogLevel.Error or ConsoleLogLevel.Critical)
+				{
+					sourceInfo.ErrorCount++;
+				}
+				else if (entry.Level == ConsoleLogLevel.Warning)
+				{
+					sourceInfo.WarningCount++;
+				}
+			}
+			return;
+		}
+
+		if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems != null)
+		{
+			foreach (var raw in e.OldItems)
+			{
+				if (raw is not ConsoleLogEntry entry)
+				{
+					continue;
+				}
+
+				var sourceInfo = _sources.FirstOrDefault(s => s.Source == entry.Source);
+				if (sourceInfo == null)
+				{
+					continue;
+				}
+
+				if (sourceInfo.Count > 0)
+				{
+					sourceInfo.Count--;
+				}
+				if (entry.Level is ConsoleLogLevel.Error or ConsoleLogLevel.Critical)
+				{
+					sourceInfo.ErrorCount = Math.Max(0, sourceInfo.ErrorCount - 1);
+				}
+				else if (entry.Level == ConsoleLogLevel.Warning)
+				{
+					sourceInfo.WarningCount = Math.Max(0, sourceInfo.WarningCount - 1);
+				}
+			}
 		}
 	}
 

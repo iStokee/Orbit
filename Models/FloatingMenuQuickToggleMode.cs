@@ -7,6 +7,12 @@ namespace Orbit.Models
 		[Description("Middle mouse button")]
 		MiddleMouse,
 
+		[Description("Double right-click")]
+		RightDoubleClick,
+
+		[Description("Ctrl + left-click")]
+		CtrlLeftClick,
+
 		[Description("Home key")]
 		HomeKey,
 

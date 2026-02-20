@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading;
-using System.Windows;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 
@@ -45,6 +44,37 @@ public sealed class ConsoleLogService
 		_isCapturing = true;
 	}
 
+	public void StopCapture()
+	{
+		if (!_isCapturing)
+		{
+			return;
+		}
+
+		try
+		{
+			if (_originalOut != null)
+			{
+				Console.SetOut(_originalOut);
+			}
+
+			if (_originalError != null)
+			{
+				Console.SetError(_originalError);
+			}
+		}
+		catch
+		{
+			// Best effort during app shutdown.
+		}
+		finally
+		{
+			_originalOut = null;
+			_originalError = null;
+			_isCapturing = false;
+		}
+	}
+
 	public void Append(string message, ConsoleLogSource source, ConsoleLogLevel level)
 	{
 		if (string.IsNullOrWhiteSpace(message))
@@ -53,9 +83,12 @@ public sealed class ConsoleLogService
 		var entry = new ConsoleLogEntry(DateTime.Now, source, level, message.TrimEnd());
 		if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
 		{
-			// App is shutting down; mutate directly to preserve tail logs.
-			_entries.Add(entry);
-			TrimEntries();
+			// Dispatcher is no longer reliable; only mutate collection on owning thread.
+			if (_dispatcher.CheckAccess())
+			{
+				_entries.Add(entry);
+				TrimEntries();
+			}
 			return;
 		}
 
@@ -75,13 +108,20 @@ public sealed class ConsoleLogService
 		}
 		else if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
 		{
+			// Avoid cross-thread ObservableCollection mutation during shutdown.
 			_pendingEntries.Clear();
-			_entries.Clear();
 		}
 		else
 		{
 			_pendingEntries.Clear();
-			_dispatcher.BeginInvoke(new Action(() => _entries.Clear()), DispatcherPriority.Background);
+			try
+			{
+				_dispatcher.BeginInvoke(new Action(() => _entries.Clear()), DispatcherPriority.Background);
+			}
+			catch (InvalidOperationException)
+			{
+				// Dispatcher unavailable; nothing else to clear safely off-thread.
+			}
 		}
 	}
 
@@ -89,7 +129,14 @@ public sealed class ConsoleLogService
 	{
 		if (Interlocked.CompareExchange(ref _flushScheduled, 1, 0) == 0)
 		{
-			_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+			try
+			{
+				_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+			}
+			catch (InvalidOperationException)
+			{
+				Interlocked.Exchange(ref _flushScheduled, 0);
+			}
 		}
 	}
 
@@ -97,7 +144,20 @@ public sealed class ConsoleLogService
 	{
 		if (!_dispatcher.CheckAccess())
 		{
-			_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+			if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+			{
+				Interlocked.Exchange(ref _flushScheduled, 0);
+				return;
+			}
+
+			try
+			{
+				_dispatcher.BeginInvoke(new Action(FlushPendingEntries), DispatcherPriority.Background);
+			}
+			catch (InvalidOperationException)
+			{
+				Interlocked.Exchange(ref _flushScheduled, 0);
+			}
 			return;
 		}
 

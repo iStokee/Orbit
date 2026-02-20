@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Orbit;
@@ -12,7 +14,7 @@ namespace Orbit.Services.Updates
 	/// </summary>
 	public sealed class GitHubReleaseChecker
 	{
-		private static readonly HttpClient _http = new HttpClient();
+		private static readonly HttpClient _http = CreateHttpClient();
 
 		public const string DefaultAssetName = UpdateConfig.DefaultAssetName;
 
@@ -54,26 +56,36 @@ namespace Orbit.Services.Updates
 		/// <param name="includePrereleases">Whether to include pre-release versions</param>
 		public async Task<UpdateInfo> CheckAsync(string expectedAssetName = DefaultAssetName,
 												 string expectedAuthor = null,
-												 bool includePrereleases = false)
+												 bool includePrereleases = false,
+												 CancellationToken cancellationToken = default)
 		{
 			var currentVersion = GetCurrentVersion();
 
 			try
 			{
-				var url = $"https://api.github.com/repos/{UpdateConfig.Owner}/{UpdateConfig.Repo}/releases/latest";
-				var req = new HttpRequestMessage(HttpMethod.Get, url);
-				// GitHub requires a user-agent
-				req.Headers.UserAgent.ParseAdd("Orbit-Updater/1.0");
-
-				var resp = await _http.SendAsync(req);
+				var url = $"https://api.github.com/repos/{UpdateConfig.Owner}/{UpdateConfig.Repo}/releases?per_page=25";
+				using var req = new HttpRequestMessage(HttpMethod.Get, url);
+				using var resp = await _http.SendAsync(req, cancellationToken);
 				resp.EnsureSuccessStatusCode();
 
 				var json = await resp.Content.ReadAsStringAsync();
-				var release = JsonSerializer.Deserialize<GitHubRelease>(json, new JsonSerializerOptions
+				var releases = JsonSerializer.Deserialize<GitHubRelease[]>(json, new JsonSerializerOptions
 				{
 					PropertyNameCaseInsensitive = true
 				});
 
+				if (releases == null || releases.Length == 0)
+				{
+					return new UpdateInfo
+					{
+						HasUpdate = false,
+						CurrentVersion = currentVersion,
+						RemoteVersion = currentVersion,
+						ErrorMessage = "Failed to parse release information or no releases are available"
+					};
+				}
+
+				var release = releases.FirstOrDefault(r => includePrereleases || !r.prerelease);
 				if (release == null)
 				{
 					return new UpdateInfo
@@ -81,18 +93,9 @@ namespace Orbit.Services.Updates
 						HasUpdate = false,
 						CurrentVersion = currentVersion,
 						RemoteVersion = currentVersion,
-						ErrorMessage = "Failed to parse release information"
-					};
-				}
-
-				if (release.prerelease && !includePrereleases)
-				{
-					// ignore prereleases
-					return new UpdateInfo
-					{
-						HasUpdate = false,
-						CurrentVersion = currentVersion,
-						RemoteVersion = currentVersion
+						ErrorMessage = includePrereleases
+							? "No releases are available"
+							: "No stable releases are available"
 					};
 				}
 
@@ -188,6 +191,17 @@ namespace Orbit.Services.Updates
 		private static Version GetCurrentVersion()
 		{
 			return AppVersion.Parsed;
+		}
+
+		private static HttpClient CreateHttpClient()
+		{
+			var client = new HttpClient
+			{
+				Timeout = TimeSpan.FromSeconds(20)
+			};
+			// GitHub requires a user-agent
+			client.DefaultRequestHeaders.UserAgent.ParseAdd("Orbit-Updater/1.0");
+			return client;
 		}
 
 		private static bool TryParseVersion(string input, out Version version)

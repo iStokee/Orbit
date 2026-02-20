@@ -22,8 +22,9 @@ public sealed class TearOffHostRegistry
 
 	private sealed record HostEntry(Window Window, TabablzControl TabControl, string Partition, HostOrigin Origin);
 
-	private readonly object _sync = new();
-	private readonly List<HostEntry> _hosts = new();
+private readonly object _sync = new();
+private readonly List<HostEntry> _hosts = new();
+	private readonly Dictionary<Window, EventHandler> _closedHandlers = new();
 
 	public void Register(Window window, TabablzControl tabControl, string partition, HostOrigin origin)
 	{
@@ -32,20 +33,21 @@ public sealed class TearOffHostRegistry
 
 		partition ??= string.Empty;
 
-			lock (_sync)
+		lock (_sync)
+		{
+			_hosts.RemoveAll(h => ReferenceEquals(h.Window, window));
+			_hosts.Add(new HostEntry(window, tabControl, partition, origin));
+
+			if (_closedHandlers.TryGetValue(window, out var existingHandler))
 			{
-				_hosts.RemoveAll(h => ReferenceEquals(h.Window, window));
-				_hosts.Add(new HostEntry(window, tabControl, partition, origin));
+				window.Closed -= existingHandler;
+				_closedHandlers.Remove(window);
 			}
 
-			void OnClosed(object? sender, EventArgs e)
-			{
-				window.Closed -= OnClosed;
-				Unregister(window);
-			}
-
-		window.Closed -= OnClosed;
-		window.Closed += OnClosed;
+			EventHandler onClosed = (_, __) => Unregister(window);
+			_closedHandlers[window] = onClosed;
+			window.Closed += onClosed;
+		}
 	}
 
 	public void Unregister(Window window)
@@ -54,6 +56,12 @@ public sealed class TearOffHostRegistry
 
 		lock (_sync)
 		{
+			if (_closedHandlers.TryGetValue(window, out var handler))
+			{
+				window.Closed -= handler;
+				_closedHandlers.Remove(window);
+			}
+
 			_hosts.RemoveAll(h => ReferenceEquals(h.Window, window));
 		}
 	}
@@ -80,7 +88,21 @@ public sealed class TearOffHostRegistry
 				continue;
 			}
 
-			try { window.Close(); } catch { /* best effort */ }
+			try
+			{
+				if (window.Dispatcher.CheckAccess())
+				{
+					window.Close();
+				}
+				else
+				{
+					window.Dispatcher.Invoke(window.Close);
+				}
+			}
+			catch
+			{
+				// best effort
+			}
 		}
 	}
 }

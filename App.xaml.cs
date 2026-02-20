@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Logging;
@@ -36,11 +37,14 @@ public partial class App : Application
 		var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
 		MainWindow = mainWindow;
 		mainWindow.Show();
+
+		_ = AutoLoadPluginsAsync();
 	}
 
 	protected override void OnExit(ExitEventArgs e)
 	{
 		_pipeServer?.Dispose();
+		ConsoleLogService.Instance.StopCapture();
 		Settings.Default.Save();
 
 		if (_serviceProvider is IDisposable disposable)
@@ -66,27 +70,14 @@ public partial class App : Application
 		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<TearOffHostRegistry>();
 		services.AddSingleton<InterTabClient>();
-		services.AddSingleton<NodeCatalogService>();
-		services.AddSingleton<NodeExecutorRegistry>();
-		services.AddSingleton<FsmScriptService>(sp => new FsmScriptService(sp.GetRequiredService<NodeCatalogService>()));
-		services.AddTransient<FsmExecutionEngine>(sp => new FsmExecutionEngine(
-			sp.GetRequiredService<NodeCatalogService>(),
-			sp.GetRequiredService<NodeExecutorRegistry>()));
 
-		services.AddTransient<SettingsView>();
+		services.AddTransient<SettingsViewModel>();
+		services.AddTransient<SettingsView>(sp => new SettingsView(sp.GetRequiredService<SettingsViewModel>()));
 		services.AddTransient<ConsoleView>();
 		services.AddTransient<ThemeManagerViewModel>();
 		services.AddTransient<ThemeManagerPanel>(sp => new ThemeManagerPanel(sp.GetRequiredService<ThemeManagerViewModel>()));
 		services.AddTransient<ScriptManagerViewModel>();
 		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
-		services.AddTransient<FsmNodeEditorViewModel>(sp => new FsmNodeEditorViewModel(
-			sp.GetRequiredService<FsmScriptService>(),
-			sp.GetRequiredService<FsmExecutionEngine>(),
-			sp.GetRequiredService<NodeCatalogService>()));
-		services.AddTransient<FsmNodeEditorView>(sp => new FsmNodeEditorView
-		{
-			DataContext = sp.GetRequiredService<FsmNodeEditorViewModel>()
-		});
 
 		services.AddTransient<AccountManagerViewModel>(sp => new AccountManagerViewModel(
 			sp.GetRequiredService<AccountService>(),
@@ -105,7 +96,6 @@ public partial class App : Application
 			sp.GetRequiredService<SessionCollectionService>(),
 			sp.GetRequiredService<OrbitLayoutStateService>(),
 			sp.GetRequiredService<TearOffHostRegistry>()));
-		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.FsmNodeEditorTool>();
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
@@ -124,5 +114,32 @@ public partial class App : Application
 
 		services.AddTransient<MainWindowViewModel>();
 		services.AddTransient<MainWindow>();
+	}
+
+	private async Task AutoLoadPluginsAsync()
+	{
+		if (_serviceProvider == null)
+		{
+			return;
+		}
+
+		try
+		{
+			var pluginManager = _serviceProvider.GetRequiredService<Plugins.PluginManager>();
+			var loaded = await pluginManager.AutoLoadPluginsAsync().ConfigureAwait(true);
+			var consoleLog = _serviceProvider.GetRequiredService<ConsoleLogService>();
+			consoleLog.Append(
+				$"[Orbit] Plugin auto-load completed. Loaded {loaded} plugin(s).",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Info);
+		}
+		catch (Exception ex)
+		{
+			var consoleLog = _serviceProvider.GetService<ConsoleLogService>();
+			consoleLog?.Append(
+				$"[Orbit] Plugin auto-load failed: {ex.Message}",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+		}
 	}
 }
