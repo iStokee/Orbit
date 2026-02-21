@@ -1,676 +1,154 @@
 # Orbit
 
-> 🚀 **Modern WPF management interface for MemoryError** - Session control, script loading, and embedded RuneScape 3 clients
+Modern WPF control surface for MemoryError. Orbit launches RuneScape clients, manages session injection, hosts tooling, and supports embedding external script windows through OrbitAPI.
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![WPF](https://img.shields.io/badge/UI-WPF-blue)](https://github.com/your-repo)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64-blue)](https://github.com/your-repo)
+## Overview
 
-## 📖 Overview
+Orbit is the operational UI for MemoryError workflows:
 
-Orbit is a comprehensive management application for MemoryError that provides:
-- **Session Management**: Launch, inject, and manage multiple RuneScape 3 client instances
-- **Embedded Clients**: RuneScape 3 game windows embedded directly in tabs
-- **Script Integration**: Load and manage C# scripts via MESharp hot reload system
-- **Account Management**: Store and manage multiple account credentials
-- **Theme System**: Full dark/light theme support with custom accent colors
-- **Console Logging**: Unified logging from ME, scripts, and native subsystems
+- Launch and manage multiple RS3 sessions
+- Inject `XInput1_4_inject.dll` into each session
+- Embed client windows directly in Orbit layouts/tabs
+- Load/reload script assemblies and monitor runtime status
+- Provide centralized logs (Orbit, ME, scripts)
+- Manage tools/plugins via a unified dashboard in Settings
 
-Orbit acts as a central hub that connects:
-- **MemoryError (ME)**: Native C++ game hook injected into RS3
-- **csharp_interop**: C# API for scripting
-- **User Scripts**: External C# applications that can embed in Orbit tabs
-- **RuneScape 3 Clients**: Multiple game instances running simultaneously
+## Current Runtime and Build Targets
 
-## 🚀 Quick Start
+- Target framework: `net10.0-windows8.0`
+- Platform target: `x64`
+- UI stack: WPF + MahApps + Dragablz
+- DI container: `Microsoft.Extensions.DependencyInjection`
 
-```bash
-# 1. Launch Orbit
-Orbit.exe
+## Quick Start
 
-# 2. Create a new session
-#    Click "Add Session" → Session launches with embedded RS3 client
+1. Launch `Orbit.exe`.
+2. Open **Settings -> General -> Client Launch**.
+3. Choose launch mode:
+   - `Legacy Executable Paths`
+   - `Jagex Launcher URI`
+4. If using Launcher mode, click **Config** and select one or more Jagex accounts.
+5. Create sessions from the main UI and inject (or use auto-inject).
+6. Open **Settings -> Advanced** to enable debug logs when needed.
 
-# 3. Load a script (optional)
-#    Navigate to Script Manager → Browse for .dll → Click "Load"
+## Client Launch Modes
 
-# 4. View logs
-#    Navigate to Console tab → See live logs from all sources
-```
+Orbit supports both legacy and Jagex-launcher flows.
 
-For script integration, see [OrbitAPI](#-orbitapi-for-script-integration).
+- `Legacy Executable Paths`
+  - Starts a regular client executable from known paths.
+  - Best match for BasicInjector `Launch_RS` behavior.
 
-## ✨ Key Features
+- `Jagex Launcher URI`
+  - Starts via `rs-launch://.../jav_config.ws`.
+  - Applies account `JX_*` environment variables from launcher config.
+  - Supports multi-account selection from config.
 
-### 1. Session Management
+## Jagex Account Config Behavior
 
-Launch and manage multiple RuneScape 3 instances:
+`Config` in **Settings -> General -> Client Launch** reads/writes `env_vars.json` account entries and selection flags.
 
-- **Create Sessions**: Launch new RS3 clients with auto-injection
-- **Launch Mode Control**: Choose `Legacy Executable Paths` or `Jagex Launcher URI` in **Settings → General → Client Launch**
-- **Launcher Account Config**: Configure launcher account env vars from the same General section via `Config`
-- **Embedded Windows**: Game windows embedded directly in Orbit tabs
-- **Process Monitoring**: Track client state, health, and injection status
-- **Auto-Injection**: Optionally inject ME automatically when clients are ready
-- **Session Persistence**: Remember sessions across app restarts
+Behavior mapping relative to BasicInjector button model:
 
-### 2. Script Integration
+- **Single selected account** -> equivalent of `Launch_1_JX`
+- **All accounts selected** -> equivalent of `Launch_All_JX`
+- **Custom selected subset** -> equivalent of `Config + Launch_Custom_JX`
 
-Load and manage C# scripts via the OrbitAPI:
+Orbit launches selected accounts in round-robin order per new session launch.
 
-```csharp
-// From external script - register your window with Orbit
-using Orbit;
+## Multi-Session Injection Notes
 
-var sessionId = OrbitAPI.RegisterScriptWindow(
-    windowHandle,    // Your WPF window's HWND
-    "My Script",     // Tab display name
-    processId        // Optional
-);
+For launcher mode, Orbit now protects against common multi-launch issues by:
 
-// Your window is now embedded as an Orbit tab!
-```
+- serializing launcher starts briefly so each process captures the intended `JX_*` values
+- avoiding duplicate `rs2client` PID binding across sessions
+- refusing injection when another active session already owns that PID
 
-**Features**:
-- Scripts can embed their UI as tabs in Orbit
-- Hot reload support via MemoryError's script loader
-- Console output routed to Orbit's unified console
-- Automatic cleanup when scripts unload
+If only one session injects correctly, enable logs and verify PID/account mapping per launch.
 
-### 3. Unified Console
+## Logging and Diagnostics
 
-Multi-source console logging system:
+Orbit has dedicated diagnostics in **Settings -> Advanced**:
 
-- **Orbit System**: Logs from Orbit itself (launcher, injector, UI)
-- **MemoryError (ME)**: Native C++ hook and subsystem logs
-- **Scripts**: Logs from loaded C# scripts
-- **Summary View**: Card-based overview of all log sources
-- **Filtering**: View logs by source with dedicated tabs
-- **Auto-Scroll**: Optional auto-scroll for live monitoring
+- `Enable theme debug logging`
+- `Enable Orbit interaction logging (drag/drop/reparent)`
 
-### 4. Theme System
+Logs are written under Orbit's local logs path (relative to app/runtime storage). Use the built-in **Open log file** actions in Settings for direct access.
 
-Comprehensive theming with MahApps.Metro:
+## Settings Layout (Current)
 
-- **Base Themes**: Dark and Light modes
-- **Accent Colors**: 20+ built-in accent colors (Blue, Red, Green, Purple, etc.)
-- **Custom Themes**: Import custom themes via JSON
-- **Custom Accents**: Define custom accent colors (primary, secondary, highlight)
-- **Theme Persistence**: Save theme preferences across sessions
-- **Live Preview**: See theme changes instantly
+Settings tabs are currently organized as:
 
-### 5. Account Management
+1. `General`
+2. `Floating Menu`
+3. `Orbit View`
+4. `Tools & Plugins`
+5. `Advanced`
 
-Secure credential storage:
+Notable details:
 
-- **Account Database**: Store multiple RS3 account credentials
-- **MongoDB Integration**: Optional cloud sync for accounts
-- **Quick Login**: One-click login to RS3 clients
-- **Account Switching**: Change accounts without restarting
-- **Security**: Encrypted storage (implementation TBD)
+- Client launch mode + launcher account config are in **General** (top section)
+- Tools/plugins dashboard is a dedicated **Settings** tab
+- Orbit Builder is registered but hidden from default floating menu exposure
 
-### 6. 📘 Orbiters Guide Hub
+## Script Integration (OrbitAPI)
 
-An in-app documentation hub for operating Orbit, troubleshooting issues, and extending the app.
-It renders Markdown with Orbit's theme and includes status hints for missing or invalid content.
+External script UIs can be embedded in Orbit tabs via `Orbit.API.OrbitAPI`.
 
-**How to Access**:
-1. Click the **book icon** (📖) in Orbit's floating menu
-2. Or toggle the **Guide** button visibility in **Settings → Floating Menu**
+Typical flow:
 
-**Architecture**:
-- Markdown-first renderer backed by [`Markdig`](https://github.com/xoofx/markdig) + [`Markdig.Wpf`](https://github.com/xoofx/markdig)
-- Loads source content from `docs/OrbitersGuide` (packaged with Orbit builds)
-- Auto-detects local repo clones to support live editing during development
-- Status footer highlights load issues (missing files, parse errors)
+1. Check availability: `OrbitAPI.IsOrbitAvailable()`
+2. Register window handle: `OrbitAPI.RegisterScriptWindow(...)`
+3. Unregister on shutdown: `OrbitAPI.UnregisterScriptWindow(...)`
 
-**Use Cases**:
-- Help operators run Orbit effectively day to day
-- Onboard contributors with a single linkable handbook
-- Surface API docs alongside architectural context and historical research
-- Provide quick actions for refreshing or opening the docs folder for edits
+## Build
 
-### 7. 🔧 Extensible Tool System
-
-Orbit features a **plugin-like tool architecture** for embedding reusable UI components:
-
-**How It Works**:
-```csharp
-// Define a tool by implementing IOrbitTool
-public class MyCustomTool : IOrbitTool
-{
-    public string Key => "MyTool";
-    public string DisplayName => "My Custom Tool";
-    public PackIconMaterialKind Icon => PackIconMaterialKind.Wrench;
-
-    public FrameworkElement CreateView(object? context = null)
-    {
-        return new MyToolView(); // Your WPF UserControl
-    }
-}
-
-// Register in App.xaml.cs
-services.AddSingleton<IOrbitTool, MyCustomTool>();
-```
-
-**Built-in Tools**:
-- **Script Controls**: Script loading and management
-- **Settings**: Application preferences
-- **Console**: Unified logging view
-- **Theme Manager**: Theme and accent customization
-- **Sessions Overview**: Session monitoring and control
-- **Script Manager**: Script library and hot reload
-- **Account Manager**: Account credentials management
-- **Guide**: Orbiters Guide documentation hub
-- **Tools & Plugins Dashboard**: Embedded management surface available as a dedicated tab in **Settings**
-- **Orbit Builder (FSM Node Editor)**: Registered but hidden from floating menu by default
-
-**Tool Registry**:
-```csharp
-public interface IToolRegistry
-{
-    IOrbitTool? Find(string key);
-    IEnumerable<IOrbitTool> GetAll();
-}
-```
-
-Tools are:
-- **Discoverable**: Registered via DI and discovered at runtime
-- **Reusable**: Can be opened multiple times or across sessions
-- **Integrated**: Appear as tabs with consistent styling
-- **Configurable**: Floating menu visibility is managed from Settings and the Tools & Plugins dashboard
-
-**Adding Custom Tools**:
-1. Create a class implementing `IOrbitTool`
-2. Implement `CreateView()` to return your WPF UserControl
-3. Register in `App.xaml.cs` with DI: `services.AddSingleton<IOrbitTool, YourTool>()`
-4. Add command/method to `MainWindowViewModel` to open it
-5. Optionally expose it in the floating menu and/or manage visibility through Tools & Plugins
-
-
-## 🔨 Building
-
-### Prerequisites
-- .NET 8.0 SDK
-- Visual Studio 2022 (recommended)
-- `csharp_interop.dll` (for OrbitAPI integration)
-
-### Build Commands
+From `Orbit/Orbit`:
 
 ```bash
-cd Orbit/Orbit
-
-# Debug build
 dotnet build Orbit.csproj -c Debug
-
-# Release build
 dotnet build Orbit.csproj -c Release
+```
 
-# Run
+Run debug build:
+
+```bash
 dotnet run -c Debug
 ```
 
-### Output
+## Core Services
 
-- **Executable**: `Orbit.exe`
-- **Platform**: x64 Windows
-- **Framework**: .NET 8.0-windows
+- `SessionCollectionService`: active session registry/state
+- `SessionManagerService`: launch/inject/cleanup pipeline
+- `OrbitLayoutStateService`: shared layout state for Orbit View
+- `ScriptManagerService`: script load/reload coordination
+- `OrbitCommandClient`: command channel to ME runtime
+- `ConsolePipeServer`: incoming log/pipe integration
+- `OrbitApiPipeServer`: OrbitAPI IPC endpoint
+- `ThemeService`: theme persistence and application
 
-## Dependencies
+## Versioning and Updates
 
-```xml
-<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-<PackageReference Include="Costura.Fody" Version="6.0.0" />
-<PackageReference Include="Dragablz" Version="0.0.3.234" />
-<PackageReference Include="Extended.Wpf.Toolkit" Version="5.0.0" />
-<PackageReference Include="MahApps.Metro" Version="2.4.11" />
-<PackageReference Include="MahApps.Metro.IconPacks" Version="6.2.1" />
-<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
-<PackageReference Include="MongoDB.Driver" Version="3.5.0" />
-<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-<PackageReference Include="PixiEditor.ColorPicker" Version="3.4.2" />
-```
+Orbit version values are defined in `Versioning/AppVersion.cs`.
 
-**Key Libraries**:
-- **CommunityToolkit.Mvvm**: Modern MVVM framework (ObservableObject, RelayCommand, source generators)
-- **Dragablz**: Tab reordering and docking
-- **MahApps.Metro**: Modern WPF UI framework
-- **MongoDB.Driver**: Account sync (optional)
-- **Costura.Fody**: Embed dependencies into single executable
+- `Current` (semantic base)
+- `AssemblyVersion`/`FileVersion` (full display + updater comparison)
 
-## 🏗️ Architecture
-
-### MVVM Pattern
-
-Orbit follows strict MVVM architecture:
-
-- **Models**: Pure data classes (SessionModel, AccountModel, ConsoleEntry)
-- **Views**: XAML UI (SessionsView, ConsoleView, ThemeManagerView)
-- **ViewModels**: Business logic and data binding
-
-### Dependency Injection
-
-Uses built-in DI container pattern (not Microsoft.Extensions.DependencyInjection):
-
-```csharp
-// Manual DI in MainWindowViewModel
-public MainWindowViewModel()
-{
-    // Create services
-    SessionCollection = new SessionCollectionService();
-    SessionManager = new SessionManagerService(SessionCollection);
-    ScriptIntegration = new ScriptIntegrationService(SessionCollection);
-
-    // Initialize OrbitAPI
-    OrbitAPI.Initialize(ScriptIntegration);
-}
-```
-
-### Service Layer
-
-Core services that power Orbit:
-
-| Service | Purpose |
-|---------|---------|
-| `SessionCollectionService` | Observable collection of active sessions |
-| `SessionManagerService` | Create, update, delete sessions |
-| `ScriptIntegrationService` | Embed external script windows |
-| `ScriptManagerService` | Load scripts via ME |
-| `OrbitCommandClient` | Named pipe communication with ME |
-| `ThemeService` | Apply and save themes |
-| `AccountService` | CRUD for account credentials |
-
-## 💻 Using Orbit
-
-### 1. Launching the Application
-
-```bash
-# Start Orbit
-Orbit.exe
-```
-
-On first launch:
-- Sets up default theme (Dark + Blue accent)
-- Initializes logging system
-- Discovers MemoryError installation
-
-### 2. Creating a Session
-
-**Via UI**:
-1. Click "Add Session" button in Sessions tab
-2. Configure session options (auto-inject, etc.)
-3. Session launches with RS3 client embedded in tab
-
-**Session States**:
-- **NotStarted**: Session created but client not launched
-- **ClientRunning**: RS3 client process running
-- **ClientReady**: Client ready for injection
-- **InjectionReady**: ME injected successfully
-- **Error**: Something went wrong
-
-### 3. Loading Scripts
-
-**Via Script Manager Tab**:
-1. Navigate to "Script Manager" tab
-2. Browse for compiled script DLL
-3. Click "Load Script"
-4. Script initializes via hot reload system
-
-**Via ME Console**:
-Scripts can also be loaded directly through MemoryError's ImGui interface.
-
-### 4. Managing Accounts
-
-**Via Account Manager Tab**:
-1. Navigate to "Account Manager"
-2. Add account credentials
-3. Assign accounts to sessions
-4. Use "Quick Login" to auto-fill credentials
-
-### 5. Viewing Logs
-
-**Console Tab**:
-- **Summary**: Card-based overview of all log sources
-- **All Sources**: Unified view of all logs
-- **Orbit**: Orbit system logs only
-- **MemoryError**: ME native logs only
-- **Scripts**: Script output only
-
-## 🔌 OrbitAPI for Script Integration
-
-External scripts can integrate with Orbit via `Orbit.API.OrbitAPI`.
-
-### Checking if Orbit is Available
-
-```csharp
-if (OrbitAPI.IsOrbitAvailable())
-{
-    // Orbit is running, we can integrate
-}
-```
-
-### Registering a Script Window
-
-```csharp
-using System;
-using System.Windows;
-using System.Windows.Interop;
-using Orbit.API;
-
-// Get your WPF window's Win32 handle
-var windowHandle = new WindowInteropHelper(myWpfWindow).Handle;
-
-// Register with Orbit
-Guid sessionId = OrbitAPI.RegisterScriptWindow(
-    windowHandle,
-    "My Script Name",
-    Process.GetCurrentProcess().Id
-);
-
-// Your window is now embedded in an Orbit tab!
-```
-
-### Unregistering on Shutdown
-
-```csharp
-// Clean up when your script shuts down
-OrbitAPI.UnregisterScriptWindow(sessionId);
-```
-
-### Full Integration Example
-
-From the WPF Debug Utility:
-
-```csharp
-public static void Initialize()
-{
-    // Create WPF window
-    var window = new MainWindow();
-    window.Show();
-
-    // Try to integrate with Orbit if available
-    var windowHandle = new WindowInteropHelper(window).Handle;
-
-    Type? orbitApiType = Type.GetType("Orbit.API.OrbitAPI, Orbit");
-    if (orbitApiType != null)
-    {
-        var isAvailableMethod = orbitApiType.GetMethod("IsOrbitAvailable");
-        var isAvailable = (bool)isAvailableMethod?.Invoke(null, null);
-
-        if (isAvailable)
-        {
-            var registerMethod = orbitApiType.GetMethod("RegisterScriptWindow");
-            var sessionId = registerMethod?.Invoke(null, new object[] {
-                windowHandle,
-                "MESharp Debug",
-                null
-            });
-
-            Console.WriteLine($"[Orbit] Registered with session ID: {sessionId}");
-        }
-    }
-}
-```
-
-## 📡 Communication with MemoryError
-
-Orbit communicates with ME via multiple channels:
-
-### 1. Named Pipe (OrbitCommandClient)
-
-Sends commands to ME:
-
-```csharp
-// Example: Load a script
-OrbitCommandClient.SendCommand($"LOAD\t{scriptPath}");
-
-// Example: Reload a script
-OrbitCommandClient.SendCommand($"RELOAD\t{scriptPath}");
-```
-
-**Supported Commands**:
-- `LOAD\t<path>`: Load a .NET script
-- `RELOAD\t<path>`: Reload an existing script
-- `UNLOAD\t<name>`: Unload a script
-
-### 2. DLL Injection (MELoader)
-
-Injects `XInput1_4_inject.dll` into RS3 clients:
-
-```csharp
-// From SessionManagerService
-MELoader.InjectIntoProcess(rsProcess, meDllPath);
-```
-
-### 3. Console Log Streaming
-
-ME streams logs back to Orbit via shared memory or named pipe (implementation varies).
-
-## 🔄 Session Lifecycle
-
-```
-[User Creates Session]
-        ↓
-[Launch RS3 Client Process]
-        ↓
-[Wait for Client Window Ready]
-        ↓
-[Inject ME DLL (XInput1_4_inject.dll)]
-        ↓
-[ME Initializes .NET Runtime]
-        ↓
-[ME Hooks Game Functions]
-        ↓
-[Session Ready for Scripts]
-        ↓
-[User Loads Scripts]
-        ↓
-[Scripts Execute via MESharp API]
-```
-
-## 🎨 Theme System
-
-Orbit's theme system is built on MahApps.Metro:
-
-### Built-in Themes
-
-**Base Themes**:
-- Light
-- Dark
-
-**Accent Colors**:
-- Red, Green, Blue, Purple, Orange, Lime, Emerald, Teal, Cyan, Cobalt, Indigo, Violet, Pink, Magenta, Crimson, Amber, Yellow, Brown, Olive, Steel, Mauve, Taupe, Sienna
-
-### Custom Themes
-
-Create custom themes via JSON:
-
-```json
-{
-  "Name": "MyCustomTheme",
-  "BaseTheme": "Dark",
-  "PrimaryAccent": "#00D9FF",
-  "SecondaryAccent": "#0099CC",
-  "HighlightAccent": "#00FFFF"
-}
-```
-
-Import via Theme Manager UI or place in `CustomAccents/` folder.
-
-### Applying Themes
-
-**Via UI**:
-1. Navigate to "Theme Manager" tab
-2. Select base theme (Dark/Light)
-3. Select accent color
-4. Click "Apply"
-
-**Programmatically**:
-```csharp
-ThemeService.ApplyTheme("Dark", "Blue");
-```
-
-## 📝 Logging System
-
-Orbit features a comprehensive logging system:
-
-### Log Sources
-
-Each log entry has a source:
-
-```csharp
-public enum LogSource
-{
-    Orbit,         // Orbit system logs
-    MemoryError,   // Native ME logs
-    Scripts,       // User script logs
-    External       // Other external sources
-}
-```
-
-### Log Levels
-
-```csharp
-public enum LogLevel
-{
-    Trace,
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Fatal
-}
-```
-
-### Creating Log Entries
-
-From Orbit code:
-
-```csharp
-ConsoleService.Log(LogLevel.Info, LogSource.Orbit, "Session created successfully");
-```
-
-From scripts (via MESharp):
-
-```csharp
-Console.WriteLine("This will appear in Orbit's Scripts tab");
-```
-
-### Console View Features
-
-- **Live Filtering**: Filter by source and level
-- **Search**: Full-text search across all logs
-- **Auto-Scroll**: Toggle auto-scroll for live monitoring
-- **Export**: Export logs to file (future feature)
-- **Colorization**: Color-coded by log level
-
-## Advanced Features
-
-### Floating Action Menu
-
-Orbit includes an optional floating action menu that appears over RS3 game windows:
-
-- **Appearance**: Customizable opacity, position, direction
-- **Actions**: Quick access to inject, scripts, console
-- **Auto-Hide**: Hides after inactivity
-- **Positioning**: Docks to screen edges
-
-Configure via Settings tab.
-
-### Inter-Tab Communication
-
-Tabs can communicate via the MainWindowViewModel:
-
-```csharp
-// From ScriptManagerViewModel
-MainWindowViewModel.SwitchToTab("Console");
-MainWindowViewModel.ConsoleViewModel.AddEntry(logEntry);
-```
-
-### Window Embedding
-
-External windows are embedded using Win32 interop:
-
-```csharp
-// From ChildClientView
-Win32.SetParent(childHwnd, hostHwnd);
-Win32.SetWindowLong(childHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE);
-```
-
-## Development Workflow
-
-### Adding a New Tool Tab
-
-1. **Create View**: `Views/NewToolView.xaml`
-2. **Create ViewModel**: `ViewModels/NewToolViewModel.cs`
-3. **Register in MainWindow**:
-   ```xaml
-   <TabItem Header="New Tool">
-       <views:NewToolView DataContext="{Binding NewToolViewModel}" />
-   </TabItem>
-   ```
-4. **Wire ViewModel**:
-   ```csharp
-   public NewToolViewModel NewToolViewModel { get; }
-
-   public MainWindowViewModel()
-   {
-       NewToolViewModel = new NewToolViewModel();
-   }
-   ```
-
-### Adding a New Service
-
-1. **Create Service**: `Services/NewService.cs`
-2. **Inject Dependencies**: Pass required services via constructor
-3. **Register in MainWindowViewModel**:
-   ```csharp
-   public NewService NewService { get; }
-
-   public MainWindowViewModel()
-   {
-       NewService = new NewService(dependency1, dependency2);
-   }
-   ```
-
-### Release Automation
-
-- Run `Orbit/tools/OrbitRelease.ps1` to bump versions, publish binaries, and build Velopack packages.
-- Option **6** executes the full pipeline and regenerates `orbit-win-x64.zip` for the built-in updater.
-- GitHub Actions workflow `.github/workflows/orbit-release.yml` mirrors the script when tags such as `orbit/v1.2.3` are pushed or via manual dispatch.
-
-## Relationship with csharp_interop
-
-Orbit **references** `csharp_interop.dll` for:
-
-1. **OrbitAPI Integration**: Scripts can register UI windows via in-process API or the cross-process `OrbitApiBridge` pipe
-2. **Type Definitions**: Shared types between Orbit and scripts
-
-**Reference Setup**:
-```xml
-<ItemGroup>
-  <Reference Include="csharp_interop">
-    <HintPath>..\..\C#\csharp_interop\bin\Debug\net8.0-windows\csharp_interop.dll</HintPath>
-  </Reference>
-</ItemGroup>
-```
-
-Orbit does **not** provide scripting functionality itself - that comes from MemoryError + csharp_interop.
+Settings displays the full app version string from `AppVersion.Display`.
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| **Session won't launch** | Check RS3 install path, verify ME DLL exists |
-| **Injection fails** | Run Orbit as Administrator, check antivirus |
-| **Embedded window blank** | Verify RS3 client is windowed mode, not fullscreen |
-| **Script window not embedding** | Ensure `OrbitAPI.RegisterScriptWindow(...)` is called and `Embed Script UI` is enabled in Script Manager |
-| **Theme not applying** | Clear theme cache, restart Orbit |
-| **Logs not appearing** | Check console tab is visible, verify log source filter |
+- **Launcher sessions open but wrong account/session attaches**
+  - Reopen **General -> Client Launch -> Config** and confirm selected entries.
+  - Launch sessions sequentially once to verify round-robin order.
 
-## Platform
+- **Multiple sessions launch but only one injects**
+  - Check logs for duplicate PID warnings.
+  - Ensure each session resolves a distinct `rs2client` PID before injection.
 
-- **Target**: `.NET 8.0-windows8.0`
-- **UI Framework**: WPF
-- **Assembly Name**: `Orbit`
-- **Platform**: `x64` only
+- **Drag/tab interactions feel unstable**
+  - Enable Orbit interaction logging in **Advanced** and inspect events around drag/reparent operations.
+
+## Repository Notes
+
+Orbit lives under `Orbit/Orbit` in the MemoryError repository. Additional operator docs are under `docs/OrbitersGuide`.
