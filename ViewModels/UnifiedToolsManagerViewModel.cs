@@ -19,7 +19,7 @@ namespace Orbit.ViewModels;
 /// Unified dashboard for managing both built-in tools and dynamically loaded plugins.
 /// Combines functionality from ToolsOverview and PluginManager into a single interface.
 /// </summary>
-public class UnifiedToolsManagerViewModel : INotifyPropertyChanged
+public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IToolRegistry _toolRegistry;
     private readonly PluginManager _pluginManager;
@@ -27,6 +27,7 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged
     private string _statusMessage = "Ready";
     private bool _isLoading;
     private string _searchFilter = string.Empty;
+    private bool _disposed;
 
     public ObservableCollection<ToolCardViewModel> ToolCards { get; }
 
@@ -210,11 +211,32 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged
 
     private void OnPluginStatusChanged(object? sender, PluginStatusChangedEventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         Application.Current?.Dispatcher.InvokeAsync(() =>
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             StatusMessage = e.Message;
             _ = RefreshToolsAsync();
         });
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _pluginManager.PluginStatusChanged -= OnPluginStatusChanged;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

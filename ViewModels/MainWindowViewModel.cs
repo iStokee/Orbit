@@ -1,4 +1,5 @@
 ﻿using Dragablz;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using Orbit.Logging;
 using Orbit.Models;
@@ -507,7 +508,7 @@ namespace Orbit.ViewModels
 		OpenOrFocusToolTab(
 			key: ScriptManagerToolKey,
 			name: "Script Manager",
-			controlFactory: () => new Views.ScriptManagerPanel(new ScriptManagerViewModel(scriptManagerService, sessionCollectionService)),
+			controlFactory: () => ResolveRequiredService<Views.ScriptManagerPanel>(),
 			icon: PackIconMaterialKind.CodeBraces);
 	}
 
@@ -712,7 +713,7 @@ namespace Orbit.ViewModels
             OpenOrFocusToolTab(
                 key: SettingsToolKey,
                 name: "Settings",
-                controlFactory: () => new Views.SettingsView(new SettingsViewModel()),
+                controlFactory: () => ResolveRequiredService<Views.SettingsView>(),
                 icon: PackIconMaterialKind.Cog);
         }
     }
@@ -738,7 +739,7 @@ namespace Orbit.ViewModels
             OpenOrFocusToolTab(
                 key: ThemeManagerToolKey,
                 name: "Theme Manager",
-                controlFactory: () => new Views.ThemeManagerPanel(),
+                controlFactory: () => ResolveRequiredService<Views.ThemeManagerPanel>(),
                 icon: PackIconMaterialKind.Palette);
         }
     }
@@ -747,12 +748,7 @@ namespace Orbit.ViewModels
     {
         if (!TryOpenToolByKey(SessionsOverviewToolKey))
         {
-            OpenOrFocusToolTab(
-                key: SessionsOverviewToolKey,
-                name: "Sessions",
-                controlFactory: () => new Views.SessionsOverviewView(
-                    new SessionsOverviewViewModel(Sessions, ActivateSession, FocusSession, CloseSession)),
-                icon: PackIconMaterialKind.ViewList);
+            ConsoleLog.Append("[Orbit] Sessions tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
         }
     }
 
@@ -782,6 +778,18 @@ namespace Orbit.ViewModels
 
 		OpenOrFocusToolTab(tool.Key, tool.DisplayName, () => tool.CreateView(this), tool.Icon);
 		return true;
+	}
+
+	private static T ResolveRequiredService<T>() where T : class
+	{
+		var app = Application.Current as App;
+		var service = app?.Services.GetService<T>();
+		if (service == null)
+		{
+			throw new InvalidOperationException($"Required service '{typeof(T).Name}' is not available from DI.");
+		}
+
+		return service;
 	}
 
 	/// <summary>
@@ -1814,6 +1822,19 @@ namespace Orbit.ViewModels
 			return;
 		}
 
+		var activePath = targetSession.ActiveScriptPath;
+		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
+			!string.Equals(activePath, path, StringComparison.OrdinalIgnoreCase);
+		if (switchingScripts)
+		{
+			var unloaded = await TryUnloadActiveScriptBeforeLoadAsync(targetSession, path).ConfigureAwait(false);
+			if (!unloaded)
+			{
+				targetSession.SetScriptRuntimeError("Failed to unload previous script before loading a new one.");
+				return;
+			}
+		}
+
 		ConsoleLog.Append($"[OrbitCmd] Requesting load for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
 		// Use RELOAD for both initial and subsequent loads to avoid legacy runtime restart; send to selected session
 		var runtimeReady = await OrbitCommandClient
@@ -1894,6 +1915,19 @@ namespace Orbit.ViewModels
 			return;
 		}
 
+		var activePath = targetSession.ActiveScriptPath;
+		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
+			!string.Equals(activePath, path, StringComparison.OrdinalIgnoreCase);
+		if (switchingScripts)
+		{
+			var unloaded = await TryUnloadActiveScriptBeforeLoadAsync(targetSession, path).ConfigureAwait(false);
+			if (!unloaded)
+			{
+				targetSession.SetScriptRuntimeError("Failed to unload previous script before reloading a new one.");
+				return;
+			}
+		}
+
 		ConsoleLog.Append($"[OrbitCmd] Requesting reload for '{path}' (session '{targetSession.Name}' PID {targetSession.RSProcess?.Id})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
 		var runtimeReady = await OrbitCommandClient
 			.SendStartRuntimeWithRetryAsync(targetSession.RSProcess?.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
@@ -1911,6 +1945,36 @@ namespace Orbit.ViewModels
 				ConsoleLog.Append("[OrbitCmd] Failed to send reload command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 			}
 		}
+
+	private async Task<bool> TryUnloadActiveScriptBeforeLoadAsync(SessionModel targetSession, string nextPath)
+	{
+		if (targetSession.RSProcess == null)
+		{
+			return false;
+		}
+
+		ConsoleLog.Append(
+			$"[OrbitCmd] Unloading active script '{targetSession.ActiveScriptName}' before loading '{Path.GetFileNameWithoutExtension(nextPath)}' in session '{targetSession.Name}'.",
+			ConsoleLogSource.Orbit,
+			ConsoleLogLevel.Info);
+
+		var unloaded = await OrbitCommandClient
+			.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+			.ConfigureAwait(false);
+
+		if (!unloaded)
+		{
+			ConsoleLog.Append(
+				$"[OrbitCmd] Failed to unload previous script in session '{targetSession.Name}'.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return false;
+		}
+
+		targetSession.SetScriptStopped();
+		await Task.Delay(250).ConfigureAwait(false);
+		return true;
+	}
 
 		private void OnSessionPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{

@@ -11,6 +11,7 @@ namespace Orbit.Logging;
 public sealed class ConsoleLogService
 {
 	private const int MaxEntries = 5000;
+	private const int TrimBatchSize = 250;
 	private static readonly Lazy<ConsoleLogService> _lazy = new(() => new ConsoleLogService());
 
 	private readonly ObservableCollection<ConsoleLogEntry> _entries = new();
@@ -181,7 +182,14 @@ public sealed class ConsoleLogService
 
 	private void TrimEntries()
 	{
-		while (_entries.Count > MaxEntries)
+		if (_entries.Count <= MaxEntries)
+		{
+			return;
+		}
+
+		var removeCount = Math.Max(TrimBatchSize, _entries.Count - MaxEntries);
+		removeCount = Math.Min(removeCount, _entries.Count);
+		for (var i = 0; i < removeCount; i++)
 		{
 			_entries.RemoveAt(0);
 		}

@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using Microsoft.Extensions.DependencyInjection;
 using Orbit.Logging;
 using Orbit.Models;
 using Orbit.Services;
@@ -17,6 +18,7 @@ using System.Windows.Input;
 using System.Windows.Data;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using Application = System.Windows.Application;
 
 namespace Orbit.ViewModels;
 
@@ -42,8 +44,32 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	/// Convenience constructor used by XAML design-time. Creates service instances on demand.
 	/// </summary>
 	public ScriptManagerViewModel()
-		: this(new ScriptManagerService(), SessionCollectionService.Instance)
+		: this(ResolveScriptManagerService(), ResolveSessionCollectionService())
 	{
+	}
+
+	private static ScriptManagerService ResolveScriptManagerService()
+	{
+		var app = Application.Current as App;
+		var service = app?.Services.GetService<ScriptManagerService>();
+		if (service == null)
+		{
+			throw new InvalidOperationException("ScriptManagerViewModel requires ScriptManagerService from DI.");
+		}
+
+		return service;
+	}
+
+	private static SessionCollectionService ResolveSessionCollectionService()
+	{
+		var app = Application.Current as App;
+		var service = app?.Services.GetService<SessionCollectionService>();
+		if (service == null)
+		{
+			throw new InvalidOperationException("ScriptManagerViewModel requires SessionCollectionService from DI.");
+		}
+
+		return service;
 	}
 
 	/// <summary>
@@ -357,7 +383,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	/// <summary>
 	/// Sends a hot-reload request for the given script to the targeted session, validating injection state first.
 	/// </summary>
-    private async Task LoadScriptAsync(ScriptProfile? profile, bool isReload)
+	private async Task LoadScriptAsync(ScriptProfile? profile, bool isReload)
     {
 		if (_isScriptCommandInFlight)
 		{
@@ -403,6 +429,21 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 				ConsoleLogSource.Orbit,
 				ConsoleLogLevel.Warning);
 			return;
+		}
+
+		// WPF-backed scripts can need a clean unload boundary before loading a different assembly.
+		// If another script is still marked active, request unload first to avoid overlap/race failures.
+		var activePath = targetSession.ActiveScriptPath;
+		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
+			!string.Equals(activePath, tracked.FilePath, StringComparison.OrdinalIgnoreCase);
+		if (switchingScripts)
+		{
+			var unloaded = await TryUnloadBeforeLoadAsync(targetSession).ConfigureAwait(true);
+			if (!unloaded)
+			{
+				targetSession.SetScriptRuntimeError("Failed to unload previous script before loading a new one.");
+				return;
+			}
 		}
 
 		var pid = targetSession.RSProcess?.Id;
@@ -572,13 +613,12 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	private SessionModel? ResolveOrSelectTargetSession()
 	{
 		var targetSession = TargetSession;
-		if (targetSession != null)
+		if (IsUsableScriptTarget(targetSession))
 		{
 			return targetSession;
 		}
 
-		var fallback = _sessionCollectionService.GlobalSelectedSession
-			?? _sessionCollectionService.Sessions.FirstOrDefault();
+		var fallback = GetPreferredScriptTarget();
 		if (fallback != null)
 		{
 			TargetSession = fallback;
@@ -586,6 +626,63 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		}
 
 		return targetSession;
+	}
+
+	private SessionModel? GetPreferredScriptTarget()
+	{
+		var preferredCandidates = new[]
+		{
+			_sessionCollectionService.GlobalHotReloadTargetSession,
+			_sessionCollectionService.GlobalSelectedSession
+		};
+
+		foreach (var candidate in preferredCandidates)
+		{
+			if (IsUsableScriptTarget(candidate))
+			{
+				return candidate;
+			}
+		}
+
+		return _sessionCollectionService.Sessions.FirstOrDefault(IsUsableScriptTarget);
+	}
+
+	private static bool IsUsableScriptTarget(SessionModel? session)
+	{
+		return session != null &&
+			session.IsRuneScapeClient &&
+			session.InjectionState == InjectionState.Injected &&
+			session.RSProcess != null;
+	}
+
+	private async Task<bool> TryUnloadBeforeLoadAsync(SessionModel targetSession)
+	{
+		if (targetSession.RSProcess == null)
+		{
+			return false;
+		}
+
+		ConsoleLogService.Instance.Append(
+			$"[ScriptManager] Unloading currently active script in session '{targetSession.Name}' before loading a new script.",
+			ConsoleLogSource.Orbit,
+			ConsoleLogLevel.Info);
+
+		var unloaded = await OrbitCommandClient
+			.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+			.ConfigureAwait(true);
+
+		if (!unloaded)
+		{
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Failed to unload previous script for session '{targetSession.Name}'.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return false;
+		}
+
+		targetSession.SetScriptStopped();
+		await Task.Delay(250).ConfigureAwait(true);
+		return true;
 	}
 
 	private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

@@ -63,6 +63,8 @@ namespace Orbit.ViewModels
 			InstallUpdateCommand = new RelayCommand(async () => await InstallUpdateAsync(), () => CanInstallUpdate);
 			OpenThemeLogCommand = new RelayCommand(OpenThemeLog);
 			ClearThemeLogCommand = new RelayCommand(ClearThemeLog);
+			OpenOrbitInteractionLogCommand = new RelayCommand(OpenOrbitInteractionLog);
+			ClearOrbitInteractionLogCommand = new RelayCommand(ClearOrbitInteractionLog);
 			OpenToolsOverviewCommand = new RelayCommand(() => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
 			ConfigureLauncherAccountsCommand = new RelayCommand(OpenLauncherAccountConfig);
 
@@ -216,6 +218,8 @@ namespace Orbit.ViewModels
 		public IRelayCommand InstallUpdateCommand { get; }
 		public IRelayCommand OpenThemeLogCommand { get; }
 		public IRelayCommand ClearThemeLogCommand { get; }
+		public IRelayCommand OpenOrbitInteractionLogCommand { get; }
+		public IRelayCommand ClearOrbitInteractionLogCommand { get; }
 		public IRelayCommand OpenToolsOverviewCommand { get; }
 		public IRelayCommand ConfigureLauncherAccountsCommand { get; }
 
@@ -980,6 +984,26 @@ namespace Orbit.ViewModels
 
 	public string ThemeLogFilePath => ThemeLogger.LogFilePath;
 
+	public bool IsOrbitInteractionLoggingEnabled
+	{
+		get => Settings.Default.OrbitInteractionLoggingEnabled;
+		set
+		{
+			if (Settings.Default.OrbitInteractionLoggingEnabled == value)
+			{
+				return;
+			}
+
+			Settings.Default.OrbitInteractionLoggingEnabled = value;
+			Settings.Default.Save();
+			OrbitInteractionLogger.IsEnabled = value;
+			OnPropertyChanged();
+			OnPropertyChanged(nameof(OrbitInteractionLogFilePath));
+		}
+	}
+
+	public string OrbitInteractionLogFilePath => OrbitInteractionLogger.LogFilePath;
+
 	public bool ShowThemeManagerWelcomeMessage
 	{
 		get => Settings.Default.ShowThemeManagerWelcomeMessage;
@@ -1073,6 +1097,40 @@ namespace Orbit.ViewModels
 		MessageBox.Show("Theme log cleared successfully.",
 			"Log Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
 		OnPropertyChanged(nameof(ThemeLogFilePath));
+	}
+
+	private void OpenOrbitInteractionLog()
+	{
+		try
+		{
+			var filePath = OrbitInteractionLogger.LogFilePath;
+			if (File.Exists(filePath))
+			{
+				System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+				{
+					FileName = filePath,
+					UseShellExecute = true
+				});
+			}
+			else
+			{
+				MessageBox.Show("Interaction log file does not exist yet. Enable logging and drag tabs/windows in Orbit View first.",
+					"Log File Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+			}
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show($"Failed to open interaction log file: {ex.Message}",
+				"Error", MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+	}
+
+	private void ClearOrbitInteractionLog()
+	{
+		OrbitInteractionLogger.ClearLog();
+		MessageBox.Show("Orbit interaction log cleared successfully.",
+			"Log Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+		OnPropertyChanged(nameof(OrbitInteractionLogFilePath));
 	}
 
 	private void OpenLauncherAccountConfig()

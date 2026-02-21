@@ -37,6 +37,7 @@ private readonly List<HostEntry> _hosts = new();
 		{
 			_hosts.RemoveAll(h => ReferenceEquals(h.Window, window));
 			_hosts.Add(new HostEntry(window, tabControl, partition, origin));
+			OrbitInteractionLogger.Log($"[OrbitView][TearOff] Registered host partition='{partition}' origin={origin}.");
 
 			if (_closedHandlers.TryGetValue(window, out var existingHandler))
 			{
@@ -63,6 +64,7 @@ private readonly List<HostEntry> _hosts = new();
 			}
 
 			_hosts.RemoveAll(h => ReferenceEquals(h.Window, window));
+			OrbitInteractionLogger.Log("[OrbitView][TearOff] Unregistered host.");
 		}
 	}
 
@@ -90,6 +92,7 @@ private readonly List<HostEntry> _hosts = new();
 
 			try
 			{
+				OrbitInteractionLogger.Log($"[OrbitView][TearOff] Closing host partition='{partition}' origin={origin}.");
 				if (window.Dispatcher.CheckAccess())
 				{
 					window.Close();

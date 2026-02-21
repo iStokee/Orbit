@@ -4,17 +4,19 @@ using System.Windows;
 using System.Windows.Controls;
 using Orbit.Tooling;
 using Orbit.ViewModels;
-using Application = System.Windows.Application;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace Orbit.Views;
 
 public partial class SettingsView : UserControl
 {
-	public SettingsView(SettingsViewModel vm)
+	private readonly IToolRegistry _toolRegistry;
+
+	public SettingsView(SettingsViewModel vm, IToolRegistry toolRegistry)
 	{
 		InitializeComponent();
 		DataContext = vm ?? throw new ArgumentNullException(nameof(vm));
+		_toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 		LoadToolsDashboard();
 		Unloaded += OnUnloaded;
 	}
@@ -23,9 +25,7 @@ public partial class SettingsView : UserControl
 	{
 		try
 		{
-			var app = Application.Current as App;
-			var registry = app?.Services.GetService(typeof(IToolRegistry)) as IToolRegistry;
-			var tool = registry?.Tools.FirstOrDefault(t => string.Equals(t.Key, "UnifiedToolsManager", StringComparison.Ordinal));
+			var tool = _toolRegistry.Tools.FirstOrDefault(t => string.Equals(t.Key, "UnifiedToolsManager", StringComparison.Ordinal));
 			if (tool != null)
 			{
 				ToolsDashboardHost.Content = tool.CreateView();

@@ -58,6 +58,13 @@ namespace Orbit.ViewModels
 		private int _currentColumns = 1;
 		private string _suggestedGridLabel = "Suggested: 1 x 1";
 		private DispatcherTimer? _workspaceReconcileTimer;
+		private readonly HashSet<TabablzControl> _observedTabControls = new();
+		private readonly Dictionary<TabablzControl, NotifyCollectionChangedEventHandler> _tabControlItemHandlers = new();
+		private readonly Dictionary<TabablzControl, RoutedEventHandler> _tabControlUnloadedHandlers = new();
+		private readonly Dictionary<object, WeakReference<TabablzControl>> _preferredOwnerByItem = new(ReferenceEqualityComparer.Instance);
+		private readonly Dictionary<string, DateTime> _diagnosticLogTimestamps = new();
+		private bool _dragOperationActive;
+		private string _lastReconcileReason = "startup";
 		private bool _disposed;
 
 	public OrbitGridLayoutViewModel(
@@ -217,14 +224,20 @@ namespace Orbit.ViewModels
 
 			if (ReferenceEquals(_sessionLayout, layout))
 			{
+				OrbitInteractionLogger.Log("[OrbitView][Layout] Reused existing layout control.");
 				EnsureWorkspaceReconcileHooked();
+				RefreshObservedTabControls();
+				ScheduleReconcile("layout-reused");
 				RefreshCommandStates();
 				return;
 			}
 
 			DetachLayoutControl();
 			_sessionLayout = layout;
+			OrbitInteractionLogger.Log("[OrbitView][Layout] Attached layout control.");
 			EnsureWorkspaceReconcileHooked();
+			RefreshObservedTabControls();
+			ScheduleReconcile("layout-attached");
 			RefreshCommandStates();
 		}
 
@@ -232,9 +245,11 @@ namespace Orbit.ViewModels
 		{
 			if (_sessionLayout != null)
 			{
-				_sessionLayout.LayoutUpdated -= SessionLayout_LayoutUpdated;
+				OrbitInteractionLogger.Log("[OrbitView][Layout] Detached layout control.");
 				_sessionLayout = null;
 			}
+
+			UnsubscribeAllObservedTabControls();
 
 			if (_workspaceReconcileTimer != null)
 			{
@@ -242,6 +257,21 @@ namespace Orbit.ViewModels
 			}
 
 			RefreshCommandStates();
+		}
+
+		public void SetDragOperationActive(bool isActive)
+		{
+			if (_dragOperationActive == isActive)
+			{
+				return;
+			}
+
+			_dragOperationActive = isActive;
+			OrbitInteractionLogger.Log($"[OrbitView][Drag] Drag operation active={isActive}.");
+			if (!isActive)
+			{
+				ScheduleReconcile("drag-end", intervalMs: 60);
+			}
 		}
 
 		private void EnsureWorkspaceReconcileHooked()
@@ -255,56 +285,187 @@ namespace Orbit.ViewModels
 			{
 				_workspaceReconcileTimer = new DispatcherTimer
 				{
-					Interval = TimeSpan.FromMilliseconds(200)
+					Interval = TimeSpan.FromMilliseconds(150)
 				};
 				_workspaceReconcileTimer.Tick += WorkspaceReconcileTimer_Tick;
 			}
-
-			// Debounce reconciliation after layout changes (drag/drop, branch consolidation, etc.).
-			_sessionLayout.LayoutUpdated -= SessionLayout_LayoutUpdated;
-			_sessionLayout.LayoutUpdated += SessionLayout_LayoutUpdated;
 		}
 
-		private void SessionLayout_LayoutUpdated(object? sender, EventArgs e)
+		private void WorkspaceReconcileTimer_Tick(object? sender, EventArgs e)
+		{
+			_workspaceReconcileTimer?.Stop();
+			ReconcileWorkspaceStructure();
+		}
+
+		private void ScheduleReconcile(string reason, int intervalMs = 150)
 		{
 			if (_disposed)
 			{
 				return;
 			}
 
+			EnsureWorkspaceReconcileHooked();
 			if (_workspaceReconcileTimer == null)
 			{
 				return;
 			}
 
+			_lastReconcileReason = reason;
+			OrbitInteractionLogger.LogThrottled(
+				$"reconcile:{reason}",
+				$"[OrbitView][Reconcile] Scheduled reason='{reason}' intervalMs={Math.Max(30, intervalMs)} dragActive={_dragOperationActive}.",
+				minIntervalMs: 150);
+			var requestedInterval = TimeSpan.FromMilliseconds(Math.Max(30, intervalMs));
+			if (_workspaceReconcileTimer.IsEnabled && requestedInterval >= _workspaceReconcileTimer.Interval)
+			{
+				// Keep the earlier scheduled reconcile to avoid timer churn during drag/reparent storms.
+				return;
+			}
+
 			_workspaceReconcileTimer.Stop();
+			_workspaceReconcileTimer.Interval = requestedInterval;
 			_workspaceReconcileTimer.Start();
 		}
 
-		private void WorkspaceReconcileTimer_Tick(object? sender, EventArgs e)
+		private void RefreshObservedTabControls()
 		{
-			_workspaceReconcileTimer?.Stop();
-			ReconcileWorkspaceState();
+			if (_sessionLayout == null || _disposed)
+			{
+				return;
+			}
+
+			var current = new HashSet<TabablzControl>(
+				GetAllTabControls(_sessionLayout).Where(c => c.ItemsSource == null));
+
+			foreach (var (_, tearOffControl) in _tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView))
+			{
+				if (tearOffControl.ItemsSource == null)
+				{
+					current.Add(tearOffControl);
+				}
+			}
+
+			foreach (var control in current)
+			{
+				if (_observedTabControls.Contains(control))
+				{
+					continue;
+				}
+
+				_observedTabControls.Add(control);
+				SubscribeTabControlEvents(control);
+			}
+
+			foreach (var control in _observedTabControls.ToList())
+			{
+				if (!current.Contains(control))
+				{
+					UnsubscribeTabControlEvents(control);
+					_observedTabControls.Remove(control);
+				}
+			}
 		}
 
-			private void ReconcileWorkspaceState()
+		private void SubscribeTabControlEvents(TabablzControl control)
+		{
+			if (control.Items is INotifyCollectionChanged incc && !_tabControlItemHandlers.ContainsKey(control))
 			{
-				if (_sessionLayout == null)
-				{
-					return;
-				}
+				NotifyCollectionChangedEventHandler handler = (_, args) => OnTabControlItemsChanged(control, args);
+				incc.CollectionChanged += handler;
+				_tabControlItemHandlers[control] = handler;
+			}
 
-				var allControls = GetAllTabControls(_sessionLayout)
+			if (!_tabControlUnloadedHandlers.ContainsKey(control))
+			{
+				RoutedEventHandler unloaded = (_, _) => ScheduleReconcile("control-unloaded", intervalMs: 120);
+				control.Unloaded += unloaded;
+				_tabControlUnloadedHandlers[control] = unloaded;
+			}
+		}
+
+		private void UnsubscribeTabControlEvents(TabablzControl control)
+		{
+			if (_tabControlItemHandlers.TryGetValue(control, out var handler))
+			{
+				if (control.Items is INotifyCollectionChanged incc)
+				{
+					incc.CollectionChanged -= handler;
+				}
+				_tabControlItemHandlers.Remove(control);
+			}
+
+			if (_tabControlUnloadedHandlers.TryGetValue(control, out var unloaded))
+			{
+				control.Unloaded -= unloaded;
+				_tabControlUnloadedHandlers.Remove(control);
+			}
+		}
+
+		private void UnsubscribeAllObservedTabControls()
+		{
+			foreach (var control in _observedTabControls.ToList())
+			{
+				UnsubscribeTabControlEvents(control);
+			}
+			_observedTabControls.Clear();
+		}
+
+		private void OnTabControlItemsChanged(TabablzControl control, NotifyCollectionChangedEventArgs e)
+		{
+			if (_disposed || control == null)
+			{
+				return;
+			}
+
+			if (e.NewItems != null)
+			{
+				foreach (var item in e.NewItems.Cast<object>())
+				{
+					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(control);
+				}
+			}
+
+			if (e.Action == NotifyCollectionChangedAction.Reset)
+			{
+				foreach (var key in _preferredOwnerByItem
+					.Where(kvp => kvp.Value.TryGetTarget(out var existing) && ReferenceEquals(existing, control))
+					.Select(kvp => kvp.Key)
+					.ToList())
+				{
+					_preferredOwnerByItem.Remove(key);
+				}
+			}
+
+			var newCount = e.NewItems?.Count ?? 0;
+			var oldCount = e.OldItems?.Count ?? 0;
+			OrbitInteractionLogger.Log($"[OrbitView][Tabs] Items changed action={e.Action}, new={newCount}, old={oldCount}, total={control.Items.Count}.");
+
+			ScheduleReconcile($"tab-items-{e.Action}", intervalMs: _dragOperationActive ? 220 : 120);
+		}
+
+		private void ReconcileWorkspaceStructure()
+		{
+			if (_sessionLayout == null)
+			{
+				return;
+			}
+
+			if (_dragOperationActive || Mouse.LeftButton == MouseButtonState.Pressed)
+			{
+				ScheduleReconcile("drag-active-deferred", intervalMs: 220);
+				return;
+			}
+
+			RefreshObservedTabControls();
+			var allControls = _observedTabControls
+				.Where(c => c != null && c.ItemsSource == null)
+				.ToList();
+			if (allControls.Count == 0 && _sessionLayout != null)
+			{
+				allControls = GetAllTabControls(_sessionLayout)
 					.Where(c => c.ItemsSource == null)
 					.ToList();
-
-				foreach (var (_, tearOffControl) in _tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView))
-				{
-					if (tearOffControl.ItemsSource == null && !allControls.Contains(tearOffControl))
-					{
-						allControls.Add(tearOffControl);
-					}
-				}
+			}
 
 				// Deduplicate: drag-to-split can temporarily leave the same item in two controls.
 				// Keep one owner control per item.
@@ -386,9 +547,10 @@ namespace Orbit.ViewModels
 						continue;
 					}
 
-					var target = SelectTargetControlForNewItem();
+					var target = SelectTargetControlForNewItem(item, allControls);
 					if (target == null)
 					{
+						LogReconcileDiagnostic($"orphan-miss:{item.GetType().Name}", $"[OrbitView][Reconcile] Unable to recover orphan workspace item ({item.GetType().Name}) after {_lastReconcileReason}.");
 						continue;
 					}
 
@@ -399,6 +561,8 @@ namespace Orbit.ViewModels
 							target.Items.Add(item);
 						}
 						ownerByItem[item] = target;
+						_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(target);
+						LogReconcileDiagnostic($"orphan-rehome:{item.GetType().Name}", $"[OrbitView][Reconcile] Re-homed orphan workspace item ({item.GetType().Name}) after {_lastReconcileReason}.");
 					}
 					catch { /* best effort */ }
 				}
@@ -408,10 +572,13 @@ namespace Orbit.ViewModels
 				foreach (var item in ownerByItem.Keys)
 				{
 					actual.Add(item);
+					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(ownerByItem[item]);
 				}
 
 				if (actual.Count == 0 && Items.Count == 0)
 				{
+					// Workspace is empty: purge stale owner hints so closed/moved tabs don't linger.
+					_preferredOwnerByItem.Clear();
 					return;
 				}
 
@@ -434,13 +601,40 @@ namespace Orbit.ViewModels
 					}
 				}
 
+				// Trim stale owner hints so the preferred map does not keep drifting references.
+				var known = new HashSet<object>(actual, ReferenceEqualityComparer.Instance);
+				foreach (var item in Items)
+				{
+					known.Add(item);
+				}
+
+				foreach (var item in _preferredOwnerByItem.Keys.ToList())
+				{
+					if (!known.Contains(item))
+					{
+						_preferredOwnerByItem.Remove(item);
+					}
+				}
+
 				// If an item is now hosted by Orbit View, ensure it isn't still in any main tab strip.
 				// Otherwise, you'd get an empty tab header left behind (HostControl was moved).
 				if (actual.OfType<SessionModel>().Any() || actual.OfType<ToolTabItem>().Any())
 				{
+					var orbitTearOffWindows = new HashSet<Window>(
+						_tearOffRegistry
+							.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
+							.Select(h => h.Window));
+
 					foreach (var window in windows)
 					{
 						if (window.DataContext is not MainWindowViewModel vm)
+						{
+							continue;
+						}
+
+						// Preserve tabs for Orbit-origin tear-off hosts; those windows are valid
+						// owners for Orbit View items and should not be swept by main-tab cleanup.
+						if (orbitTearOffWindows.Contains(window))
 						{
 							continue;
 						}
@@ -455,7 +649,7 @@ namespace Orbit.ViewModels
 					}
 				}
 
-				EnsureSelectedSessionsAreActive(allControls);
+				RunPostReconcileActivation(allControls);
 			}
 
 		/// <summary>
@@ -466,6 +660,7 @@ namespace Orbit.ViewModels
 		{
 			if (_sessionLayout == null || rows < 1 || cols < 1)
 				return;
+			OrbitInteractionLogger.Log($"[OrbitView][Grid] Creating grid {rows}x{cols}.");
 
 			try
 			{
@@ -559,6 +754,8 @@ namespace Orbit.ViewModels
 				}
 
 				EnsureSelectedSessionsAreActive(allCellControls);
+				RefreshObservedTabControls();
+				ScheduleReconcile("create-grid", intervalMs: 100);
 
 				_currentRows = rows;
 				_currentColumns = cols;
@@ -584,6 +781,7 @@ namespace Orbit.ViewModels
 		{
 			if (_sessionLayout == null)
 				return null;
+			OrbitInteractionLogger.Log("[OrbitView][Grid] Resetting layout to single control.");
 
 			try
 			{
@@ -605,6 +803,8 @@ namespace Orbit.ViewModels
 
 				_sessionLayout.Content = newRootControl;
 				_sessionLayout.UpdateLayout();
+				RefreshObservedTabControls();
+				ScheduleReconcile("reset-layout", intervalMs: 80);
 
 				System.Diagnostics.Debug.WriteLine($"[OrbitView] Layout reset complete. Restored {allItems.Count} sessions to single view.");
 				return newRootControl;
@@ -777,6 +977,12 @@ namespace Orbit.ViewModels
 
 		private static void EnsureSelectedSessionsAreActive(IEnumerable<TabablzControl> tabControls)
 		{
+			// Avoid focus churn while a drag gesture is active.
+			if (Mouse.LeftButton == MouseButtonState.Pressed)
+			{
+				return;
+			}
+
 			if (tabControls == null)
 			{
 				return;
@@ -826,6 +1032,17 @@ namespace Orbit.ViewModels
 			}, DispatcherPriority.Input);
 		}
 
+		private void RunPostReconcileActivation(IReadOnlyCollection<TabablzControl> controls)
+		{
+			if (_dragOperationActive)
+			{
+				ScheduleReconcile("activation-deferred", intervalMs: 80);
+				return;
+			}
+
+			EnsureSelectedSessionsAreActive(controls);
+		}
+
 	private bool CanCreateGrid() => _sessionLayout != null;
 
 			private void HandleTabClosing(ItemActionCallbackArgs<TabablzControl> args)
@@ -852,6 +1069,7 @@ namespace Orbit.ViewModels
 				{
 					Application.Current.Dispatcher.BeginInvoke(() =>
 					{
+						_preferredOwnerByItem.Remove(item);
 						Items.Remove(item);
 					RefreshCommandStates();
 				}, DispatcherPriority.Background);
@@ -862,16 +1080,7 @@ namespace Orbit.ViewModels
 			{
 				if (_sessionLayout != null && e != null)
 				{
-					if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
-					{
-						if (e.NewItems != null)
-						{
-							foreach (var item in e.NewItems.Cast<object>())
-							{
-								AddItemToLayout(item);
-							}
-						}
-					}
+					RefreshObservedTabControls();
 
 					if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
 					{
@@ -879,7 +1088,7 @@ namespace Orbit.ViewModels
 						{
 							foreach (var item in e.OldItems.Cast<object>())
 							{
-								RemoveItemFromLayout(item);
+								_preferredOwnerByItem.Remove(item);
 							}
 						}
 					}
@@ -887,7 +1096,7 @@ namespace Orbit.ViewModels
 					if (e.Action == NotifyCollectionChangedAction.Reset)
 					{
 						// Best-effort: ensure branched tab controls are cleared so they don't retain stale references.
-						foreach (var control in GetAllTabControls(_sessionLayout).ToList())
+						foreach (var control in _observedTabControls.ToList())
 						{
 							if (control.ItemsSource == null)
 							{
@@ -895,11 +1104,13 @@ namespace Orbit.ViewModels
 								CollapseIfEmpty(control);
 							}
 						}
+						_preferredOwnerByItem.Clear();
 					}
 				}
 
 				RefreshCommandStates();
 				UpdateSuggestedGridLabel();
+				ScheduleReconcile($"workspace-{e.Action}", intervalMs: 70);
 			}
 
 			private static void DisposeToolItem(object item)
@@ -930,7 +1141,8 @@ namespace Orbit.ViewModels
 			if (_sessionLayout == null)
 				return;
 
-			var targetControl = SelectTargetControlForNewItem();
+			RefreshObservedTabControls();
+			var targetControl = SelectTargetControlForNewItem(item, _observedTabControls.ToList());
 			if (targetControl == null)
 				return;
 
@@ -943,6 +1155,7 @@ namespace Orbit.ViewModels
 			if (!targetControl.Items.Contains(item))
 			{
 				targetControl.Items.Add(item);
+				_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(targetControl);
 				if (targetControl.SelectedItem == null)
 				{
 					targetControl.SelectedItem = item;
@@ -951,16 +1164,25 @@ namespace Orbit.ViewModels
 			RefreshCommandStates();
 		}
 
-		private TabablzControl? SelectTargetControlForNewItem()
+		private TabablzControl? SelectTargetControlForNewItem(object item, IReadOnlyCollection<TabablzControl>? candidateControls = null)
 		{
 			if (_sessionLayout == null)
 				return null;
 
-			var tabControls = GetAllTabControls(_sessionLayout)
-				.Where(c => c.ItemsSource == null)
+			var tabControls = (candidateControls ?? GetAllTabControls(_sessionLayout).Where(c => c.ItemsSource == null).ToList())
+				.Where(c => c != null && c.ItemsSource == null)
 				.ToList();
 			if (tabControls.Count == 0)
 				return null;
+
+			// Prefer the last known owner to reduce cross-control churn and preserve
+			// stable host assignment for high-frequency script/game window updates.
+			if (_preferredOwnerByItem.TryGetValue(item, out var preferredRef) &&
+				preferredRef.TryGetTarget(out var preferred) &&
+				tabControls.Contains(preferred))
+			{
+				return preferred;
+			}
 
 			return tabControls
 				.OrderBy(c => c.Items.Count)
@@ -1014,7 +1236,8 @@ namespace Orbit.ViewModels
 			if (_sessionLayout == null)
 				return;
 
-			foreach (var control in GetAllTabControls(_sessionLayout))
+			RefreshObservedTabControls();
+			foreach (var control in _observedTabControls.ToList())
 			{
 				if (control.ItemsSource != null)
 				{
@@ -1025,9 +1248,33 @@ namespace Orbit.ViewModels
 				if (control.Items.Contains(item))
 				{
 					control.Items.Remove(item);
+					if (_preferredOwnerByItem.TryGetValue(item, out var preferredRef) &&
+						preferredRef.TryGetTarget(out var preferred) &&
+						ReferenceEquals(preferred, control))
+					{
+						_preferredOwnerByItem.Remove(item);
+					}
 					CollapseIfEmpty(control);
 				}
 			}
+		}
+
+		private void LogReconcileDiagnostic(string key, string message, int throttleMs = 2000)
+		{
+			if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(message))
+			{
+				return;
+			}
+
+			var now = DateTime.UtcNow;
+			if (_diagnosticLogTimestamps.TryGetValue(key, out var last) &&
+				(now - last).TotalMilliseconds < throttleMs)
+			{
+				return;
+			}
+
+			_diagnosticLogTimestamps[key] = now;
+			Console.WriteLine(message);
 		}
 
 		private void CollapseIfEmpty(TabablzControl control)
@@ -1079,6 +1326,9 @@ namespace Orbit.ViewModels
 			_disposed = true;
 			CollectionChangedEventManager.RemoveHandler(Items, OnWorkspaceItemsChanged);
 			DetachLayoutControl();
+			_preferredOwnerByItem.Clear();
+			_diagnosticLogTimestamps.Clear();
+			_dragOperationActive = false;
 
 			if (_workspaceReconcileTimer != null)
 			{

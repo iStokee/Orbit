@@ -31,6 +31,7 @@ public partial class App : Application
 
 		var consoleLog = _serviceProvider.GetRequiredService<ConsoleLogService>();
 		consoleLog.StartCapture();
+		OrbitInteractionLogger.IsEnabled = Settings.Default.OrbitInteractionLoggingEnabled;
 
 		_pipeServer = _serviceProvider.GetRequiredService<ConsolePipeServer>();
 		_pipeServer.Start();
@@ -48,6 +49,7 @@ public partial class App : Application
 	{
 		_pipeServer?.Dispose();
 		_orbitApiPipeServer?.Dispose();
+		OrbitInteractionLogger.Shutdown();
 		ConsoleLogService.Instance.StopCapture();
 		Settings.Default.Save();
 
@@ -77,12 +79,16 @@ public partial class App : Application
 		services.AddSingleton<InterTabClient>();
 
 		services.AddTransient<SettingsViewModel>();
-		services.AddTransient<SettingsView>(sp => new SettingsView(sp.GetRequiredService<SettingsViewModel>()));
+		services.AddTransient<SettingsView>(sp => new SettingsView(
+			sp.GetRequiredService<SettingsViewModel>(),
+			sp.GetRequiredService<IToolRegistry>()));
 		services.AddTransient<ConsoleView>();
 		services.AddTransient<ThemeManagerViewModel>();
 		services.AddTransient<ThemeManagerPanel>(sp => new ThemeManagerPanel(sp.GetRequiredService<ThemeManagerViewModel>()));
 		services.AddTransient<ScriptManagerViewModel>();
 		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
+		services.AddTransient<GuideBrowserViewModel>();
+		services.AddTransient<GuideBrowserView>(sp => new GuideBrowserView(sp.GetRequiredService<GuideBrowserViewModel>()));
 
 		services.AddTransient<AccountManagerViewModel>(sp => new AccountManagerViewModel(
 			sp.GetRequiredService<AccountService>(),

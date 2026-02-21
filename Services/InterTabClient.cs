@@ -34,6 +34,7 @@ namespace Orbit
 			var origin = IsOrbitViewSource(source)
 				? TearOffHostRegistry.HostOrigin.OrbitView
 				: TearOffHostRegistry.HostOrigin.MainTabs;
+			OrbitInteractionLogger.Log($"[OrbitView][Drag] New tear-off host requested partition='{partitionKey}' origin={origin}.");
 
 			tearOffRegistry.Register(view, view.SessionTabControl, partitionKey, origin);
 			return new NewTabHost<Window>(view, view.SessionTabControl);
@@ -72,6 +73,7 @@ namespace Orbit
 			// Keep the primary shell alive even when all tabs close; allow tear-off shells to close normally.
 			if (ReferenceEquals(window, Application.Current.MainWindow))
 			{
+				OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on primary shell; keeping window alive.");
 				return TabEmptiedResponse.DoNothing;
 			}
 
@@ -79,6 +81,7 @@ namespace Orbit
 			// CloseWindowOrLayoutBranch will:
 			// - Close the window if it's a tear-off
 			// - Collapse the branch if it's within a Layout control
+			OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on secondary window/layout; closing host branch.");
 			return TabEmptiedResponse.CloseWindowOrLayoutBranch;
 		}
 	}

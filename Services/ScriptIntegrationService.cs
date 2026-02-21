@@ -70,6 +70,18 @@ namespace Orbit.Services
 				throw new ArgumentException($"Process with ID {pid} does not exist", nameof(processId));
 			}
 
+			// Reuse existing external session when the same HWND is already registered.
+			var existingSession = _sessionCollection.Sessions.FirstOrDefault(s =>
+				s.IsExternalScript && s.ExternalHandle == (nint)windowHandle);
+			if (existingSession != null)
+			{
+				existingSession.Name = tabName;
+				existingSession.RSProcess = scriptProcess;
+				existingSession.UpdateState(SessionState.ClientReady);
+				existingSession.UpdateInjectionState(InjectionState.NotReady);
+				return existingSession.Id;
+			}
+
 			// Create a host control for the embedded window
 			var hostControl = new ChildClientView();
 

@@ -1296,6 +1296,11 @@
                         Header="Enable theme debug logging"
                         IsOn="{Binding IsThemeLoggingEnabled, Mode=TwoWay}" />
 
+                    <Controls:ToggleSwitch
+                        Margin="0,8,0,0"
+                        Header="Enable Orbit interaction logging (drag/drop/reparent)"
+                        IsOn="{Binding IsOrbitInteractionLoggingEnabled, Mode=TwoWay}" />
+
                     <StackPanel
                         Margin="0,12,0,0"
                         Orientation="Vertical"
@@ -1326,6 +1331,40 @@
                             <Button
                                 Width="110"
                                 Command="{Binding ClearThemeLogCommand}"
+                                Content="Clear log" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel
+                        Margin="0,12,0,0"
+                        Orientation="Vertical"
+                        Visibility="{Binding IsOrbitInteractionLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border
+                            Padding="12"
+                            Background="{DynamicResource MahApps.Brushes.Gray7}"
+                            CornerRadius="8">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                TextWrapping="Wrap">
+                                <Run Text="Orbit drag/drop/layout events are logged to:" />
+                                <LineBreak />
+                                <Run
+                                    FontFamily="Consolas"
+                                    FontWeight="SemiBold"
+                                    Text="{Binding OrbitInteractionLogFilePath, Mode=OneWay}" />
+                            </TextBlock>
+                        </Border>
+                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                            <Button
+                                Width="130"
+                                Margin="0,0,8,0"
+                                Command="{Binding OpenOrbitInteractionLogCommand}"
+                                Content="Open log file"
+                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
+                            <Button
+                                Width="110"
+                                Command="{Binding ClearOrbitInteractionLogCommand}"
                                 Content="Clear log" />
                         </StackPanel>
                     </StackPanel>

@@ -1,8 +1,11 @@
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Dragablz;
 using Orbit.Models;
+using Orbit.Services;
 using Orbit.ViewModels;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace Orbit.Views
@@ -27,6 +30,7 @@ namespace Orbit.Views
 
 		private void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
 		{
+			OrbitInteractionLogger.Log("[OrbitView][View] Loaded.");
 			// Give the ViewModel access to the Layout control for programmatic branching
 			if (DataContext is OrbitGridLayoutViewModel viewModel)
 			{
@@ -37,18 +41,62 @@ namespace Orbit.Views
 					_defaultDensityApplied = true;
 				}
 			}
+
+			SessionLayout.PreviewMouseLeftButtonDown += SessionLayout_PreviewMouseLeftButtonDown;
+			SessionLayout.PreviewMouseLeftButtonUp += SessionLayout_PreviewMouseLeftButtonUp;
+			SessionLayout.LostMouseCapture += SessionLayout_LostMouseCapture;
 		}
 
 		private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
 		{
+			OrbitInteractionLogger.Log("[OrbitView][View] Unloaded.");
+			SessionLayout.PreviewMouseLeftButtonDown -= SessionLayout_PreviewMouseLeftButtonDown;
+			SessionLayout.PreviewMouseLeftButtonUp -= SessionLayout_PreviewMouseLeftButtonUp;
+			SessionLayout.LostMouseCapture -= SessionLayout_LostMouseCapture;
+
 			if (DataContext is OrbitGridLayoutViewModel viewModel)
 			{
+				viewModel.SetDragOperationActive(false);
 				viewModel.DetachLayoutControl();
+			}
+		}
+
+		private void SessionLayout_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			OrbitInteractionLogger.Log("[OrbitView][Drag] Mouse down on layout.");
+			if (DataContext is OrbitGridLayoutViewModel viewModel)
+			{
+				viewModel.SetDragOperationActive(true);
+			}
+		}
+
+		private void SessionLayout_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+		{
+			OrbitInteractionLogger.Log("[OrbitView][Drag] Mouse up on layout.");
+			if (DataContext is OrbitGridLayoutViewModel viewModel)
+			{
+				viewModel.SetDragOperationActive(false);
+			}
+		}
+
+		private void SessionLayout_LostMouseCapture(object sender, MouseEventArgs e)
+		{
+			OrbitInteractionLogger.Log("[OrbitView][Drag] Layout lost mouse capture.");
+			if (DataContext is OrbitGridLayoutViewModel viewModel)
+			{
+				viewModel.SetDragOperationActive(false);
 			}
 		}
 
 		private void OrbitTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
+			// Drag gestures can trigger transient selection swaps; skip expensive reactivation/focus
+			// during active left-button interactions to keep drag smooth and avoid focus fights.
+			if (Mouse.LeftButton == MouseButtonState.Pressed)
+			{
+				return;
+			}
+
 			if (!ReferenceEquals(sender, e.OriginalSource))
 			{
 				return;
@@ -63,6 +111,8 @@ namespace Orbit.Views
 			{
 				return;
 			}
+
+			OrbitInteractionLogger.Log($"[OrbitView][Selection] Selected session tab '{session.Name}'.");
 
 			var host = session.HostControl;
 			host.EnsureActiveAfterLayout();

@@ -682,5 +682,77 @@ namespace Orbit {
                 this["AutoOpenOrbitViewOnStartup"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool OrbitInteractionLoggingEnabled {
+            get {
+                return ((bool)(this["OrbitInteractionLoggingEnabled"]));
+            }
+            set {
+                this["OrbitInteractionLoggingEnabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1400")]
+        public double MainWindowWidth {
+            get {
+                return ((double)(this["MainWindowWidth"]));
+            }
+            set {
+                this["MainWindowWidth"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public double MainWindowHeight {
+            get {
+                return ((double)(this["MainWindowHeight"]));
+            }
+            set {
+                this["MainWindowHeight"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("-1")]
+        public double MainWindowLeft {
+            get {
+                return ((double)(this["MainWindowLeft"]));
+            }
+            set {
+                this["MainWindowLeft"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("-1")]
+        public double MainWindowTop {
+            get {
+                return ((double)(this["MainWindowTop"]));
+            }
+            set {
+                this["MainWindowTop"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MainWindowMaximized {
+            get {
+                return ((bool)(this["MainWindowMaximized"]));
+            }
+            set {
+                this["MainWindowMaximized"] = value;
+            }
+        }
     }
 }

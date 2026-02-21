@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using MahApps.Metro.IconPacks;
+using Microsoft.Extensions.DependencyInjection;
 using Orbit.ViewModels;
 using Orbit.Views;
 using Application = System.Windows.Application;
@@ -17,7 +18,7 @@ public sealed class UnifiedToolsManagerTool : IOrbitTool
 
     public UnifiedToolsManagerTool(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     public string Key => "UnifiedToolsManager";
@@ -28,11 +29,10 @@ public sealed class UnifiedToolsManagerTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        var toolRegistry = (IToolRegistry)_serviceProvider.GetService(typeof(IToolRegistry))!;
-        var pluginManager = (Plugins.PluginManager)_serviceProvider.GetService(typeof(Plugins.PluginManager))!;
-        var mainWindowViewModel = Application.Current?.MainWindow is FrameworkElement root
-            ? root.DataContext as MainWindowViewModel
-            : null;
+        var toolRegistry = _serviceProvider.GetRequiredService<IToolRegistry>();
+        var pluginManager = _serviceProvider.GetRequiredService<Plugins.PluginManager>();
+        var mainWindowViewModel = context as MainWindowViewModel
+            ?? (Application.Current?.MainWindow as FrameworkElement)?.DataContext as MainWindowViewModel;
 
         var viewModel = new UnifiedToolsManagerViewModel(toolRegistry, pluginManager, mainWindowViewModel);
         var view = new UnifiedToolsManagerView

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using Orbit.Logging;
@@ -13,6 +14,7 @@ namespace Orbit.Views;
 public partial class ConsoleView : UserControl
 {
 	private readonly ConsoleViewModel _viewModel;
+	private int _autoScrollPending;
 
 	public ConsoleView()
 	{
@@ -39,14 +41,26 @@ public partial class ConsoleView : UserControl
 		// Only auto-scroll when new items are added and auto-scroll is enabled
 		if (e.Action == NotifyCollectionChangedAction.Add && _viewModel.AutoScrollEnabled)
 		{
+			if (Interlocked.Exchange(ref _autoScrollPending, 1) == 1)
+			{
+				return;
+			}
+
 			// Defer scroll until after layout settles to avoid re-entrancy issues.
 			Dispatcher.BeginInvoke(new Action(() =>
 			{
-				// Auto-scroll all visible listboxes based on current tab
-				ScrollListBoxToEnd(AllSourcesListBox);
-				ScrollListBoxToEnd(OrbitListBox);
-				ScrollListBoxToEnd(MemoryErrorListBox);
-				ScrollListBoxToEnd(ScriptsListBox);
+				try
+				{
+					// Auto-scroll all visible listboxes based on current tab
+					ScrollListBoxToEnd(AllSourcesListBox);
+					ScrollListBoxToEnd(OrbitListBox);
+					ScrollListBoxToEnd(MemoryErrorListBox);
+					ScrollListBoxToEnd(ScriptsListBox);
+				}
+				finally
+				{
+					Interlocked.Exchange(ref _autoScrollPending, 0);
+				}
 			}), DispatcherPriority.ContextIdle);
 		}
 	}

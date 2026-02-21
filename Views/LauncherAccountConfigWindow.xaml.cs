@@ -77,12 +77,18 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 	{
 		_accounts.Clear();
 		var selectedDisplayName = Settings.Default.LauncherSelectedDisplayName ?? string.Empty;
+		var loaded = LauncherAccountStore.Load();
+		var hasExplicitSelections = loaded.Any(a => a.IsSelected);
 
-		foreach (var account in LauncherAccountStore.Load())
+		foreach (var account in loaded)
 		{
 			_accounts.Add(new EditableLauncherAccount
 			{
-				IsSelected = string.Equals(account.DisplayName, selectedDisplayName, System.StringComparison.Ordinal),
+				// Prefer persisted multi-select flags. Fall back to legacy single selection only when
+				// no SELECTED flags exist in env_vars.json (migration compatibility).
+				IsSelected = hasExplicitSelections
+					? account.IsSelected
+					: string.Equals(account.DisplayName, selectedDisplayName, System.StringComparison.Ordinal),
 				DisplayName = account.DisplayName,
 				CharacterId = account.CharacterId,
 				SessionId = account.SessionId
@@ -114,7 +120,8 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 
 	private void Save_Click(object sender, RoutedEventArgs e)
 	{
-		AccountsGrid.CommitEdit();
+		AccountsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Cell, true);
+		AccountsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
 
 		var selectedAccounts = _accounts
 			.Where(a => a.IsSelected && !string.IsNullOrWhiteSpace(a.DisplayName))

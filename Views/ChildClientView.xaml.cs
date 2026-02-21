@@ -610,7 +610,9 @@ namespace Orbit.Views
 
 		private static bool AreClose(double left, double right)
 		{
-			return Math.Abs(left - right) < 0.5;
+			// Ignore sub-pixel/1px jitter during live drag-resize to reduce expensive
+			// Win32 resize traffic when high-resolution clients are embedded.
+			return Math.Abs(left - right) < 2.0;
 		}
 
 		internal void EnsureActiveAfterLayout()

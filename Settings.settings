@@ -167,5 +167,23 @@
   <Setting Name="AutoOpenOrbitViewOnStartup" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
   </Setting>
+  <Setting Name="OrbitInteractionLoggingEnabled" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
+  <Setting Name="MainWindowWidth" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">1400</Value>
+  </Setting>
+  <Setting Name="MainWindowHeight" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">1000</Value>
+  </Setting>
+  <Setting Name="MainWindowLeft" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">-1</Value>
+  </Setting>
+  <Setting Name="MainWindowTop" Type="System.Double" Scope="User">
+    <Value Profile="(Default)">-1</Value>
+  </Setting>
+  <Setting Name="MainWindowMaximized" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
 </Settings>
 </SettingsFile>

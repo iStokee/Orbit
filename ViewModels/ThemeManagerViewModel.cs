@@ -1,4 +1,5 @@
 using Orbit.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Orbit.Services;
 using System;
 using System.Collections.ObjectModel;
@@ -31,8 +32,20 @@ namespace Orbit.ViewModels
 		private MediaColor selectedCustomForeground = MediaColors.White;
 		private ThemeColorEditorMode activeColorEditor = ThemeColorEditorMode.Accent;
 
-		public ThemeManagerViewModel() : this(new ThemeService())
+		public ThemeManagerViewModel() : this(ResolveThemeService())
 		{
+		}
+
+		private static ThemeService ResolveThemeService()
+		{
+			var app = Application.Current as App;
+			var service = app?.Services.GetService<ThemeService>();
+			if (service == null)
+			{
+				throw new InvalidOperationException("ThemeManagerViewModel requires ThemeService from DI.");
+			}
+
+			return service;
 		}
 
 		public ThemeManagerViewModel(ThemeService themeService)

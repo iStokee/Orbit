@@ -150,11 +150,11 @@ namespace Orbit.ViewModels
 		public IRelayCommand ClearFormCommand { get; }
 		public IAsyncRelayCommand LoginSelectedAccountCommand { get; }
 
-		public AccountManagerViewModel(AccountService accountService, SessionCollectionService? sessionCollectionService = null, AutoLoginService? autoLoginService = null)
+		public AccountManagerViewModel(AccountService accountService, SessionCollectionService sessionCollectionService, AutoLoginService autoLoginService)
 		{
 			_accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
-			_sessionCollectionService = sessionCollectionService ?? SessionCollectionService.Instance;
-			_autoLoginService = autoLoginService ?? new AutoLoginService(_accountService);
+			_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+			_autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 			FilteredAccounts = new ObservableCollection<AccountModel>();
 
 			AddAccountCommand = new RelayCommand(AddAccount, () => CanAddAccount);

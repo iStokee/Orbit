@@ -29,13 +29,19 @@ namespace Orbit.ViewModels
 
 		private readonly SessionCollectionService _sessionCollectionService;
 		private readonly DispatcherTimer _refreshTimer;
-		private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
+		private readonly DispatcherTimer _refreshCheckTimer;
+		private readonly SemaphoreSlim _refreshSignal = new(0, int.MaxValue);
+		private readonly object _refreshQueueSync = new();
+		private readonly HashSet<SessionModel> _queuedSessions = new();
+		private readonly CancellationTokenSource _refreshLoopCts = new();
+		private CancellationTokenSource? _activeRefreshCts;
+		private bool _refreshAllRequested;
+		private Task? _refreshLoopTask;
 
 		private double _thumbnailSize = 300;
 		private bool _autoRefreshEnabled = true;
 		private double _globalRefreshIntervalSeconds = 5;
 		private bool _allowSessionOverrides = true;
-		private CancellationTokenSource _refreshCancellationTokenSource = new();
 		private bool _disposed;
 		private bool _useCustomThumbnailSize = false;
 		private double _customThumbnailSize = 300;
@@ -57,7 +63,10 @@ namespace Orbit.ViewModels
 
 			// Auto-refresh timer (tick every second and check per-session intervals)
 			_refreshTimer = new DispatcherTimer { Interval = TimerInterval };
-			_refreshTimer.Tick += async (_, _) => await RefreshDueThumbnailsAsync();
+			_refreshTimer.Tick += OnRefreshTimerTick;
+			_refreshCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+			_refreshCheckTimer.Tick += OnRefreshCheckTimerTick;
+			_refreshLoopTask = Task.Run(RefreshLoopAsync);
 
 			Sessions.CollectionChanged += OnSessionsCollectionChanged;
 			foreach (var session in Sessions.ToList())
@@ -268,24 +277,19 @@ namespace Orbit.ViewModels
 		/// <summary>
 		/// Refreshes thumbnails for all sessions
 		/// </summary>
-		private async Task RefreshAllThumbnailsAsync()
+		private Task RefreshAllThumbnailsAsync()
 		{
-			var previousCts = Interlocked.Exchange(ref _refreshCancellationTokenSource, new CancellationTokenSource());
-			previousCts?.Cancel();
-			previousCts?.Dispose();
-			var token = _refreshCancellationTokenSource.Token;
-
-			var targetSessions = Sessions.ToList();
-			await RefreshSessionsAsync(targetSessions, token, allowWait: true);
+			QueueFullRefresh(cancelInFlight: true);
+			return Task.CompletedTask;
 		}
 
 		/// <summary>
 		/// Refreshes thumbnails that are due based on the global/per-session intervals.
 		/// </summary>
-		private async Task RefreshDueThumbnailsAsync()
+		private Task RefreshDueThumbnailsAsync()
 		{
 			if (_disposed)
-				return;
+				return Task.CompletedTask;
 
 			var snapshot = Sessions.ToList();
 			var dueSessions = snapshot
@@ -293,9 +297,26 @@ namespace Orbit.ViewModels
 				.ToList();
 
 			if (dueSessions.Count == 0)
-				return;
+				return Task.CompletedTask;
 
-			await RefreshSessionsAsync(dueSessions, CancellationToken.None, allowWait: false);
+			QueueSessionRefresh(dueSessions);
+			return Task.CompletedTask;
+		}
+
+		private async void OnRefreshTimerTick(object? sender, EventArgs e)
+		{
+			await RefreshDueThumbnailsAsync();
+		}
+
+		private async void OnRefreshCheckTimerTick(object? sender, EventArgs e)
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_refreshCheckTimer.Stop();
+			await RefreshDueThumbnailsAsync();
 		}
 
 		private bool ShouldRefreshSession(SessionModel session)
@@ -321,47 +342,174 @@ namespace Orbit.ViewModels
 			return session.ThumbnailAge >= threshold;
 		}
 
-		private async Task RefreshSessionsAsync(IList<SessionModel> sessions, CancellationToken token, bool allowWait)
+		private async Task RefreshLoopAsync()
 		{
-			if (sessions == null || sessions.Count == 0)
-				return;
-
-			var acquired = false;
 			try
 			{
-				if (allowWait)
+				while (!_refreshLoopCts.IsCancellationRequested)
 				{
-					await _refreshSemaphore.WaitAsync(token);
-					acquired = true;
-				}
-				else
-				{
-					acquired = await _refreshSemaphore.WaitAsync(TimeSpan.Zero);
-					if (!acquired)
-						return;
-				}
+					await _refreshSignal.WaitAsync(_refreshLoopCts.Token).ConfigureAwait(false);
 
-				await Task.Run(() =>
-				{
-					foreach (var session in sessions)
+					while (TryDequeueRefreshBatch(out var refreshAll, out var batch))
 					{
-						if (token.IsCancellationRequested)
-							break;
+						var token = PrepareBatchTokenSource();
+						try
+						{
+							var sessionsToRefresh = refreshAll ? GetSessionSnapshot() : batch;
+							foreach (var session in sessionsToRefresh)
+							{
+								if (_disposed || token.IsCancellationRequested || _refreshLoopCts.IsCancellationRequested)
+								{
+									break;
+								}
 
-						CaptureThumbnailForSession(session);
+								CaptureThumbnailForSession(session);
+							}
+						}
+						catch (OperationCanceledException)
+						{
+							// Expected when a full refresh preempts current batch.
+						}
+						finally
+						{
+							ClearBatchTokenSource();
+						}
 					}
-				}, token);
+				}
 			}
 			catch (OperationCanceledException)
 			{
-				// expected when the refresh is cancelled
+				// expected during disposal
 			}
-			finally
+		}
+
+		private CancellationToken PrepareBatchTokenSource()
+		{
+			lock (_refreshQueueSync)
 			{
-				if (acquired)
+				_activeRefreshCts?.Dispose();
+				_activeRefreshCts = CancellationTokenSource.CreateLinkedTokenSource(_refreshLoopCts.Token);
+				return _activeRefreshCts.Token;
+			}
+		}
+
+		private void ClearBatchTokenSource()
+		{
+			lock (_refreshQueueSync)
+			{
+				_activeRefreshCts?.Dispose();
+				_activeRefreshCts = null;
+			}
+		}
+
+		private bool TryDequeueRefreshBatch(out bool refreshAll, out List<SessionModel> sessions)
+		{
+			lock (_refreshQueueSync)
+			{
+				if (_refreshAllRequested)
 				{
-					_refreshSemaphore.Release();
+					_refreshAllRequested = false;
+					_queuedSessions.Clear();
+					refreshAll = true;
+					sessions = new List<SessionModel>();
+					return true;
 				}
+
+				if (_queuedSessions.Count == 0)
+				{
+					refreshAll = false;
+					sessions = new List<SessionModel>();
+					return false;
+				}
+
+				sessions = _queuedSessions.ToList();
+				_queuedSessions.Clear();
+				refreshAll = false;
+				return true;
+			}
+		}
+
+		private List<SessionModel> GetSessionSnapshot()
+		{
+			var dispatcher = Application.Current?.Dispatcher;
+			if (dispatcher == null || dispatcher.CheckAccess())
+			{
+				return Sessions.ToList();
+			}
+
+			return dispatcher.Invoke(() => Sessions.ToList());
+		}
+
+		private void QueueFullRefresh(bool cancelInFlight)
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			lock (_refreshQueueSync)
+			{
+				_refreshAllRequested = true;
+				_queuedSessions.Clear();
+				if (cancelInFlight)
+				{
+					try
+					{
+						_activeRefreshCts?.Cancel();
+					}
+					catch
+					{
+						// best effort cancellation
+					}
+				}
+			}
+
+			try
+			{
+				_refreshSignal.Release();
+			}
+			catch (SemaphoreFullException)
+			{
+				// best effort; queued work is already marked
+			}
+		}
+
+		private void QueueSessionRefresh(IEnumerable<SessionModel> sessions)
+		{
+			if (_disposed || sessions == null)
+			{
+				return;
+			}
+
+			var hasQueuedWork = false;
+			lock (_refreshQueueSync)
+			{
+				if (_refreshAllRequested)
+				{
+					return;
+				}
+
+				foreach (var session in sessions)
+				{
+					if (session != null)
+					{
+						hasQueuedWork |= _queuedSessions.Add(session);
+					}
+				}
+			}
+
+			if (!hasQueuedWork)
+			{
+				return;
+			}
+
+			try
+			{
+				_refreshSignal.Release();
+			}
+			catch (SemaphoreFullException)
+			{
+				// best effort; queued work is already marked
 			}
 		}
 
@@ -396,7 +544,13 @@ namespace Orbit.ViewModels
 				}
 				else
 				{
-					dispatcher.Invoke(() => session.Thumbnail = thumbnail);
+					dispatcher.BeginInvoke(new Action(() =>
+					{
+						if (!_disposed)
+						{
+							session.Thumbnail = thumbnail;
+						}
+					}), DispatcherPriority.Background);
 				}
 			}
 			catch (Exception ex)
@@ -611,7 +765,8 @@ namespace Orbit.ViewModels
 			if (_disposed)
 				return;
 
-			_ = RefreshDueThumbnailsAsync();
+			_refreshCheckTimer.Stop();
+			_refreshCheckTimer.Start();
 		}
 
 		[DllImport("user32.dll")]
@@ -628,6 +783,9 @@ namespace Orbit.ViewModels
 
 			_disposed = true;
 			_refreshTimer.Stop();
+			_refreshTimer.Tick -= OnRefreshTimerTick;
+			_refreshCheckTimer.Stop();
+			_refreshCheckTimer.Tick -= OnRefreshCheckTimerTick;
 			Sessions.CollectionChanged -= OnSessionsCollectionChanged;
 
 			foreach (var session in Sessions.ToList())
@@ -635,9 +793,46 @@ namespace Orbit.ViewModels
 				DetachSession(session);
 			}
 
-			_refreshCancellationTokenSource.Cancel();
-			_refreshCancellationTokenSource.Dispose();
-			_refreshSemaphore.Dispose();
+			_refreshLoopCts.Cancel();
+			lock (_refreshQueueSync)
+			{
+				try
+				{
+					_activeRefreshCts?.Cancel();
+				}
+				catch
+				{
+					// best effort cancellation
+				}
+			}
+
+			try
+			{
+				_refreshSignal.Release();
+			}
+			catch (SemaphoreFullException)
+			{
+				// ignored during teardown
+			}
+
+			try
+			{
+				_refreshLoopTask?.Wait(TimeSpan.FromMilliseconds(500));
+			}
+			catch
+			{
+				// teardown best effort only
+			}
+
+			lock (_refreshQueueSync)
+			{
+				_activeRefreshCts?.Dispose();
+				_activeRefreshCts = null;
+				_queuedSessions.Clear();
+			}
+
+			_refreshLoopCts.Dispose();
+			_refreshSignal.Dispose();
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged;

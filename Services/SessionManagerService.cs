@@ -108,6 +108,14 @@ namespace Orbit.Services
 
 				session.RSForm = rsForm;
 				session.RSProcess = rsForm?.pDocked ?? throw new InvalidOperationException("RuneScape process handle is unavailable.");
+				if (SessionCollectionService.Instance.Sessions.Any(s =>
+					!ReferenceEquals(s, session) &&
+					s.RSProcess != null &&
+					!s.RSProcess.HasExited &&
+					s.RSProcess.Id == session.RSProcess.Id))
+				{
+					Console.WriteLine($"[Orbit][Warning] Session '{session.Name}' resolved to PID {session.RSProcess.Id}, which is already bound to another session. Injection targeting may be incorrect.");
+				}
 				session.ParentProcessId = rsForm?.ParentProcessId;
 				session.ExternalHandle = rsForm.DockedClientHandle;
 				session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
@@ -138,6 +146,19 @@ namespace Orbit.Services
 		public async Task InjectAsync(SessionModel session)
 		{
 			var process = session.RSProcess ?? throw new InvalidOperationException("Cannot inject before the RuneScape client is ready.");
+			var duplicateOwner = SessionCollectionService.Instance.Sessions.FirstOrDefault(s =>
+				!ReferenceEquals(s, session) &&
+				s.RSProcess != null &&
+				!s.RSProcess.HasExited &&
+				s.RSProcess.Id == process.Id &&
+				s.State != SessionState.Closed);
+			if (duplicateOwner != null)
+			{
+				var message = $"Cannot inject session '{session.Name}' because PID {process.Id} is already attached to session '{duplicateOwner.Name}'.";
+				Console.WriteLine($"[Orbit][Inject] {message}");
+				session.RecordInjectionFailure(new InvalidOperationException(message));
+				throw new InvalidOperationException(message);
+			}
 
 			string dllPath;
 			try
