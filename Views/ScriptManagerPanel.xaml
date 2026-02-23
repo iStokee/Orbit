@@ -139,6 +139,17 @@
                                     Foreground="{DynamicResource MahApps.Brushes.Gray2}"
                                     Text="{Binding FileName}" />
                             </Border>
+                            <Border
+                                Margin="6,0,0,0"
+                                Padding="6,1"
+                                Background="{DynamicResource MahApps.Brushes.Accent2}"
+                                CornerRadius="8"
+                                Opacity="0.9">
+                                <TextBlock
+                                    FontSize="10"
+                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Text="{Binding ScriptId}" />
+                            </Border>
                         </StackPanel>
                         <TextBlock
                             Margin="0,2,0,0"
@@ -244,7 +255,7 @@
                             VerticalAlignment="Center"
                             FontSize="10"
                             Foreground="{DynamicResource MahApps.Brushes.Gray4}"
-                            Text="{Binding FileName}"
+                            Text="{Binding ScriptId}"
                             TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Button
@@ -287,6 +298,7 @@
     <!-- Main surface: header, toolbar, then three-column content (library / favorites / recents) -->
     <Grid Style="{StaticResource ScriptManagerRootGridStyle}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -412,6 +424,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0">
@@ -499,8 +512,57 @@
 
                 </Grid>
 
-                <!--  Management Controls  -->
                 <Grid Grid.Row="1" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock
+                            Margin="0,0,8,0"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Text="Script ID:" />
+                        <TextBox
+                            Width="220"
+                            Height="34"
+                            Padding="8,0"
+                            VerticalContentAlignment="Center"
+                            Text="{Binding SelectedScriptId, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Text="{Binding DiagnosticsStatus}"
+                        TextTrimming="CharacterEllipsis" />
+
+                    <Button
+                        Grid.Column="2"
+                        Width="160"
+                        Height="36"
+                        Margin="10,0,0,0"
+                        Command="{Binding RefreshDiagnosticsCommand}"
+                        ToolTip="Pull script.list and script.get_state from MCP bridge">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                Kind="DatabaseRefresh" />
+                            <TextBlock VerticalAlignment="Center" Text="Refresh Runtime" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!--  Management Controls  -->
+                <Grid Grid.Row="2" Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -554,8 +616,79 @@
             </Grid>
         </Border>
 
-        <!--  Content  -->
         <Border Grid.Row="2" Style="{StaticResource ScriptManagerCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Text="Runtime Scripts (MCP Bridge)" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                            Text="{Binding DiagnosticsStatus}" />
+                        <TextBlock
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                            Text="Refreshing..."
+                            Visibility="{Binding IsDiagnosticsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,8,0,0">
+                    <ListView
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemsSource="{Binding RuntimeScripts}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="120" Header="ScriptId" DisplayMemberBinding="{Binding ScriptId}" />
+                                <GridViewColumn Width="56" Header="Loaded" DisplayMemberBinding="{Binding IsLoaded}" />
+                                <GridViewColumn Width="100" Header="Lifecycle" DisplayMemberBinding="{Binding LifecycleState}" />
+                                <GridViewColumn Width="180" Header="Assembly" DisplayMemberBinding="{Binding AssemblyName}" />
+                                <GridViewColumn Width="90" Header="Version" DisplayMemberBinding="{Binding AssemblyVersion}" />
+                                <GridViewColumn Width="90" Header="ContextAlive" DisplayMemberBinding="{Binding ContextAlive}" />
+                                <GridViewColumn Width="220" Header="Main Type" DisplayMemberBinding="{Binding MainScriptType}" />
+                                <GridViewColumn Width="100" Header="Main State" DisplayMemberBinding="{Binding MainScriptState}" />
+                                <GridViewColumn Width="140" Header="Main Status" DisplayMemberBinding="{Binding MainScriptStatus}" />
+                                <GridViewColumn Width="75" Header="Has Target" DisplayMemberBinding="{Binding MainScriptHasUserSelectedTarget}" />
+                                <GridViewColumn Width="140" Header="Combat Target" DisplayMemberBinding="{Binding MainScriptActiveCombatTarget}" />
+                                <GridViewColumn Width="140" Header="LoadedAtUtc" DisplayMemberBinding="{Binding LoadedAtUtc}" />
+                                <GridViewColumn Width="140" Header="LastStatusUtc" DisplayMemberBinding="{Binding LastStatusUtc}" />
+                                <GridViewColumn Width="220" Header="Path" DisplayMemberBinding="{Binding Path}" />
+                                <GridViewColumn Width="220" Header="Info" DisplayMemberBinding="{Binding Info}" />
+                                <GridViewColumn Width="180" Header="Last Error" DisplayMemberBinding="{Binding LastError}" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                        Text="No runtime scripts reported by MCP."
+                        Visibility="{Binding HasNoRuntimeScripts, Converter={StaticResource BoolToVisibilityConverter}}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!--  Content  -->
+        <Border Grid.Row="3" Style="{StaticResource ScriptManagerCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

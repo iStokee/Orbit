@@ -12,16 +12,28 @@ internal static class OrbitCommandClient
     private const string PipeName = "MESharpControl";
 
     public static Task<bool> SendLoadAsync(string scriptPath, CancellationToken cancellationToken)
-        => SendAsync($"LOAD\t{scriptPath}", "Load", null, cancellationToken);
+        => SendAsync(BuildScriptCommand("LOAD", scriptPath, null), "Load", null, cancellationToken);
+
+    public static Task<bool> SendLoadAsync(string scriptPath, string scriptId, CancellationToken cancellationToken)
+        => SendAsync(BuildScriptCommand("LOAD", scriptPath, scriptId), "Load", null, cancellationToken);
 
     public static Task<bool> SendLoadAsync(string scriptPath, int processId, CancellationToken cancellationToken = default)
-        => SendAsync($"LOAD\t{scriptPath}", "Load", processId, cancellationToken);
+        => SendAsync(BuildScriptCommand("LOAD", scriptPath, null), "Load", processId, cancellationToken);
+
+    public static Task<bool> SendLoadAsync(string scriptPath, string scriptId, int processId, CancellationToken cancellationToken = default)
+        => SendAsync(BuildScriptCommand("LOAD", scriptPath, scriptId), "Load", processId, cancellationToken);
 
     public static Task<bool> SendReloadAsync(string scriptPath, CancellationToken cancellationToken)
-        => SendAsync($"RELOAD\t{scriptPath}", "Reload", null, cancellationToken);
+        => SendAsync(BuildScriptCommand("RELOAD", scriptPath, null), "Reload", null, cancellationToken);
+
+    public static Task<bool> SendReloadAsync(string scriptPath, string scriptId, CancellationToken cancellationToken)
+        => SendAsync(BuildScriptCommand("RELOAD", scriptPath, scriptId), "Reload", null, cancellationToken);
 
     public static Task<bool> SendReloadAsync(string scriptPath, int processId, CancellationToken cancellationToken = default)
-        => SendAsync($"RELOAD\t{scriptPath}", "Reload", processId, cancellationToken);
+        => SendAsync(BuildScriptCommand("RELOAD", scriptPath, null), "Reload", processId, cancellationToken);
+
+    public static Task<bool> SendReloadAsync(string scriptPath, string scriptId, int processId, CancellationToken cancellationToken = default)
+        => SendAsync(BuildScriptCommand("RELOAD", scriptPath, scriptId), "Reload", processId, cancellationToken);
 
     public static async Task<bool> SendLoadWithRetryAsync(
         string scriptPath,
@@ -31,7 +43,24 @@ internal static class OrbitCommandClient
         CancellationToken cancellationToken = default)
     {
         return await SendWithRetryAsync(
-            $"LOAD\t{scriptPath}",
+            BuildScriptCommand("LOAD", scriptPath, null),
+            "Load",
+            processId,
+            maxAttempts,
+            initialDelay,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task<bool> SendLoadWithRetryAsync(
+        string scriptPath,
+        string scriptId,
+        int? processId,
+        int maxAttempts = 4,
+        TimeSpan? initialDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendWithRetryAsync(
+            BuildScriptCommand("LOAD", scriptPath, scriptId),
             "Load",
             processId,
             maxAttempts,
@@ -47,7 +76,24 @@ internal static class OrbitCommandClient
         CancellationToken cancellationToken = default)
     {
         return await SendWithRetryAsync(
-            $"RELOAD\t{scriptPath}",
+            BuildScriptCommand("RELOAD", scriptPath, null),
+            "Reload",
+            processId,
+            maxAttempts,
+            initialDelay,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task<bool> SendReloadWithRetryAsync(
+        string scriptPath,
+        string scriptId,
+        int? processId,
+        int maxAttempts = 4,
+        TimeSpan? initialDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendWithRetryAsync(
+            BuildScriptCommand("RELOAD", scriptPath, scriptId),
             "Reload",
             processId,
             maxAttempts,
@@ -75,6 +121,12 @@ internal static class OrbitCommandClient
 
     public static Task<bool> SendUnloadScriptAsync(CancellationToken cancellationToken = default)
         => SendAsync("UNLOAD_SCRIPT", "UnloadScript", null, cancellationToken);
+
+    public static Task<bool> SendUnloadScriptAsync(string scriptId, int processId, CancellationToken cancellationToken = default)
+        => SendAsync(BuildUnloadScriptCommand(scriptId), "UnloadScript", processId, cancellationToken);
+
+    public static Task<bool> SendUnloadScriptAsync(string scriptId, CancellationToken cancellationToken = default)
+        => SendAsync(BuildUnloadScriptCommand(scriptId), "UnloadScript", null, cancellationToken);
 
     public static async Task<bool> SendInputModeWithRetryAsync(
         int mode,
@@ -229,6 +281,42 @@ internal static class OrbitCommandClient
             cancellationToken).ConfigureAwait(false);
     }
 
+    public static async Task<bool> SendUnloadScriptWithRetryAsync(
+        string scriptId,
+        int? processId,
+        int maxAttempts = 3,
+        TimeSpan? initialDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendWithRetryAsync(
+            BuildUnloadScriptCommand(scriptId),
+            "UnloadScript",
+            processId,
+            maxAttempts,
+            initialDelay,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string BuildScriptCommand(string verb, string scriptPath, string? scriptId)
+    {
+        if (string.IsNullOrWhiteSpace(scriptId))
+        {
+            return $"{verb}\t{scriptPath}";
+        }
+
+        return $"{verb}\t{scriptId.Trim()}\t{scriptPath}";
+    }
+
+    private static string BuildUnloadScriptCommand(string? scriptId)
+    {
+        if (string.IsNullOrWhiteSpace(scriptId))
+        {
+            return "UNLOAD_SCRIPT";
+        }
+
+        return $"UNLOAD_SCRIPT\t{scriptId.Trim()}";
+    }
+
     private static async Task<bool> SendWithRetryAsync(
         string payload,
         string operation,
@@ -281,18 +369,18 @@ internal static class OrbitCommandClient
                 return true;
             }
 
-            // Fallback to legacy global pipe for backward compatibility if per-session fails or times out
+            // Compatibility fallback: older injected ME builds expose only the global control pipe.
             if (await TrySendAsync(PipeName, payload, cancellationToken).ConfigureAwait(false))
             {
                 ConsoleLogService.Instance.Append(
-                    $"[MESharpCmd] {operation} sent via legacy pipe; update native to per-session for full multi-session support.",
+                    $"[MESharpCmd] {operation} for PID {processId.Value} succeeded via legacy global pipe.",
                     ConsoleLogSource.Orbit,
                     ConsoleLogLevel.Info);
                 return true;
             }
 
             ConsoleLogService.Instance.Append(
-                $"[MESharpCmd] {operation} request failed (per-session + legacy pipes unavailable).",
+                $"[MESharpCmd] {operation} request failed for PID {processId.Value} (per-session and global pipes unavailable).",
                 ConsoleLogSource.Orbit,
                 ConsoleLogLevel.Warning);
             return false;

@@ -463,6 +463,12 @@ namespace Orbit
 				selected = configuredSingle;
 				Console.WriteLine($"[Orbit][Launcher] Falling back to single selected account '{selected.DisplayName}'.");
 			}
+			else if (LauncherAccountStore.TryGetFirstConfigured(out var firstConfigured) && firstConfigured != null)
+			{
+				// BasicInjector parity fallback for Launch_1_JX semantics: first account in env_vars.json.
+				selected = firstConfigured;
+				Console.WriteLine($"[Orbit][Launcher] Falling back to first configured account '{selected.DisplayName}'.");
+			}
 
 			if (selected == null)
 			{

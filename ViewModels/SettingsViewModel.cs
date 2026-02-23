@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Linq;
@@ -8,6 +9,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.IO;
+using System.Diagnostics;
+using System.Reflection;
+using System.Text.Json;
+using Microsoft.Win32;
 using MahApps.Metro.IconPacks;
 using Orbit;
 using Orbit.Logging;
@@ -17,6 +22,7 @@ using Orbit.Utilities;
 using Orbit.Models;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace Orbit.ViewModels
 {
@@ -47,8 +53,15 @@ namespace Orbit.ViewModels
 
 		private string _downloadedZipPath;
 		private string _extractedFolderPath;
+		private readonly ObservableCollection<string> _recentInjectorDllPaths = new();
+		private string _selectedInjectorDllPath = string.Empty;
+		private string _injectorDllMetadata = string.Empty;
+		private bool _selectedInjectorDllExists;
+		private bool _selectedInjectorLooksLikeMesharp;
 
 		private const string ExpectedGitHubAuthor = UpdateConfig.ExpectedAuthor;
+		private const string DefaultInjectorDllName = "XInput1_4_inject.dll";
+		private const int MaxRecentInjectorDlls = 10;
 
 		public SettingsViewModel()
 		{
@@ -67,6 +80,11 @@ namespace Orbit.ViewModels
 			ClearOrbitInteractionLogCommand = new RelayCommand(ClearOrbitInteractionLog);
 			OpenToolsOverviewCommand = new RelayCommand(() => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
 			ConfigureLauncherAccountsCommand = new RelayCommand(OpenLauncherAccountConfig);
+			BrowseInjectorDllCommand = new RelayCommand(BrowseInjectorDll);
+			UseDefaultInjectorDllCommand = new RelayCommand(UseDefaultInjectorDll);
+			ClearInjectorHistoryCommand = new RelayCommand(ClearInjectorHistory);
+
+			InitializeInjectorDllSelection();
 
 			// Check for updates on startup (silently)
 			_ = CheckForUpdatesAsync(silent: true);
@@ -222,6 +240,9 @@ namespace Orbit.ViewModels
 		public IRelayCommand ClearOrbitInteractionLogCommand { get; }
 		public IRelayCommand OpenToolsOverviewCommand { get; }
 		public IRelayCommand ConfigureLauncherAccountsCommand { get; }
+		public IRelayCommand BrowseInjectorDllCommand { get; }
+		public IRelayCommand UseDefaultInjectorDllCommand { get; }
+		public IRelayCommand ClearInjectorHistoryCommand { get; }
 
 		#endregion
 
@@ -1004,6 +1025,22 @@ namespace Orbit.ViewModels
 
 	public string OrbitInteractionLogFilePath => OrbitInteractionLogger.LogFilePath;
 
+	public bool IsMesharpIntegrationEnabled
+	{
+		get => Settings.Default.MesharpIntegrationEnabled;
+		set
+		{
+			if (Settings.Default.MesharpIntegrationEnabled == value)
+			{
+				return;
+			}
+
+			Settings.Default.MesharpIntegrationEnabled = value;
+			Settings.Default.Save();
+			OnPropertyChanged();
+		}
+	}
+
 	public bool ShowThemeManagerWelcomeMessage
 	{
 		get => Settings.Default.ShowThemeManagerWelcomeMessage;
@@ -1156,6 +1193,213 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	private void InitializeInjectorDllSelection()
+	{
+		_recentInjectorDllPaths.Clear();
+		foreach (var path in LoadRecentInjectorDllPaths())
+		{
+			_recentInjectorDllPaths.Add(path);
+		}
+
+		var configured = Settings.Default.InjectorDllPath ?? string.Empty;
+		SelectedInjectorDllPath = configured;
+		RefreshInjectorDllMetadata();
+	}
+
+	private void BrowseInjectorDll()
+	{
+		try
+		{
+			var dialog = new OpenFileDialog
+			{
+				Title = "Select injector DLL",
+				Filter = "DLL files (*.dll)|*.dll|All files (*.*)|*.*",
+				CheckFileExists = true,
+				FileName = string.IsNullOrWhiteSpace(SelectedInjectorDllPath)
+					? DefaultInjectorDllName
+					: Path.GetFileName(SelectedInjectorDllPath)
+			};
+
+			var baseDirectory = AppContext.BaseDirectory;
+			if (Directory.Exists(baseDirectory))
+			{
+				dialog.InitialDirectory = baseDirectory;
+			}
+
+			if (dialog.ShowDialog() == true)
+			{
+				SelectedInjectorDllPath = dialog.FileName;
+			}
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show($"Failed to browse injector DLL: {ex.Message}",
+				"Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+	}
+
+	private void UseDefaultInjectorDll()
+	{
+		SelectedInjectorDllPath = string.Empty;
+	}
+
+	private void ClearInjectorHistory()
+	{
+		_recentInjectorDllPaths.Clear();
+		Settings.Default.RecentInjectorDllPathsJson = "[]";
+		Settings.Default.Save();
+		OnPropertyChanged(nameof(RecentInjectorDllPaths));
+	}
+
+	private IEnumerable<string> LoadRecentInjectorDllPaths()
+	{
+		var json = Settings.Default.RecentInjectorDllPathsJson;
+		if (string.IsNullOrWhiteSpace(json))
+		{
+			return Array.Empty<string>();
+		}
+
+		try
+		{
+			var parsed = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+			return parsed
+				.Where(p => !string.IsNullOrWhiteSpace(p))
+				.Select(NormalizePath)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.Take(MaxRecentInjectorDlls)
+				.ToList();
+		}
+		catch
+		{
+			return Array.Empty<string>();
+		}
+	}
+
+	private void SaveRecentInjectorDllPaths()
+	{
+		var json = JsonSerializer.Serialize(_recentInjectorDllPaths.ToList());
+		Settings.Default.RecentInjectorDllPathsJson = json;
+		Settings.Default.Save();
+	}
+
+	private static string NormalizePath(string path)
+	{
+		if (string.IsNullOrWhiteSpace(path))
+		{
+			return string.Empty;
+		}
+
+		try
+		{
+			return Path.GetFullPath(path);
+		}
+		catch
+		{
+			return path ?? string.Empty;
+		}
+	}
+
+	private void RefreshInjectorDllMetadata()
+	{
+		var path = string.IsNullOrWhiteSpace(_selectedInjectorDllPath)
+			? GetDefaultInjectorDllPath()
+			: _selectedInjectorDllPath;
+
+		var usingDefault = string.IsNullOrWhiteSpace(_selectedInjectorDllPath);
+		_selectedInjectorDllExists = File.Exists(path);
+		_selectedInjectorLooksLikeMesharp = LooksLikeMesharpInjector(path);
+
+		if (!_selectedInjectorDllExists)
+		{
+			_injectorDllMetadata = usingDefault
+				? $"Default injector not found at: {path}"
+				: $"Selected injector not found: {path}";
+			OnPropertyChanged(nameof(InjectorDllMetadata));
+			OnPropertyChanged(nameof(SelectedInjectorDllExists));
+			OnPropertyChanged(nameof(SelectedInjectorLooksLikeMesharp));
+			return;
+		}
+
+		var details = new List<string>();
+		var fileName = Path.GetFileName(path);
+		details.Add(usingDefault ? $"Using default: {fileName}" : $"Using custom: {fileName}");
+
+		try
+		{
+			var info = FileVersionInfo.GetVersionInfo(path);
+			if (!string.IsNullOrWhiteSpace(info.ProductName))
+			{
+				details.Add($"Product: {info.ProductName}");
+			}
+
+			if (!string.IsNullOrWhiteSpace(info.FileDescription))
+			{
+				details.Add($"Description: {info.FileDescription}");
+			}
+
+			if (!string.IsNullOrWhiteSpace(info.FileVersion))
+			{
+				details.Add($"File version: {info.FileVersion}");
+			}
+		}
+		catch
+		{
+			// Best effort metadata only.
+		}
+
+		try
+		{
+			var assemblyName = AssemblyName.GetAssemblyName(path);
+			if (!string.IsNullOrWhiteSpace(assemblyName.Name))
+			{
+				details.Add($"Managed assembly: {assemblyName.Name}");
+			}
+		}
+		catch
+		{
+			// Native DLLs will typically fail managed metadata inspection.
+		}
+
+		details.Add(_selectedInjectorLooksLikeMesharp
+			? "MESharp marker: likely compatible"
+			: "MESharp marker: unknown/not detected");
+
+		_injectorDllMetadata = string.Join(Environment.NewLine, details);
+		OnPropertyChanged(nameof(InjectorDllMetadata));
+		OnPropertyChanged(nameof(SelectedInjectorDllExists));
+		OnPropertyChanged(nameof(SelectedInjectorLooksLikeMesharp));
+	}
+
+	private static string GetDefaultInjectorDllPath()
+	{
+		return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, DefaultInjectorDllName));
+	}
+
+	private static bool LooksLikeMesharpInjector(string path)
+	{
+		var name = Path.GetFileName(path);
+		if (string.Equals(name, DefaultInjectorDllName, StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+
+		try
+		{
+			var info = FileVersionInfo.GetVersionInfo(path);
+			var haystack = string.Join(" ",
+				info.ProductName ?? string.Empty,
+				info.FileDescription ?? string.Empty,
+				info.OriginalFilename ?? string.Empty,
+				info.CompanyName ?? string.Empty);
+			return haystack.IndexOf("mesharp", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			       haystack.IndexOf("memoryerror", StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
 	#endregion
 
 	#region Orbit View Settings
@@ -1188,6 +1432,51 @@ namespace Orbit.ViewModels
 						nameof(ClientLaunchMode));
 				}
 			}
+
+			public IEnumerable<string> RecentInjectorDllPaths => _recentInjectorDllPaths;
+
+			public string SelectedInjectorDllPath
+			{
+				get => _selectedInjectorDllPath;
+				set
+				{
+					var normalized = NormalizePath(value ?? string.Empty).Trim();
+					if (string.Equals(_selectedInjectorDllPath, normalized, StringComparison.OrdinalIgnoreCase))
+					{
+						return;
+					}
+
+					_selectedInjectorDllPath = normalized;
+					Settings.Default.InjectorDllPath = _selectedInjectorDllPath;
+
+					if (!string.IsNullOrWhiteSpace(_selectedInjectorDllPath) && File.Exists(_selectedInjectorDllPath))
+					{
+						var existing = _recentInjectorDllPaths
+							.FirstOrDefault(p => string.Equals(p, _selectedInjectorDllPath, StringComparison.OrdinalIgnoreCase));
+						if (existing != null)
+						{
+							_recentInjectorDllPaths.Remove(existing);
+						}
+
+						_recentInjectorDllPaths.Insert(0, _selectedInjectorDllPath);
+						while (_recentInjectorDllPaths.Count > MaxRecentInjectorDlls)
+						{
+							_recentInjectorDllPaths.RemoveAt(_recentInjectorDllPaths.Count - 1);
+						}
+					}
+
+					SaveRecentInjectorDllPaths();
+					OnPropertyChanged();
+					OnPropertyChanged(nameof(RecentInjectorDllPaths));
+					RefreshInjectorDllMetadata();
+				}
+			}
+
+			public string InjectorDllMetadata => _injectorDllMetadata;
+
+			public bool SelectedInjectorDllExists => _selectedInjectorDllExists;
+
+			public bool SelectedInjectorLooksLikeMesharp => _selectedInjectorLooksLikeMesharp;
 
 		/// <summary>
 		/// Grid density for Orbit View (1=Single, 2=Standard, 3=Dense)

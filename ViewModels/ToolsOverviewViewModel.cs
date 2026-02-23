@@ -104,12 +104,19 @@ namespace Orbit.ViewModels
 			// Tools without a corresponding setting default to true (always visible)
 			return Key switch
 			{
+				"SessionsOverview" => Settings.Default.ShowMenuSessions,
 				"Sessions" => Settings.Default.ShowMenuSessions,
+				"SessionGallery" => Settings.Default.ShowMenuSessionGallery,
+				"OrbitView" => Settings.Default.ShowMenuOrbitView,
 				"AccountManager" => Settings.Default.ShowMenuAccountManager,
+				"ScriptManager" => Settings.Default.ShowMenuScriptControls,
 				"ThemeManager" => Settings.Default.ShowMenuThemeManager,
 				"Console" => Settings.Default.ShowMenuConsole,
+				"McpControl" => Settings.Default.ShowMenuMcpControl,
 				"ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
 				"Settings" => Settings.Default.ShowMenuSettings,
+				"UnifiedToolsManager" => Settings.Default.ShowMenuToolsOverview,
+				"ToolsOverview" => Settings.Default.ShowMenuToolsOverview,
 				// Tools that don't appear in floating menu or don't have settings
 				_ => true
 			};
@@ -121,11 +128,21 @@ namespace Orbit.ViewModels
 			{
 				switch (Key)
 				{
+					case "SessionsOverview":
 					case "Sessions":
 						_mainWindowViewModel!.ShowMenuSessions = value;
 						break;
+					case "SessionGallery":
+						_mainWindowViewModel!.ShowMenuSessionGallery = value;
+						break;
+					case "OrbitView":
+						_mainWindowViewModel!.ShowMenuOrbitView = value;
+						break;
 					case "AccountManager":
 						_mainWindowViewModel!.ShowMenuAccountManager = value;
+						break;
+					case "ScriptManager":
+						_mainWindowViewModel!.ShowMenuScriptControls = value;
 						break;
 					case "ThemeManager":
 						_mainWindowViewModel!.ShowMenuThemeManager = value;
@@ -136,11 +153,18 @@ namespace Orbit.ViewModels
 					case "Console":
 						_mainWindowViewModel!.ShowMenuConsole = value;
 						break;
+					case "McpControl":
+						_mainWindowViewModel!.ShowMenuMcpControl = value;
+						break;
 					case "ApiDocumentation":
 						_mainWindowViewModel!.ShowMenuGuide = value;
 						break;
 					case "Settings":
 						_mainWindowViewModel!.ShowMenuSettings = value;
+						break;
+					case "UnifiedToolsManager":
+					case "ToolsOverview":
+						_mainWindowViewModel!.ShowMenuToolsOverview = value;
 						break;
 				}
 			}
@@ -149,11 +173,21 @@ namespace Orbit.ViewModels
 			{
 				switch (Key)
 				{
+					case "SessionsOverview":
 					case "Sessions":
 						Settings.Default.ShowMenuSessions = value;
 						break;
+					case "SessionGallery":
+						Settings.Default.ShowMenuSessionGallery = value;
+						break;
+					case "OrbitView":
+						Settings.Default.ShowMenuOrbitView = value;
+						break;
 					case "AccountManager":
 						Settings.Default.ShowMenuAccountManager = value;
+						break;
+					case "ScriptManager":
+						Settings.Default.ShowMenuScriptControls = value;
 						break;
 					case "ThemeManager":
 						Settings.Default.ShowMenuThemeManager = value;
@@ -164,11 +198,18 @@ namespace Orbit.ViewModels
 					case "Console":
 						Settings.Default.ShowMenuConsole = value;
 						break;
+					case "McpControl":
+						Settings.Default.ShowMenuMcpControl = value;
+						break;
 					case "ApiDocumentation":
 						Settings.Default.ShowMenuApiDocumentation = value;
 						break;
 					case "Settings":
 						Settings.Default.ShowMenuSettings = value;
+						break;
+					case "UnifiedToolsManager":
+					case "ToolsOverview":
+						Settings.Default.ShowMenuToolsOverview = value;
 						break;
 					// Tools without settings - no-op
 				}
@@ -202,6 +243,7 @@ namespace Orbit.ViewModels
 				"ThemeManager" => "Customize themes, accents, and appearance",
 				"ScriptManager" => "Browse and manage script library",
 				"Console" => "View unified logs from Orbit, ME, and scripts",
+				"McpControl" => "Control MCP runtime policy, probe bridge health, and inspect structured payloads",
 				"ApiDocumentation" => "Open the Orbit documentation hub",
 				"ToolsOverview" => "Manage registered tools and their visibility",
 				"FsmNodeEditor" => "Design and run finite state machine scripts visually",

@@ -281,6 +281,22 @@ namespace Orbit
 			}
 		}
 
+		private void MainShellBranchTabControl_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (sender is not TabablzControl tabControl || viewModel == null)
+			{
+				return;
+			}
+
+			// Branch tabs need the same close routing so session shutdown logic stays centralized.
+			tabControl.ClosingItemCallback -= viewModel.TabControl_ClosingItemHandler;
+			tabControl.ClosingItemCallback += viewModel.TabControl_ClosingItemHandler;
+
+			tabControl.InterTabController ??= new InterTabController();
+			tabControl.InterTabController.InterTabClient = viewModel.InterTabClient;
+			tabControl.InterTabController.Partition = "OrbitMainShell";
+		}
+
 		private void SaveWindowPlacementToSettings()
 		{
 			if (!isPrimaryShellWindow)

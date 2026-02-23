@@ -71,6 +71,9 @@ public partial class App : Application
 		services.AddSingleton<OrbitLayoutStateService>();
 		services.AddSingleton<ScriptIntegrationService>();
 		services.AddSingleton<SessionManagerService>();
+		services.AddSingleton<McpPreferencesStore>();
+		services.AddSingleton<McpBridgeClientService>();
+		services.AddSingleton<McpInjectorSettingsService>();
 		services.AddSingleton<ThemeService>();
 		services.AddSingleton<ScriptManagerService>();
 		services.AddSingleton<AccountService>();
@@ -89,6 +92,8 @@ public partial class App : Application
 		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
 		services.AddTransient<GuideBrowserViewModel>();
 		services.AddTransient<GuideBrowserView>(sp => new GuideBrowserView(sp.GetRequiredService<GuideBrowserViewModel>()));
+		services.AddTransient<McpControlCenterViewModel>();
+		services.AddTransient<McpControlCenterView>();
 
 		services.AddTransient<AccountManagerViewModel>(sp => new AccountManagerViewModel(
 			sp.GetRequiredService<AccountService>(),
@@ -102,6 +107,7 @@ public partial class App : Application
 		services.AddSingleton<IOrbitTool, SessionsOverviewTool>();
 		services.AddSingleton<IOrbitTool, ScriptManagerTool>();
 		services.AddSingleton<IOrbitTool, AccountManagerTool>();
+		services.AddSingleton<IOrbitTool, McpControlTool>();
 		services.AddSingleton<IOrbitTool>(sp => new SessionGalleryTool(sp.GetRequiredService<SessionCollectionService>()));
 		services.AddSingleton<IOrbitTool>(sp => new OrbitViewTool(
 			sp.GetRequiredService<SessionCollectionService>(),

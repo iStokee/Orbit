@@ -38,6 +38,12 @@ public class ScriptManagerService
 	/// Adds a script to the recent list or bumps it to the top if already tracked. Also refreshes name/description.
 	/// </summary>
 	public void AddOrUpdateScript(string filePath, string? name = null, string? description = null)
+		=> AddOrUpdateScript(filePath, name, description, scriptId: null);
+
+	/// <summary>
+	/// Adds/updates a script profile and tracks an explicit script id used for multi-assembly runtime commands.
+	/// </summary>
+	public void AddOrUpdateScript(string filePath, string? name, string? description, string? scriptId)
 	{
 		if (string.IsNullOrWhiteSpace(filePath))
 			return;
@@ -51,6 +57,7 @@ public class ScriptManagerService
 			// Update existing
 			existing.LastUsed = DateTime.Now;
 			existing.HideFromRecents = false;
+			existing.ScriptId = NormalizeScriptId(scriptId, existing.FilePath);
 			if (!string.IsNullOrWhiteSpace(name))
 				existing.Name = name;
 			if (!string.IsNullOrWhiteSpace(description))
@@ -68,6 +75,7 @@ public class ScriptManagerService
 				FilePath = filePath,
 				Name = name ?? Path.GetFileNameWithoutExtension(filePath),
 				Description = description ?? string.Empty,
+				ScriptId = NormalizeScriptId(scriptId, filePath),
 				LastUsed = DateTime.Now,
 				HideFromRecents = false
 			};
@@ -140,6 +148,7 @@ public class ScriptManagerService
 				FilePath = file,
 				Name = Path.GetFileNameWithoutExtension(file),
 				Description = string.Empty,
+				ScriptId = DeriveScriptIdFromPath(file),
 				LastUsed = DateTime.MinValue,
 				HideFromRecents = false
 			};
@@ -173,6 +182,13 @@ public class ScriptManagerService
 		try
 		{
 			var profiles = JsonConvert.DeserializeObject<List<ScriptProfile>>(json);
+			if (profiles != null)
+			{
+				foreach (var profile in profiles)
+				{
+					profile.ScriptId = NormalizeScriptId(profile.ScriptId, profile.FilePath);
+				}
+			}
 			_recentScripts = profiles != null
 				? new ObservableCollection<ScriptProfile>(profiles.OrderByDescending(p => p.LastUsed))
 				: new ObservableCollection<ScriptProfile>();
@@ -213,5 +229,39 @@ public class ScriptManagerService
 
 		if (toRemove.Any())
 			SaveScriptProfiles();
+	}
+
+	public static string DeriveScriptIdFromPath(string? filePath)
+	{
+		var name = string.IsNullOrWhiteSpace(filePath)
+			? string.Empty
+			: Path.GetFileNameWithoutExtension(filePath);
+		if (string.IsNullOrWhiteSpace(name))
+		{
+			return "default";
+		}
+
+		var chars = name.Trim().ToLowerInvariant().ToCharArray();
+		for (int i = 0; i < chars.Length; i++)
+		{
+			var c = chars[i];
+			chars[i] = char.IsLetterOrDigit(c) ? c : '.';
+		}
+
+		var normalized = new string(chars);
+		while (normalized.Contains("..", StringComparison.Ordinal))
+		{
+			normalized = normalized.Replace("..", ".", StringComparison.Ordinal);
+		}
+
+		normalized = normalized.Trim('.');
+		return string.IsNullOrWhiteSpace(normalized) ? "default" : normalized;
+	}
+
+	private static string NormalizeScriptId(string? scriptId, string? filePath)
+	{
+		return string.IsNullOrWhiteSpace(scriptId)
+			? DeriveScriptIdFromPath(filePath)
+			: scriptId.Trim();
 	}
 }

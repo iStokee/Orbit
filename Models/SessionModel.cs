@@ -28,6 +28,7 @@ namespace Orbit.Models
 		private bool _gallerySizeOverrideEnabled;
 		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
 		private string? _activeScriptPath;
+		private string? _activeScriptId;
 		private string _scriptRuntimeStatus = "No script loaded";
 		private DateTime? _scriptLastChangedAt;
 
@@ -283,6 +284,19 @@ namespace Orbit.Models
 
 		public bool HasActiveScript => !string.IsNullOrWhiteSpace(_activeScriptPath);
 
+		public string? ActiveScriptId
+		{
+			get => _activeScriptId;
+			private set
+			{
+				if (string.Equals(_activeScriptId, value, StringComparison.OrdinalIgnoreCase))
+					return;
+
+				_activeScriptId = value;
+				OnPropertyChanged();
+			}
+		}
+
 		public string ScriptRuntimeStatus
 		{
 			get => _scriptRuntimeStatus;
@@ -339,16 +353,20 @@ namespace Orbit.Models
 			ScriptLastChangedAt = DateTime.Now;
 		}
 
-		public void SetScriptLoaded(string scriptPath)
+		public void SetScriptLoaded(string scriptPath, string? scriptId = null)
 		{
 			ActiveScriptPath = scriptPath;
-			ScriptRuntimeStatus = $"Loaded: {ActiveScriptName}";
+			ActiveScriptId = string.IsNullOrWhiteSpace(scriptId) ? null : scriptId.Trim();
+			ScriptRuntimeStatus = string.IsNullOrWhiteSpace(ActiveScriptId)
+				? $"Loaded: {ActiveScriptName}"
+				: $"Loaded [{ActiveScriptId}]: {ActiveScriptName}";
 			ScriptLastChangedAt = DateTime.Now;
 		}
 
 		public void SetScriptStopped()
 		{
 			ActiveScriptPath = null;
+			ActiveScriptId = null;
 			ScriptRuntimeStatus = "No script loaded";
 			ScriptLastChangedAt = DateTime.Now;
 		}

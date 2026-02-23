@@ -117,6 +117,9 @@ namespace Orbit.ViewModels
 
 		private bool CanLoadScript(SessionModel? session)
 		{
+			if (!Settings.Default.MesharpIntegrationEnabled)
+				return false;
+
 			if (_isScriptCommandInFlight)
 				return false;
 
@@ -130,6 +133,9 @@ namespace Orbit.ViewModels
 
 		private bool CanReloadScript(SessionModel? session)
 		{
+			if (!Settings.Default.MesharpIntegrationEnabled)
+				return false;
+
 			if (_isScriptCommandInFlight)
 				return false;
 
@@ -150,6 +156,9 @@ namespace Orbit.ViewModels
 
 		private bool CanStopScript(SessionModel? session)
 		{
+			if (!Settings.Default.MesharpIntegrationEnabled)
+				return false;
+
 			if (_isScriptCommandInFlight)
 				return false;
 
@@ -163,6 +172,16 @@ namespace Orbit.ViewModels
 		{
 			if (!TryResolveSession(session, out var target))
 				return;
+
+			if (!Settings.Default.MesharpIntegrationEnabled)
+			{
+				target.SetScriptRuntimeError("MESharp integration is disabled.");
+				ConsoleLogService.Instance.Append(
+					$"[Sessions] MESharp integration is disabled. Script commands are unavailable for '{target.Name}'.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+				return;
+			}
 
 			if (!HasConfiguredScriptPath)
 			{
@@ -181,6 +200,16 @@ namespace Orbit.ViewModels
 		{
 			if (!TryResolveSession(session, out var target))
 				return;
+
+			if (!Settings.Default.MesharpIntegrationEnabled)
+			{
+				target.SetScriptRuntimeError("MESharp integration is disabled.");
+				ConsoleLogService.Instance.Append(
+					$"[Sessions] MESharp integration is disabled. Script commands are unavailable for '{target.Name}'.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+				return;
+			}
 
 			var path = target.ActiveScriptPath;
 			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -205,6 +234,16 @@ namespace Orbit.ViewModels
 		{
 			if (!TryResolveSession(session, out var target))
 				return;
+
+			if (!Settings.Default.MesharpIntegrationEnabled)
+			{
+				target.SetScriptRuntimeError("MESharp integration is disabled.");
+				ConsoleLogService.Instance.Append(
+					$"[Sessions] MESharp integration is disabled. Script stop is unavailable for '{target.Name}'.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+				return;
+			}
 
 			if (target.InjectionState != InjectionState.Injected || target.RSProcess == null)
 			{

@@ -28,8 +28,9 @@ Orbit is the operational UI for MemoryError workflows:
    - `Legacy Executable Paths`
    - `Jagex Launcher URI`
 4. If using Launcher mode, click **Config** and select one or more Jagex accounts.
-5. Create sessions from the main UI and inject (or use auto-inject).
-6. Open **Settings -> Advanced** to enable debug logs when needed.
+5. (Optional) choose a custom injector DLL in **Settings -> General -> Injector DLL**.
+6. Create sessions from the main UI and inject (or use auto-inject).
+7. Open **Settings -> Advanced** to enable debug logs when needed.
 
 ## Client Launch Modes
 
@@ -55,6 +56,7 @@ Behavior mapping relative to BasicInjector button model:
 - **Custom selected subset** -> equivalent of `Config + Launch_Custom_JX`
 
 Orbit launches selected accounts in round-robin order per new session launch.
+When multiple accounts are selected and launch mode is `Jagex Launcher URI`, a single **Add Session** action launches one Orbit session per selected account.
 
 ## Multi-Session Injection Notes
 
@@ -66,14 +68,27 @@ For launcher mode, Orbit now protects against common multi-launch issues by:
 
 If only one session injects correctly, enable logs and verify PID/account mapping per launch.
 
+## Injector DLL Selection
+
+Orbit supports selecting a custom injector DLL from **Settings -> General -> Injector DLL**.
+
+- `Browse` to a DLL path
+- pick from recent DLLs in the dropdown
+- `Use Default` to revert to built-in `XInput1_4_inject.dll` behavior
+
+Orbit shows file metadata (version/product/description when available) and a best-effort MESharp compatibility marker.
+
 ## Logging and Diagnostics
 
 Orbit has dedicated diagnostics in **Settings -> Advanced**:
 
 - `Enable theme debug logging`
 - `Enable Orbit interaction logging (drag/drop/reparent)`
+- `Enable MESharp integration (runtime/script commands)`
 
 Logs are written under Orbit's local logs path (relative to app/runtime storage). Use the built-in **Open log file** actions in Settings for direct access.
+
+When MESharp integration is disabled, Orbit still supports launcher/session management and DLL injection, but MESharp-specific runtime and script command features are intentionally disabled.
 
 ## Settings Layout (Current)
 

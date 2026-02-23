@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -30,13 +31,18 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 {
 	private readonly ScriptManagerService _scriptService;
 	private readonly SessionCollectionService _sessionCollectionService;
+	private readonly McpBridgeClientService _mcpBridgeClient;
 	private readonly ObservableCollection<ScriptProfile> _favorites;
 	private readonly ObservableCollection<ScriptProfile> _libraryScripts = new();
 	private readonly ObservableCollection<ScriptProfile> _browserScripts = new();
+	private readonly ObservableCollection<RuntimeScriptDiagnostic> _runtimeScripts = new();
 	private ScriptProfile? _selectedScript;
 	private string _hotReloadScriptPath = string.Empty;
+	private string _selectedScriptId = string.Empty;
 	private SessionModel? _targetSession;
 	private bool _isScriptCommandInFlight;
+	private bool _isDiagnosticsBusy;
+	private string _diagnosticsStatus = "Runtime diagnostics are not loaded yet.";
 	private ScriptBrowserFilter _selectedFilter = ScriptBrowserFilter.All;
 	private ScriptBrowserLayout _selectedLayout = ScriptBrowserLayout.List;
 
@@ -44,7 +50,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	/// Convenience constructor used by XAML design-time. Creates service instances on demand.
 	/// </summary>
 	public ScriptManagerViewModel()
-		: this(ResolveScriptManagerService(), ResolveSessionCollectionService())
+		: this(ResolveScriptManagerService(), ResolveSessionCollectionService(), ResolveMcpBridgeClientService())
 	{
 	}
 
@@ -72,15 +78,29 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		return service;
 	}
 
+	private static McpBridgeClientService ResolveMcpBridgeClientService()
+	{
+		var app = Application.Current as App;
+		var service = app?.Services.GetService<McpBridgeClientService>();
+		if (service == null)
+		{
+			throw new InvalidOperationException("ScriptManagerViewModel requires McpBridgeClientService from DI.");
+		}
+
+		return service;
+	}
+
 	/// <summary>
 	/// Primary constructor used by the runtime. Accepts the script catalog + shared session collection services.
 	/// </summary>
 	public ScriptManagerViewModel(
 		ScriptManagerService scriptService,
-		SessionCollectionService sessionCollectionService)
+		SessionCollectionService sessionCollectionService,
+		McpBridgeClientService mcpBridgeClient)
 	{
 		_scriptService = scriptService ?? throw new ArgumentNullException(nameof(scriptService));
 		_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+		_mcpBridgeClient = mcpBridgeClient ?? throw new ArgumentNullException(nameof(mcpBridgeClient));
 
 		// Initialize favorites collection
 		_favorites = new ObservableCollection<ScriptProfile>(_scriptService.GetFavorites());
@@ -115,11 +135,13 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		LoadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, false), CanExecuteScriptCommand);
 		ReloadScriptCommand = new RelayCommand<ScriptProfile?>(async profile => await LoadScriptAsync(profile, true), CanExecuteScriptCommand);
 		StopScriptCommand = new RelayCommand(async () => await StopScriptAsync(), CanStopScript);
+		RefreshDiagnosticsCommand = new AsyncRelayCommand(RefreshRuntimeDiagnosticsAsync, CanRefreshDiagnostics);
 		ClearMissingCommand = new RelayCommand(ClearMissing);
 
 		_hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
 		_selectedScript = _scriptService.RecentScripts.FirstOrDefault(p =>
 			string.Equals(p.FilePath, _hotReloadScriptPath, StringComparison.OrdinalIgnoreCase));
+		_selectedScriptId = _selectedScript?.ScriptId ?? string.Empty;
 
 		var initialTarget = _sessionCollectionService.GlobalHotReloadTargetSession
 			?? _sessionCollectionService.GlobalSelectedSession
@@ -131,6 +153,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		RefreshBrowserScripts();
 		RecentScriptsView?.Refresh();
 		UpdateCommandStates();
+		_ = RefreshRuntimeDiagnosticsAsync();
 	}
 
 	public ICollectionView RecentScriptsView { get; private set; } = null!;
@@ -138,6 +161,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 	public ObservableCollection<ScriptProfile> LibraryScripts => _libraryScripts;
 	public ObservableCollection<ScriptProfile> BrowserScripts => _browserScripts;
+	public ObservableCollection<RuntimeScriptDiagnostic> RuntimeScripts => _runtimeScripts;
 
 	public ObservableCollection<ScriptProfile> Favorites => _favorites;
 
@@ -155,6 +179,11 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			if (value?.FileExists == true)
 			{
 				HotReloadScriptPath = value.FilePath;
+			}
+
+			if (value != null)
+			{
+				SelectedScriptId = value.ScriptId;
 			}
 
 			OnPropertyChanged(nameof(SelectedScript));
@@ -182,10 +211,28 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 				_selectedScript = match;
 				OnPropertyChanged(nameof(SelectedScript));
 			}
+			if (match != null && !string.IsNullOrWhiteSpace(match.ScriptId))
+			{
+				SelectedScriptId = match.ScriptId;
+			}
 
 			OnPropertyChanged(nameof(HotReloadScriptPath));
 			LoadScriptCommand.NotifyCanExecuteChanged();
 			ReloadScriptCommand.NotifyCanExecuteChanged();
+		}
+	}
+
+	public string SelectedScriptId
+	{
+		get => _selectedScriptId;
+		set
+		{
+			var normalized = value?.Trim() ?? string.Empty;
+			if (string.Equals(_selectedScriptId, normalized, StringComparison.Ordinal))
+				return;
+
+			_selectedScriptId = normalized;
+			OnPropertyChanged(nameof(SelectedScriptId));
 		}
 	}
 
@@ -218,6 +265,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			OnPropertyChanged(nameof(TargetSessionHasActiveScript));
 			OnPropertyChanged(nameof(TargetSessionLastChangedDisplay));
 			UpdateCommandStates();
+			_ = RefreshRuntimeDiagnosticsAsync();
 		}
 	}
 
@@ -272,6 +320,32 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public bool HasFavorites => _favorites.Count > 0;
 	public bool HasSessions => _sessionCollectionService.Sessions.Count > 0;
 	public bool HasLibraryScripts => _libraryScripts.Count > 0;
+	public bool HasRuntimeScripts => _runtimeScripts.Count > 0;
+	public bool HasNoRuntimeScripts => !HasRuntimeScripts;
+	public bool IsDiagnosticsBusy
+	{
+		get => _isDiagnosticsBusy;
+		private set
+		{
+			if (_isDiagnosticsBusy == value)
+				return;
+			_isDiagnosticsBusy = value;
+			OnPropertyChanged(nameof(IsDiagnosticsBusy));
+			RefreshDiagnosticsCommand.NotifyCanExecuteChanged();
+		}
+	}
+
+	public string DiagnosticsStatus
+	{
+		get => _diagnosticsStatus;
+		private set
+		{
+			if (string.Equals(_diagnosticsStatus, value, StringComparison.Ordinal))
+				return;
+			_diagnosticsStatus = value;
+			OnPropertyChanged(nameof(DiagnosticsStatus));
+		}
+	}
 	public string LibraryDirectoryPath => _scriptService.DefaultLibraryPath;
 	public bool ScriptWindowEmbeddingEnabled
 	{
@@ -301,6 +375,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public IRelayCommand<ScriptProfile?> LoadScriptCommand { get; }
 	public IRelayCommand<ScriptProfile?> ReloadScriptCommand { get; }
 	public IRelayCommand StopScriptCommand { get; }
+	public IAsyncRelayCommand RefreshDiagnosticsCommand { get; }
 	public IRelayCommand ClearMissingCommand { get; }
 
 	public event PropertyChangedEventHandler? PropertyChanged;
@@ -390,6 +465,15 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			return;
 		}
 
+		if (!Settings.Default.MesharpIntegrationEnabled)
+		{
+			ConsoleLogService.Instance.Append(
+				"[ScriptManager] MESharp integration is disabled in Settings -> Advanced. Script load/reload is unavailable.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
 		var resolvedProfile = ResolveExecutableProfile(profile);
 		if (resolvedProfile == null)
 		{
@@ -406,7 +490,10 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 		// Update last used
 		tracked.LastUsed = DateTime.Now;
-		_scriptService.AddOrUpdateScript(tracked.FilePath, tracked.Name, tracked.Description);
+		var resolvedScriptId = ResolveScriptId(tracked);
+		_scriptService.AddOrUpdateScript(tracked.FilePath, tracked.Name, tracked.Description, resolvedScriptId);
+		tracked.ScriptId = resolvedScriptId;
+		SelectedScriptId = resolvedScriptId;
 		tracked.HideFromRecents = false;
 		RecentScriptsView?.Refresh();
 
@@ -431,27 +518,12 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			return;
 		}
 
-		// WPF-backed scripts can need a clean unload boundary before loading a different assembly.
-		// If another script is still marked active, request unload first to avoid overlap/race failures.
-		var activePath = targetSession.ActiveScriptPath;
-		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
-			!string.Equals(activePath, tracked.FilePath, StringComparison.OrdinalIgnoreCase);
-		if (switchingScripts)
-		{
-			var unloaded = await TryUnloadBeforeLoadAsync(targetSession).ConfigureAwait(true);
-			if (!unloaded)
-			{
-				targetSession.SetScriptRuntimeError("Failed to unload previous script before loading a new one.");
-				return;
-			}
-		}
-
 		var pid = targetSession.RSProcess?.Id;
 
 		var verb = isReload ? "reload" : "load";
 		targetSession.SetScriptRuntimePending(isReload ? "Reloading script" : "Loading script");
 		ConsoleLogService.Instance.Append(
-			$"[ScriptManager] Requesting {verb} for '{tracked.Name}' to session '{targetSession.Name}' (PID {pid})",
+			$"[ScriptManager] Requesting {verb} for '{tracked.Name}' as scriptId '{resolvedScriptId}' to session '{targetSession.Name}' (PID {pid})",
 			ConsoleLogSource.Orbit,
 			ConsoleLogLevel.Info);
 
@@ -471,33 +543,40 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 					ConsoleLogLevel.Warning);
 			}
 
-			var success = pid.HasValue
-				? await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, pid.Value, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-				: await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, null, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
+			var success = isReload
+				? await OrbitCommandClient.SendReloadWithRetryAsync(tracked.FilePath, resolvedScriptId, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+				: await OrbitCommandClient.SendLoadWithRetryAsync(tracked.FilePath, resolvedScriptId, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
 
 			if (!success)
 			{
 				targetSession.SetScriptRuntimeError($"Failed to {verb} '{tracked.Name}'.");
 				ConsoleLogService.Instance.Append(
-					$"[ScriptManager] Failed to send {verb} command for '{tracked.Name}'. Check if MESharp is running.",
+					$"[ScriptManager] Failed to send {verb} command for '{tracked.Name}' (scriptId '{resolvedScriptId}'). Check if MESharp is running.",
 					ConsoleLogSource.Orbit,
 					ConsoleLogLevel.Warning);
 				return;
 			}
 
-			targetSession.SetScriptLoaded(tracked.FilePath);
+			targetSession.SetScriptLoaded(tracked.FilePath, resolvedScriptId);
 		}
 		finally
 		{
 			_isScriptCommandInFlight = false;
 			UpdateCommandStates();
 		}
+
+		await RefreshRuntimeDiagnosticsAsync().ConfigureAwait(true);
 		// Note: success=true only means the command was sent, not that the script loaded.
 		// Check the MESharp console for actual script loading results.
 	}
 
 	private bool CanExecuteScriptCommand(ScriptProfile? profile)
 	{
+		if (!Settings.Default.MesharpIntegrationEnabled)
+		{
+			return false;
+		}
+
 		if (_isScriptCommandInFlight)
 		{
 			return false;
@@ -513,6 +592,11 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 	private bool CanStopScript()
 	{
+		if (!Settings.Default.MesharpIntegrationEnabled)
+		{
+			return false;
+		}
+
 		if (_isScriptCommandInFlight)
 		{
 			return false;
@@ -524,10 +608,62 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			target.RSProcess != null;
 	}
 
+	private bool CanRefreshDiagnostics()
+	{
+		if (IsDiagnosticsBusy)
+		{
+			return false;
+		}
+
+		var target = TargetSession;
+		return target != null &&
+			target.InjectionState == InjectionState.Injected &&
+			target.RSProcess != null;
+	}
+
+	private string ResolveScriptId(ScriptProfile profile)
+	{
+		if (!string.IsNullOrWhiteSpace(SelectedScriptId))
+		{
+			return SelectedScriptId.Trim();
+		}
+
+		if (!string.IsNullOrWhiteSpace(profile.ScriptId))
+		{
+			return profile.ScriptId.Trim();
+		}
+
+		return ScriptManagerService.DeriveScriptIdFromPath(profile.FilePath);
+	}
+
+	private string? ResolveScriptIdForStop(SessionModel targetSession)
+	{
+		if (!string.IsNullOrWhiteSpace(SelectedScriptId))
+		{
+			return SelectedScriptId.Trim();
+		}
+
+		if (!string.IsNullOrWhiteSpace(targetSession.ActiveScriptId))
+		{
+			return targetSession.ActiveScriptId;
+		}
+
+		return null;
+	}
+
 	private async Task StopScriptAsync()
 	{
 		if (_isScriptCommandInFlight)
 		{
+			return;
+		}
+
+		if (!Settings.Default.MesharpIntegrationEnabled)
+		{
+			ConsoleLogService.Instance.Append(
+				"[ScriptManager] MESharp integration is disabled in Settings -> Advanced. Script stop is unavailable.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
 			return;
 		}
 
@@ -557,9 +693,14 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			_isScriptCommandInFlight = true;
 			UpdateCommandStates();
 
-			var success = await OrbitCommandClient
-				.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-				.ConfigureAwait(true);
+			var scriptIdToUnload = ResolveScriptIdForStop(targetSession);
+			var success = string.IsNullOrWhiteSpace(scriptIdToUnload)
+				? await OrbitCommandClient
+					.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+					.ConfigureAwait(true)
+				: await OrbitCommandClient
+					.SendUnloadScriptWithRetryAsync(scriptIdToUnload, targetSession.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+					.ConfigureAwait(true);
 
 			if (!success)
 			{
@@ -571,9 +712,15 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 				return;
 			}
 
-			targetSession.SetScriptStopped();
+			if (string.IsNullOrWhiteSpace(scriptIdToUnload) ||
+				string.Equals(targetSession.ActiveScriptId, scriptIdToUnload, StringComparison.OrdinalIgnoreCase))
+			{
+				targetSession.SetScriptStopped();
+			}
 			ConsoleLogService.Instance.Append(
-				$"[ScriptManager] Stopped script for session '{targetSession.Name}'.",
+				string.IsNullOrWhiteSpace(scriptIdToUnload)
+					? $"[ScriptManager] Stopped script for session '{targetSession.Name}'."
+					: $"[ScriptManager] Stopped script '{scriptIdToUnload}' for session '{targetSession.Name}'.",
 				ConsoleLogSource.Orbit,
 				ConsoleLogLevel.Info);
 		}
@@ -582,6 +729,8 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			_isScriptCommandInFlight = false;
 			UpdateCommandStates();
 		}
+
+		await RefreshRuntimeDiagnosticsAsync().ConfigureAwait(true);
 	}
 
 	private ScriptProfile? ResolveExecutableProfile(ScriptProfile? profile)
@@ -655,34 +804,179 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			session.RSProcess != null;
 	}
 
-	private async Task<bool> TryUnloadBeforeLoadAsync(SessionModel targetSession)
+	private async Task RefreshRuntimeDiagnosticsAsync()
 	{
-		if (targetSession.RSProcess == null)
+		if (IsDiagnosticsBusy)
 		{
-			return false;
+			return;
 		}
 
-		ConsoleLogService.Instance.Append(
-			$"[ScriptManager] Unloading currently active script in session '{targetSession.Name}' before loading a new script.",
-			ConsoleLogSource.Orbit,
-			ConsoleLogLevel.Info);
-
-		var unloaded = await OrbitCommandClient
-			.SendUnloadScriptWithRetryAsync(targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-			.ConfigureAwait(true);
-
-		if (!unloaded)
+		var targetSession = ResolveOrSelectTargetSession();
+		if (targetSession?.RSProcess == null || targetSession.InjectionState != InjectionState.Injected)
 		{
-			ConsoleLogService.Instance.Append(
-				$"[ScriptManager] Failed to unload previous script for session '{targetSession.Name}'.",
-				ConsoleLogSource.Orbit,
-				ConsoleLogLevel.Warning);
-			return false;
+			_runtimeScripts.Clear();
+			OnPropertyChanged(nameof(HasRuntimeScripts));
+			OnPropertyChanged(nameof(HasNoRuntimeScripts));
+			DiagnosticsStatus = "Select an injected session to read runtime diagnostics.";
+			return;
 		}
 
-		targetSession.SetScriptStopped();
-		await Task.Delay(250).ConfigureAwait(true);
-		return true;
+		var pid = targetSession.RSProcess.Id;
+		IsDiagnosticsBusy = true;
+		DiagnosticsStatus = $"Refreshing runtime diagnostics for PID {pid}...";
+		try
+		{
+			var listResult = await _mcpBridgeClient
+				.CallAsync(pid, "script.list", new { }, CancellationToken.None)
+				.ConfigureAwait(true);
+
+			if (!listResult.IsSuccess || string.IsNullOrWhiteSpace(listResult.PayloadJson))
+			{
+				_runtimeScripts.Clear();
+				OnPropertyChanged(nameof(HasRuntimeScripts));
+				OnPropertyChanged(nameof(HasNoRuntimeScripts));
+				DiagnosticsStatus = $"script.list failed: {listResult.Message}";
+				return;
+			}
+
+			var scripts = ParseScriptList(listResult.PayloadJson);
+			var diagnostics = new List<RuntimeScriptDiagnostic>(scripts.Count);
+
+			foreach (var script in scripts)
+			{
+				var stateResult = await _mcpBridgeClient
+					.CallAsync(pid, "script.get_state", new { scriptId = script.ScriptId }, CancellationToken.None)
+					.ConfigureAwait(true);
+
+				if (stateResult.IsSuccess && !string.IsNullOrWhiteSpace(stateResult.PayloadJson))
+				{
+					var merged = MergeWithStatePayload(script, stateResult.PayloadJson);
+					diagnostics.Add(merged);
+				}
+				else
+				{
+					diagnostics.Add(script with
+					{
+						LastError = string.IsNullOrWhiteSpace(script.LastError)
+							? stateResult.Message
+							: $"{script.LastError}; state failed: {stateResult.Message}"
+					});
+				}
+			}
+
+			_runtimeScripts.Clear();
+			foreach (var item in diagnostics.OrderByDescending(d => d.IsLoaded).ThenBy(d => d.ScriptId, StringComparer.OrdinalIgnoreCase))
+			{
+				_runtimeScripts.Add(item);
+			}
+
+			OnPropertyChanged(nameof(HasRuntimeScripts));
+			OnPropertyChanged(nameof(HasNoRuntimeScripts));
+			DiagnosticsStatus = _runtimeScripts.Count == 0
+				? $"No loaded scripts reported for PID {pid}."
+				: $"Runtime reports {_runtimeScripts.Count} script(s) for PID {pid}.";
+		}
+		catch (Exception ex)
+		{
+			_runtimeScripts.Clear();
+			OnPropertyChanged(nameof(HasRuntimeScripts));
+			OnPropertyChanged(nameof(HasNoRuntimeScripts));
+			DiagnosticsStatus = $"Runtime diagnostics failed: {ex.Message}";
+		}
+		finally
+		{
+			IsDiagnosticsBusy = false;
+		}
+	}
+
+	private static List<RuntimeScriptDiagnostic> ParseScriptList(string payloadJson)
+	{
+		var scripts = new List<RuntimeScriptDiagnostic>();
+		using var doc = JsonDocument.Parse(payloadJson);
+		if (!doc.RootElement.TryGetProperty("scripts", out var scriptsEl) || scriptsEl.ValueKind != JsonValueKind.Array)
+		{
+			return scripts;
+		}
+
+		foreach (var item in scriptsEl.EnumerateArray())
+		{
+			var scriptId = ReadString(item, "scriptId") ?? "default";
+			var path = ReadString(item, "path");
+			var isLoaded = ReadBool(item, "isLoaded");
+			var info = ReadString(item, "info");
+			scripts.Add(new RuntimeScriptDiagnostic
+			{
+				ScriptId = scriptId,
+				Path = path,
+				IsLoaded = isLoaded ?? false,
+				Info = info ?? string.Empty
+			});
+		}
+
+		return scripts;
+	}
+
+	private static RuntimeScriptDiagnostic MergeWithStatePayload(RuntimeScriptDiagnostic baseItem, string statePayloadJson)
+	{
+		using var doc = JsonDocument.Parse(statePayloadJson);
+		if (!doc.RootElement.TryGetProperty("scriptState", out var stateEl) || stateEl.ValueKind != JsonValueKind.Object)
+		{
+			return baseItem;
+		}
+
+		return baseItem with
+		{
+			ScriptId = ReadString(stateEl, "scriptId") ?? baseItem.ScriptId,
+			IsLoaded = ReadBool(stateEl, "isLoaded") ?? baseItem.IsLoaded,
+			AssemblyName = ReadString(stateEl, "assemblyName"),
+			AssemblyVersion = ReadString(stateEl, "assemblyVersion"),
+			LifecycleState = ReadString(stateEl, "scriptLifecycleState"),
+			Path = ReadString(stateEl, "lastLoadedPath") ?? baseItem.Path,
+			LoadedAtUtc = ReadDateTime(stateEl, "loadedAtUtc"),
+			LastStatusUtc = ReadDateTime(stateEl, "lastStatusUtc"),
+			LastError = ReadString(stateEl, "lastError"),
+			ContextAlive = ReadBool(stateEl, "contextAlive"),
+			MainScriptType = ReadString(stateEl, "mainScriptType"),
+			MainScriptState = ReadString(stateEl, "mainScriptState"),
+			MainScriptStatus = ReadString(stateEl, "mainScriptStatus"),
+			MainScriptHasUserSelectedTarget = ReadBool(stateEl, "mainScriptHasUserSelectedTarget"),
+			MainScriptActiveCombatTarget = ReadString(stateEl, "mainScriptActiveCombatTarget")
+		};
+	}
+
+	private static string? ReadString(JsonElement element, string name)
+	{
+		if (!element.TryGetProperty(name, out var value))
+		{
+			return null;
+		}
+
+		return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+	}
+
+	private static bool? ReadBool(JsonElement element, string name)
+	{
+		if (!element.TryGetProperty(name, out var value))
+		{
+			return null;
+		}
+
+		return value.ValueKind switch
+		{
+			JsonValueKind.True => true,
+			JsonValueKind.False => false,
+			_ => null
+		};
+	}
+
+	private static DateTime? ReadDateTime(JsonElement element, string name)
+	{
+		if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
+		{
+			return null;
+		}
+
+		return value.TryGetDateTime(out var parsed) ? parsed : null;
 	}
 
 	private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -702,6 +996,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		}
 
 		UpdateCommandStates();
+		_ = RefreshRuntimeDiagnosticsAsync();
 	}
 
 	private void OnSessionCollectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -713,6 +1008,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			{
 				TargetSession = sharedTarget;
 			}
+			_ = RefreshRuntimeDiagnosticsAsync();
 		}
 		else if (e.PropertyName == nameof(SessionCollectionService.GlobalSelectedSession) && _targetSession == null)
 		{
@@ -721,6 +1017,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			{
 				TargetSession = fallback;
 			}
+			_ = RefreshRuntimeDiagnosticsAsync();
 		}
 	}
 
@@ -728,6 +1025,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	{
 		if (e.PropertyName == nameof(SessionModel.ScriptRuntimeStatus) ||
 			e.PropertyName == nameof(SessionModel.ActiveScriptPath) ||
+			e.PropertyName == nameof(SessionModel.ActiveScriptId) ||
 			e.PropertyName == nameof(SessionModel.ScriptLastChangedAt) ||
 			e.PropertyName == nameof(SessionModel.InjectionState) ||
 			e.PropertyName == nameof(SessionModel.RSProcess))
@@ -851,11 +1149,15 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		if (!profile.FileExists)
 			return null;
 
-		_scriptService.AddOrUpdateScript(profile.FilePath, profile.Name, profile.Description);
+		_scriptService.AddOrUpdateScript(profile.FilePath, profile.Name, profile.Description, SelectedScriptId);
 		tracked = _scriptService.FindByPath(profile.FilePath);
 		if (tracked != null)
 		{
 			tracked.HideFromRecents = false;
+			if (!string.IsNullOrWhiteSpace(SelectedScriptId))
+			{
+				tracked.ScriptId = SelectedScriptId;
+			}
 			RecentScriptsView?.Refresh();
 		}
 
@@ -934,6 +1236,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		LoadScriptCommand.NotifyCanExecuteChanged();
 		ReloadScriptCommand.NotifyCanExecuteChanged();
 		StopScriptCommand.NotifyCanExecuteChanged();
+		RefreshDiagnosticsCommand.NotifyCanExecuteChanged();
 	}
 
 	protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -954,4 +1257,24 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			profile.PropertyChanged -= OnScriptProfilePropertyChanged;
 		}
 	}
+}
+
+public sealed record RuntimeScriptDiagnostic
+{
+	public string ScriptId { get; init; } = "default";
+	public bool IsLoaded { get; init; }
+	public string? Path { get; init; }
+	public string? Info { get; init; }
+	public string? AssemblyName { get; init; }
+	public string? AssemblyVersion { get; init; }
+	public string? LifecycleState { get; init; }
+	public DateTime? LoadedAtUtc { get; init; }
+	public DateTime? LastStatusUtc { get; init; }
+	public string? LastError { get; init; }
+	public bool? ContextAlive { get; init; }
+	public string? MainScriptType { get; init; }
+	public string? MainScriptState { get; init; }
+	public string? MainScriptStatus { get; init; }
+	public bool? MainScriptHasUserSelectedTarget { get; init; }
+	public string? MainScriptActiveCombatTarget { get; init; }
 }

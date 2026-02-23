@@ -8,6 +8,7 @@ public class ScriptProfile : ObservableObject
 	private string _name = string.Empty;
 	private string _description = string.Empty;
 	private string _filePath = string.Empty;
+	private string _scriptId = string.Empty;
 	private DateTime _lastUsed;
 	private bool _isFavorite;
 	private bool _hideFromRecents;
@@ -35,6 +36,12 @@ public class ScriptProfile : ObservableObject
 				OnPropertyChanged(nameof(FileName));
 			}
 		}
+	}
+
+	public string ScriptId
+	{
+		get => _scriptId;
+		set => SetProperty(ref _scriptId, value ?? string.Empty);
 	}
 
 	public DateTime LastUsed

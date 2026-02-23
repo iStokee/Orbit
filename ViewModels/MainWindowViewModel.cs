@@ -45,6 +45,7 @@ namespace Orbit.ViewModels
 	private const string ScriptManagerToolKey = "ScriptManager";
 	private const string GuideToolKey = "ApiDocumentation";
 	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
+	private const string McpControlToolKey = "McpControl";
 	private const string FsmNodeEditorToolKey = "FsmNodeEditor";
 
 	private readonly SessionManagerService sessionManager;
@@ -143,6 +144,7 @@ namespace Orbit.ViewModels
 		OpenGuideCommand = new RelayCommand(OpenGuideTab);
 		OpenSettingsCommand = new RelayCommand(OpenSettingsTab);
 		OpenToolsOverviewCommand = new RelayCommand(OpenToolsOverviewTab);
+		OpenMcpControlCommand = new RelayCommand(OpenMcpControlTab);
 		ToggleConsoleCommand = new RelayCommand(ToggleConsole);
 		BrowseScriptCommand = new RelayCommand(BrowseForScript);
 		LoadScriptCommand = new RelayCommand(async () => await LoadScriptAsync(), CanLoadScript);
@@ -211,6 +213,7 @@ namespace Orbit.ViewModels
 	public IRelayCommand OpenGuideCommand { get; }
 	public IRelayCommand OpenSettingsCommand { get; }
 	public IRelayCommand OpenToolsOverviewCommand { get; }
+	public IRelayCommand OpenMcpControlCommand { get; }
 	public Array FloatingMenuDirectionOptions { get; }
 	public Array FloatingMenuQuickToggleModes { get; }
 
@@ -388,6 +391,41 @@ namespace Orbit.ViewModels
 		/// kept inside the Orbit view grid or materialized as its own tab.
 		/// </summary>
 		private async Task AddSessionAsync()
+		{
+			if (TryGetLauncherBatchLaunchCount(out var batchCount))
+			{
+				Console.WriteLine($"[Orbit][Launcher] Batch launch requested for {batchCount} selected account(s).");
+				LauncherAccountStore.BeginSelectedLaunchBatch();
+				for (var i = 0; i < batchCount; i++)
+				{
+					await AddSingleSessionAsync();
+				}
+
+				return;
+			}
+
+			await AddSingleSessionAsync();
+		}
+
+		private static bool TryGetLauncherBatchLaunchCount(out int batchCount)
+		{
+			batchCount = 0;
+			if (!string.Equals(Settings.Default.ClientLaunchMode, "Launcher", StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
+
+			var selected = LauncherAccountStore.LoadSelected();
+			if (selected.Count <= 1)
+			{
+				return false;
+			}
+
+			batchCount = selected.Count;
+			return true;
+		}
+
+		private async Task AddSingleSessionAsync()
 		{
 			var hostControl = new ChildClientView();
 
@@ -611,6 +649,11 @@ namespace Orbit.ViewModels
 
 	private bool CanLoadScript()
 	{
+		if (!Settings.Default.MesharpIntegrationEnabled)
+		{
+			return false;
+		}
+
 		var targetSession = ResolveHotReloadTarget();
 		return targetSession?.InjectionState == InjectionState.Injected
 			&& !string.IsNullOrWhiteSpace(hotReloadScriptPath);
@@ -765,6 +808,14 @@ namespace Orbit.ViewModels
 		if (!TryOpenToolByKey(ToolsOverviewToolKey))
 		{
 			ConsoleLog.Append("[Orbit] Tools dashboard is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+	}
+
+	public void OpenMcpControlTab()
+	{
+		if (!TryOpenToolByKey(McpControlToolKey))
+		{
+			ConsoleLog.Append("[Orbit] MCP Control tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 		}
 	}
 
@@ -1413,6 +1464,17 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowMenuMcpControl
+	{
+		get => Settings.Default.ShowMenuMcpControl;
+		set
+		{
+			if (Settings.Default.ShowMenuMcpControl == value) return;
+			Settings.Default.ShowMenuMcpControl = value;
+			OnPropertyChanged(nameof(ShowMenuMcpControl));
+		}
+	}
+
 	public bool ShowMenuGuide
 	{
 		get => Settings.Default.ShowMenuApiDocumentation;
@@ -1796,6 +1858,13 @@ namespace Orbit.ViewModels
 		{
 			if (!CanLoadScript())
 			{
+				if (!Settings.Default.MesharpIntegrationEnabled)
+				{
+					ConsoleLog.Append(
+						"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script load is unavailable.",
+						ConsoleLogSource.Orbit,
+						ConsoleLogLevel.Warning);
+				}
 				return;
 			}
 
@@ -1889,6 +1958,13 @@ namespace Orbit.ViewModels
 		{
 			if (!CanReloadScript())
 			{
+				if (!Settings.Default.MesharpIntegrationEnabled)
+				{
+					ConsoleLog.Append(
+						"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script reload is unavailable.",
+						ConsoleLogSource.Orbit,
+						ConsoleLogLevel.Warning);
+				}
 				return;
 			}
 

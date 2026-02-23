@@ -25,6 +25,7 @@ namespace Orbit.Services
 		private const uint SWP_HIDEWINDOW = 0x0080;
 		private static readonly nint HWND_TOP = nint.Zero;
 		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(3);
+		private static bool IsMesharpIntegrationEnabled => Settings.Default.MesharpIntegrationEnabled;
 
 		private enum ProcessRole
 		{
@@ -75,7 +76,7 @@ namespace Orbit.Services
 
 					// IMPROVED: Always try to re-apply commands if injected, even if injection completed earlier
 					// Window re-parenting (SetParent) can reset hooks, so we re-apply to restore state
-					if (session.InjectionState == InjectionState.Injected && session.RSProcess != null)
+					if (IsMesharpIntegrationEnabled && session.InjectionState == InjectionState.Injected && session.RSProcess != null)
 					{
 						Console.WriteLine($"[Orbit] Re-applying MESharp commands after docking for session '{session.Name}'...");
 
@@ -100,6 +101,10 @@ namespace Orbit.Services
 					else if (session.InjectionState != InjectionState.Injected)
 					{
 						Console.WriteLine($"[Orbit] Docked event fired for '{session.Name}' but injection state is {session.InjectionState}. Skipping command re-application.");
+					}
+					else if (!IsMesharpIntegrationEnabled)
+					{
+						Console.WriteLine($"[Orbit] Docked event fired for '{session.Name}' with MESharp integration disabled. Skipping MESharp post-dock commands.");
 					}
 
 					rsForm.Docked -= dockedHandler;
@@ -175,7 +180,7 @@ namespace Orbit.Services
 			session.UpdateInjectionState(InjectionState.Injecting);
 			session.UpdateState(SessionState.Injecting);
 
-            try
+			try
 			{
 				session.RSForm?.SignalInjectionStarting();
 				Console.WriteLine($"[Orbit] Injecting '{dllPath}' into PID {process.Id}...");
@@ -183,6 +188,15 @@ namespace Orbit.Services
 				Console.WriteLine(injected
 					? "[Orbit] Injection completed successfully."
 					: "[Orbit] Injection call returned false.");
+				if (!injected)
+				{
+					var message =
+						$"Injection failed for PID {process.Id}. Verify '{Path.GetFileName(dllPath)}' is the correct Orbit/ME injector binary and includes required runtime assets.";
+					var failure = new InvalidOperationException(message);
+					session.RecordInjectionFailure(failure);
+					throw failure;
+				}
+
 				session.UpdateInjectionState(InjectionState.Injected);
 				session.UpdateState(SessionState.Injected);
 
@@ -193,37 +207,52 @@ namespace Orbit.Services
 				Console.WriteLine($"[Orbit] Restoring focus to game window (0x{session.ExternalHandle:X})");
 				try { session.HostControl?.FocusEmbeddedClient(); } catch { }
 
-				var runtimeStarted = await OrbitCommandClient
-					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!runtimeStarted)
+				if (IsMesharpIntegrationEnabled)
 				{
-					Console.WriteLine("[Orbit] Warning: Unable to start MemoryError .NET runtime after injection.");
-				}
+					var autoStartRuntime = new McpPreferencesStore().Load().AutoStartRuntimeOnInject;
+					if (autoStartRuntime)
+					{
+						var runtimeStarted = await OrbitCommandClient
+							.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+							.ConfigureAwait(true);
+						if (!runtimeStarted)
+						{
+							Console.WriteLine("[Orbit] Warning: Unable to start MemoryError .NET runtime after injection.");
+						}
+					}
+					else
+					{
+						Console.WriteLine("[Orbit] MCP policy: runtime auto-start on injection is disabled.");
+					}
 
-				// Ensure ImGui does not capture keyboard input by default
-				var inputModeApplied = await OrbitCommandClient
-					.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!inputModeApplied)
-				{
-					Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode to passthrough (keyboard capture may persist).");
-				}
+					// Ensure ImGui does not capture keyboard input by default
+					var inputModeApplied = await OrbitCommandClient
+						.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.ConfigureAwait(true);
+					if (!inputModeApplied)
+					{
+						Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode to passthrough (keyboard capture may persist).");
+					}
 
-				var debugMenuHidden = await OrbitCommandClient
-					.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!debugMenuHidden)
-				{
-					Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
-				}
+					var debugMenuHidden = await OrbitCommandClient
+						.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.ConfigureAwait(true);
+					if (!debugMenuHidden)
+					{
+						Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
+					}
 
-				var focusSpoofApplied = await OrbitCommandClient
-					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!focusSpoofApplied)
+					var focusSpoofApplied = await OrbitCommandClient
+						.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.ConfigureAwait(true);
+					if (!focusSpoofApplied)
+					{
+						Console.WriteLine("[Orbit] Warning: Unable to disable MemoryError focus spoof (focus handling may remain hijacked).");
+					}
+				}
+				else
 				{
-					Console.WriteLine("[Orbit] Warning: Unable to disable MemoryError focus spoof (focus handling may remain hijacked).");
+					Console.WriteLine($"[Orbit] MESharp integration disabled. Skipping runtime/script/input commands for session '{session.Name}'.");
 				}
 			}
 			catch (Exception ex)
@@ -242,37 +271,40 @@ namespace Orbit.Services
 			}
 
 			// Final safeguard: reassert passthrough shortly after MESharp finishes wiring hooks.
-			_ = Task.Run(async () =>
+			if (IsMesharpIntegrationEnabled)
 			{
-				try
+				_ = Task.Run(async () =>
 				{
-					await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-					if (!process.HasExited)
+					try
 					{
-						await OrbitCommandClient
-							.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-
-						await OrbitCommandClient
-							.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-
-						await OrbitCommandClient
-							.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-
-						// Attempt to refocus the embedded client on the UI thread.
-						_ = session.HostControl?.Dispatcher?.InvokeAsync(() =>
+						await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+						if (!process.HasExited)
 						{
-							try { session.HostControl.FocusEmbeddedClient(); } catch { }
-						});
+							await OrbitCommandClient
+								.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+								.ConfigureAwait(false);
+
+							await OrbitCommandClient
+								.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+								.ConfigureAwait(false);
+
+							await OrbitCommandClient
+								.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+								.ConfigureAwait(false);
+
+							// Attempt to refocus the embedded client on the UI thread.
+							_ = session.HostControl?.Dispatcher?.InvokeAsync(() =>
+							{
+								try { session.HostControl.FocusEmbeddedClient(); } catch { }
+							});
+						}
 					}
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"[Orbit] Deferred input passthrough request failed: {ex}");
-				}
-			});
+					catch (Exception ex)
+					{
+						Console.WriteLine($"[Orbit] Deferred input passthrough request failed: {ex}");
+					}
+				});
+			}
 	    }
 
 		public async Task ShutdownSessionAsync(SessionModel session, TimeSpan? timeout = null, CancellationToken cancellationToken = default, bool forceKillOnTimeout = false)
@@ -286,7 +318,7 @@ namespace Orbit.Services
 
 			session.UpdateState(SessionState.ShuttingDown, clearError: false);
 
-			if (session.InjectionState == InjectionState.Injected && session.RSProcess != null && !session.RSProcess.HasExited)
+			if (IsMesharpIntegrationEnabled && session.InjectionState == InjectionState.Injected && session.RSProcess != null && !session.RSProcess.HasExited)
 			{
 				try
 				{
@@ -676,7 +708,12 @@ namespace Orbit.Services
 		private static string ResolveInjectorPath()
 		{
 			var baseDirectory = AppContext.BaseDirectory;
-			var candidate = Path.GetFullPath(Path.Combine(baseDirectory, DefaultInjectorDll));
+			var configuredPath = (Settings.Default.InjectorDllPath ?? string.Empty).Trim();
+			var candidate = string.IsNullOrWhiteSpace(configuredPath)
+				? Path.GetFullPath(Path.Combine(baseDirectory, DefaultInjectorDll))
+				: Path.GetFullPath(Path.IsPathRooted(configuredPath)
+					? configuredPath
+					: Path.Combine(baseDirectory, configuredPath));
 			if (File.Exists(candidate) && IsValidInjectorDirectory(Path.GetDirectoryName(candidate)))
 			{
 				return candidate;
@@ -684,14 +721,20 @@ namespace Orbit.Services
 
 			var runtimeConfig = Path.Combine(baseDirectory, "ME.runtimeconfig.json");
 			var interop = Path.Combine(baseDirectory, "csharp_interop.dll");
-			var message =
-				$"Injector DLL '{DefaultInjectorDll}' must exist in Orbit launch directory '{baseDirectory}' with required runtime assets. " +
-				$"Expected files: '{candidate}', '{runtimeConfig}', '{interop}'.";
+			var sourceLabel = string.IsNullOrWhiteSpace(configuredPath) ? "default" : "configured";
+			var message = IsMesharpIntegrationEnabled
+				? $"{sourceLabel} injector DLL must exist and be valid. Expected files: '{candidate}', '{runtimeConfig}', '{interop}'."
+				: $"{sourceLabel} injector DLL must exist and be valid. Missing: '{candidate}'.";
 			throw new FileNotFoundException(message, candidate);
 		}
 
 		private static bool IsValidInjectorDirectory(string? directory)
 		{
+			if (!IsMesharpIntegrationEnabled)
+			{
+				return !string.IsNullOrWhiteSpace(directory);
+			}
+
 			if (string.IsNullOrWhiteSpace(directory))
 			{
 				return false;

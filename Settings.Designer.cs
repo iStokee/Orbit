@@ -302,6 +302,18 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowMenuMcpControl {
+            get {
+                return ((bool)(this["ShowMenuMcpControl"]));
+            }
+            set {
+                this["ShowMenuMcpControl"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowMenuApiDocumentation {
             get {
                 return ((bool)(this["ShowMenuApiDocumentation"]));
@@ -586,6 +598,30 @@ namespace Orbit {
                 this["LauncherSelectedDisplayName"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string InjectorDllPath {
+            get {
+                return ((string)(this["InjectorDllPath"]));
+            }
+            set {
+                this["InjectorDllPath"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("[]")]
+        public string RecentInjectorDllPathsJson {
+            get {
+                return ((string)(this["RecentInjectorDllPathsJson"]));
+            }
+            set {
+                this["RecentInjectorDllPathsJson"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -692,6 +728,18 @@ namespace Orbit {
             }
             set {
                 this["OrbitInteractionLoggingEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MesharpIntegrationEnabled {
+            get {
+                return ((bool)(this["MesharpIntegrationEnabled"]));
+            }
+            set {
+                this["MesharpIntegrationEnabled"] = value;
             }
         }
         

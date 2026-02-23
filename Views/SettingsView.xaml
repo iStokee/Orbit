@@ -1257,6 +1257,103 @@
                 </Controls:MetroTabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
+            <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <Border
+                            Width="32"
+                            Height="32"
+                            Margin="0,0,12,0"
+                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            CornerRadius="16"
+                            Opacity="0.8">
+                            <iconPacks:PackIconMaterial
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Kind="FileCodeOutline" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Injector DLL" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                FontSize="12"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.75"
+                                Text="Select which DLL Orbit injects. Leave blank to use default XInput1_4_inject.dll." />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+
+                    <ComboBox
+                        Height="30"
+                        IsEditable="True"
+                        ItemsSource="{Binding RecentInjectorDllPaths}"
+                        Text="{Binding SelectedInjectorDllPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                        <Button
+                            Width="90"
+                            Margin="0,0,8,0"
+                            Command="{Binding BrowseInjectorDllCommand}"
+                            Content="Browse" />
+                        <Button
+                            Width="140"
+                            Margin="0,0,8,0"
+                            Command="{Binding UseDefaultInjectorDllCommand}"
+                            Content="Use Default" />
+                        <Button
+                            Width="120"
+                            Command="{Binding ClearInjectorHistoryCommand}"
+                            Content="Clear History" />
+                    </StackPanel>
+
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="12"
+                        Background="{DynamicResource MahApps.Brushes.Gray9}"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="Detected Metadata" />
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                FontFamily="Consolas"
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Text="{Binding InjectorDllMetadata}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Margin="0,8,0,0"
+                                FontSize="11"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.85"
+                                Text="{Binding SelectedInjectorDllExists, StringFormat=File exists: {0}}" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                FontSize="11"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Opacity="0.85"
+                                Text="{Binding SelectedInjectorLooksLikeMesharp, StringFormat=MESharp compatibility marker: {0}}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <!-- Theme Debug Logging -->
             <Border Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
@@ -1300,6 +1397,11 @@
                         Margin="0,8,0,0"
                         Header="Enable Orbit interaction logging (drag/drop/reparent)"
                         IsOn="{Binding IsOrbitInteractionLoggingEnabled, Mode=TwoWay}" />
+
+                    <Controls:ToggleSwitch
+                        Margin="0,8,0,0"
+                        Header="Enable MESharp integration (runtime/script commands)"
+                        IsOn="{Binding IsMesharpIntegrationEnabled, Mode=TwoWay}" />
 
                     <StackPanel
                         Margin="0,12,0,0"

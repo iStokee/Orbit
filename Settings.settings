@@ -71,6 +71,9 @@
   <Setting Name="ShowMenuConsole" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="ShowMenuMcpControl" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowMenuApiDocumentation" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -143,6 +146,12 @@
   <Setting Name="LauncherSelectedDisplayName" Type="System.String" Scope="User">
     <Value Profile="(Default)" />
   </Setting>
+  <Setting Name="InjectorDllPath" Type="System.String" Scope="User">
+    <Value Profile="(Default)" />
+  </Setting>
+  <Setting Name="RecentInjectorDllPathsJson" Type="System.String" Scope="User">
+    <Value Profile="(Default)">[]</Value>
+  </Setting>
   <Setting Name="OrbitViewCompactness" Type="System.Int32" Scope="User">
     <Value Profile="(Default)">1</Value>
   </Setting>
@@ -169,6 +178,9 @@
   </Setting>
   <Setting Name="OrbitInteractionLoggingEnabled" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
+  </Setting>
+  <Setting Name="MesharpIntegrationEnabled" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
   </Setting>
   <Setting Name="MainWindowWidth" Type="System.Double" Scope="User">
     <Value Profile="(Default)">1400</Value>

@@ -12,6 +12,8 @@ public static class LauncherAccountStore
 {
 	private const string EnvVarsFileName = "env_vars.json";
 	private static int _roundRobinCounter = -1;
+	private static readonly object LaunchBatchSync = new();
+	private static Queue<LauncherAccountModel>? _pendingSelectedLaunchQueue;
 
 	public static IReadOnlyList<LauncherAccountModel> Load()
 	{
@@ -107,6 +109,20 @@ public static class LauncherAccountStore
 	public static bool TryGetNextSelected(out LauncherAccountModel? account)
 	{
 		account = null;
+		lock (LaunchBatchSync)
+		{
+			if (_pendingSelectedLaunchQueue is { Count: > 0 })
+			{
+				account = _pendingSelectedLaunchQueue.Dequeue();
+				if (_pendingSelectedLaunchQueue.Count == 0)
+				{
+					_pendingSelectedLaunchQueue = null;
+				}
+
+				return account != null;
+			}
+		}
+
 		var selected = LoadSelected();
 		if (selected.Count == 0)
 		{
@@ -117,6 +133,26 @@ public static class LauncherAccountStore
 		var index = (next & int.MaxValue) % selected.Count;
 		account = selected[index];
 		return true;
+	}
+
+	public static void BeginSelectedLaunchBatch()
+	{
+		var selected = LoadSelected()
+			.Where(a => !string.IsNullOrWhiteSpace(a.DisplayName))
+			.ToList();
+
+		lock (LaunchBatchSync)
+		{
+			_pendingSelectedLaunchQueue = selected.Count > 0
+				? new Queue<LauncherAccountModel>(selected)
+				: null;
+		}
+	}
+
+	public static bool TryGetFirstConfigured(out LauncherAccountModel? account)
+	{
+		account = Load().FirstOrDefault(a => !string.IsNullOrWhiteSpace(a.DisplayName));
+		return account != null;
 	}
 
 	public static string GetMemoryErrorDirectory()

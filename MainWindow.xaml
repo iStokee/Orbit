@@ -6,6 +6,7 @@
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
+    xmlns:dockablz="clr-namespace:Dragablz.Dockablz;assembly=Dragablz"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -254,19 +255,38 @@
         <!--  Main Content Area  -->
         <DockPanel>
 
-            <!--  TabablzControl bound to Sessions and InterTabClient  -->
-            <dragablz:TabablzControl
-                x:Name="SessionTabControl"
-                Padding="5"
-                ItemsSource="{Binding Tabs}"
-                SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
-                ShowDefaultCloseButton="True"
-                ContentTemplateSelector="{StaticResource TabContentTemplateSelector}">
+            <!--  Main shell layout enables side-by-side snapping outside Orbit View  -->
+            <dockablz:Layout Partition="OrbitMainShell">
+                <dockablz:Layout.BranchTemplate>
+                    <DataTemplate>
+                        <dragablz:TabablzControl
+                            Padding="5"
+                            ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
+                            ItemTemplateSelector="{StaticResource TabHeaderTemplateSelector}"
+                            Loaded="MainShellBranchTabControl_Loaded"
+                            ShowDefaultCloseButton="True">
+                            <dragablz:TabablzControl.InterTabController>
+                                <dragablz:InterTabController
+                                    InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    Partition="OrbitMainShell" />
+                            </dragablz:TabablzControl.InterTabController>
+                        </dragablz:TabablzControl>
+                    </DataTemplate>
+                </dockablz:Layout.BranchTemplate>
+
+                <!--  TabablzControl bound to Sessions and InterTabClient  -->
+                <dragablz:TabablzControl
+                    x:Name="SessionTabControl"
+                    Padding="5"
+                    ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
+                    ShowDefaultCloseButton="True"
+                    ContentTemplateSelector="{StaticResource TabContentTemplateSelector}">
 
                 <!--  InterTabController with binding to InterTabClient  -->
-                <dragablz:TabablzControl.InterTabController>
-                    <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" />
-                </dragablz:TabablzControl.InterTabController>
+                    <dragablz:TabablzControl.InterTabController>
+                        <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" Partition="OrbitMainShell" />
+                    </dragablz:TabablzControl.InterTabController>
 
                 <dragablz:TabablzControl.CustomHeaderItemTemplate>
                     <DataTemplate>
@@ -773,9 +793,10 @@
                             </Grid>
                         </Border>
                     </DataTemplate>
-                </dragablz:TabablzControl.CustomHeaderItemTemplate>
+                    </dragablz:TabablzControl.CustomHeaderItemTemplate>
 
-            </dragablz:TabablzControl>
+                </dragablz:TabablzControl>
+            </dockablz:Layout>
 
         </DockPanel>
 
@@ -1328,6 +1349,13 @@
                                     ToolTip="Toggle Console"
                                     Visibility="{Binding ShowMenuConsole, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="Console" />
+                                </Button>
+                                <Button
+                                    Command="{Binding OpenMcpControlCommand}"
+                                    Style="{StaticResource FloatingMenuButtonStyle}"
+                                    ToolTip="MCP Control"
+                                    Visibility="{Binding ShowMenuMcpControl, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <iconPacks:PackIconMaterial Kind="LanConnect" />
                                 </Button>
                                 <Button
                                     Command="{Binding OpenGuideCommand}"

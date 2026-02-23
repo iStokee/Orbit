@@ -350,15 +350,20 @@ public class ToolCardViewModel : INotifyPropertyChanged
     {
         return Key switch
         {
+            "SessionsOverview" => Settings.Default.ShowMenuSessions,
             "Sessions" => Settings.Default.ShowMenuSessions,
             "SessionGallery" => Settings.Default.ShowMenuSessionGallery,
             "OrbitView" => Settings.Default.ShowMenuOrbitView,
             "AccountManager" => Settings.Default.ShowMenuAccountManager,
+            "ScriptManager" => Settings.Default.ShowMenuScriptControls,
             "ThemeManager" => Settings.Default.ShowMenuThemeManager,
             "Console" => Settings.Default.ShowMenuConsole,
+            "McpControl" => Settings.Default.ShowMenuMcpControl,
             "FsmNodeEditor" => Settings.Default.ShowMenuFsmNodeEditor,
             "ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
             "Settings" => Settings.Default.ShowMenuSettings,
+            "UnifiedToolsManager" => Settings.Default.ShowMenuToolsOverview,
+            "ToolsOverview" => Settings.Default.ShowMenuToolsOverview,
             _ => true // Plugins and other tools default to visible
         };
     }
@@ -371,6 +376,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             {
                 switch (Key)
                 {
+                    case "SessionsOverview":
                     case "Sessions":
                         _mainWindowViewModel.ShowMenuSessions = value;
                         break;
@@ -383,6 +389,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
                     case "AccountManager":
                         _mainWindowViewModel.ShowMenuAccountManager = value;
                         break;
+                    case "ScriptManager":
+                        _mainWindowViewModel.ShowMenuScriptControls = value;
+                        break;
                 case "ThemeManager":
                     _mainWindowViewModel.ShowMenuThemeManager = value;
                     break;
@@ -392,11 +401,18 @@ public class ToolCardViewModel : INotifyPropertyChanged
                 case "Console":
                     _mainWindowViewModel.ShowMenuConsole = value;
                     break;
+                case "McpControl":
+                    _mainWindowViewModel.ShowMenuMcpControl = value;
+                    break;
                 case "ApiDocumentation":
                     _mainWindowViewModel.ShowMenuGuide = value;
                         break;
                     case "Settings":
                         _mainWindowViewModel.ShowMenuSettings = value;
+                        break;
+                    case "UnifiedToolsManager":
+                    case "ToolsOverview":
+                        _mainWindowViewModel.ShowMenuToolsOverview = value;
                         break;
                 }
             }
@@ -407,6 +423,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
         // Also update settings directly
         switch (Key)
         {
+            case "SessionsOverview":
             case "Sessions":
                 Settings.Default.ShowMenuSessions = value;
                 break;
@@ -419,6 +436,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
             case "AccountManager":
                 Settings.Default.ShowMenuAccountManager = value;
                 break;
+            case "ScriptManager":
+                Settings.Default.ShowMenuScriptControls = value;
+                break;
             case "ThemeManager":
                 Settings.Default.ShowMenuThemeManager = value;
                 break;
@@ -428,11 +448,18 @@ public class ToolCardViewModel : INotifyPropertyChanged
             case "Console":
                 Settings.Default.ShowMenuConsole = value;
                 break;
+            case "McpControl":
+                Settings.Default.ShowMenuMcpControl = value;
+                break;
             case "ApiDocumentation":
                 Settings.Default.ShowMenuApiDocumentation = value;
                 break;
             case "Settings":
                 Settings.Default.ShowMenuSettings = value;
+                break;
+            case "UnifiedToolsManager":
+            case "ToolsOverview":
+                Settings.Default.ShowMenuToolsOverview = value;
                 break;
         }
 
@@ -459,6 +486,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ThemeManager" => "Customize themes, accents, and appearance",
             "ScriptManager" => "Browse and manage script library",
             "Console" => "View unified logs from Orbit, ME, and scripts",
+            "McpControl" => "Control MCP runtime policy, probe bridge health, and inspect structured payloads",
             "FsmNodeEditor" => "Visual editor and runner for FSM-based automations",
             "ApiDocumentation" => "Open the Orbit documentation hub",
             "ToolsOverview" => "Manage registered tools and their visibility",
