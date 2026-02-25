@@ -9,7 +9,7 @@
     xmlns:models="clr-namespace:Orbit.Models"
     MinWidth="760"
     MinHeight="520"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     Unloaded="OnUnloaded">
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
@@ -136,7 +136,7 @@
                                 CornerRadius="8">
                                 <TextBlock
                                     FontSize="10"
-                                    Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                     Text="{Binding FileName}" />
                             </Border>
                             <Border
@@ -154,7 +154,7 @@
                         <TextBlock
                             Margin="0,2,0,0"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                             Text="{Binding Description}"
                             TextTrimming="CharacterEllipsis" />
                     </StackPanel>
@@ -241,7 +241,7 @@
                         Grid.Row="1"
                         Margin="0,4,0,0"
                         FontSize="11"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                         Text="{Binding Description}"
                         TextWrapping="Wrap"
                         TextTrimming="CharacterEllipsis" />
@@ -254,7 +254,7 @@
                         <TextBlock
                             VerticalAlignment="Center"
                             FontSize="10"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
                             Text="{Binding ScriptId}"
                             TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -539,7 +539,7 @@
                         Margin="10,0,0,0"
                         VerticalAlignment="Center"
                         FontSize="11"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                         Text="{Binding DiagnosticsStatus}"
                         TextTrimming="CharacterEllipsis" />
 
@@ -637,13 +637,13 @@
                         <TextBlock
                             VerticalAlignment="Center"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                             Text="{Binding DiagnosticsStatus}" />
                         <TextBlock
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                             Text="Refreshing..."
                             Visibility="{Binding IsDiagnosticsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </StackPanel>
@@ -680,7 +680,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
                         Text="No runtime scripts reported by MCP."
                         Visibility="{Binding HasNoRuntimeScripts, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>
@@ -753,7 +753,7 @@
                     Grid.Row="1"
                     Margin="0,8,0,0"
                     FontSize="11"
-                    Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                     Text="{Binding LibraryDirectoryPath}"
                     TextWrapping="Wrap" />
 
@@ -788,7 +788,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
                         Text="No scripts match the selected filter."
                         Visibility="{Binding BrowserScriptsView.IsEmpty, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>

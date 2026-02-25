@@ -9,7 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:orbitControls="clr-namespace:Orbit.Views.Controls"
     xmlns:views="clr-namespace:Orbit.Views"
-    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -19,12 +19,12 @@
         <DataTemplate x:Key="Orbit.ToggleSwitchHeaderTemplate">
             <TextBlock
                 FontWeight="SemiBold"
-                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                 Text="{Binding}"
                 TextWrapping="Wrap" />
         </DataTemplate>
         <Style BasedOn="{StaticResource MahApps.Styles.ToggleSwitch}" TargetType="Controls:ToggleSwitch">
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             <Setter Property="HeaderTemplate" Value="{StaticResource Orbit.ToggleSwitchHeaderTemplate}" />
         </Style>
         <Style x:Key="Orbit.ValuePillStyle" TargetType="Border">
@@ -107,12 +107,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Client Launch" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Choose how Orbit starts clients and configure launcher account variables." />
                                     </StackPanel>
@@ -123,12 +123,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Client Launch Mode" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Choose how Orbit starts RuneScape clients for new sessions." />
                                     <StackPanel Orientation="Horizontal">
@@ -219,12 +219,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Software Updates" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Keep Orbit up to date with the latest features and fixes." />
                                     </StackPanel>
@@ -256,13 +256,13 @@
                                             Height="16"
                                             Margin="0,0,8,0"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Kind="InformationOutline" />
                                         <TextBlock
                                             Grid.Row="0"
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}">
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
                                             <Run FontWeight="SemiBold" Text="Current Version:" />
                                             <Run Text="{Binding CurrentVersion, Mode=OneWay}" />
                                         </TextBlock>
@@ -278,7 +278,7 @@
                                             Kind="{Binding UpdateStatusIcon, Mode=OneWay}">
                                             <iconPacks:PackIconMaterial.Style>
                                                 <Style TargetType="iconPacks:PackIconMaterial">
-                                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding HasUpdate}" Value="True">
                                                             <Setter Property="Foreground" Value="{DynamicResource Orbit.UpdateBadgeBrush}" />
@@ -298,7 +298,7 @@
                                             Text="{Binding UpdateStatusText, Mode=OneWay}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding HasUpdate}" Value="True">
                                                             <Setter Property="Foreground" Value="{DynamicResource Orbit.UpdateBadgeBrush}" />
@@ -321,14 +321,14 @@
                                             Height="16"
                                             Margin="0,8,8,0"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Kind="ClockOutline" />
                                         <TextBlock
                                             Grid.Row="2"
                                             Grid.Column="1"
                                             Margin="0,8,0,0"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}">
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}">
                                             <Run Text="Last checked:" />
                                             <Run Text="{Binding LastCheckedDisplay, Mode=OneWay}" />
                                         </TextBlock>
@@ -349,7 +349,7 @@
                                             Grid.Column="1"
                                             Margin="0,8,0,0"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.9"
                                             Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Run Text="Update available:" />
@@ -364,7 +364,7 @@
                                     <TextBlock
                                         Margin="0,0,0,4"
                                         FontSize="12"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.75"
                                         Text="Downloading update..." />
                                     <Controls:MetroProgressBar
@@ -375,7 +375,7 @@
                                         Margin="0,4,0,0"
                                         HorizontalAlignment="Right"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.Gray5}">
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}">
                                         <Run Text="{Binding DownloadProgress, Mode=OneWay, StringFormat=N0}" />
                                         <Run Text="%" />
                                     </TextBlock>
@@ -476,12 +476,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Automation" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Configure automatic behaviors and welcome messages" />
                                     </StackPanel>
@@ -497,7 +497,7 @@
                                 <TextBlock
                                     FontSize="14"
                                     FontWeight="SemiBold"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Text="Welcome messages" />
 
                                 <Controls:ToggleSwitch
@@ -549,12 +549,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Snap zones &amp; guides" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Preview and fine tune the areas Orbit uses when docking the floating launcher." />
                                     </StackPanel>
@@ -587,7 +587,7 @@
                                             Margin="0,8,0,0"
                                             HorizontalAlignment="Center"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.7"
                                             Text="Live preview (scaled to window proportions)" />
                                     </StackPanel>
@@ -613,13 +613,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Edge snap thickness" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockEdgeThreshold, StringFormat={}{0:0}px}" />
                                                 </Border>
                                             </Grid>
@@ -638,13 +638,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Edge coverage" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockEdgeCoverage, StringFormat={}{0:P0}}" />
                                                 </Border>
                                             </Grid>
@@ -663,13 +663,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Edge highlight opacity" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockZoneOpacity, StringFormat={}{0:P0}}" />
                                                 </Border>
                                             </Grid>
@@ -690,13 +690,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Corner catchment width" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockCornerThreshold, StringFormat={}{0:0}px}" />
                                                 </Border>
                                             </Grid>
@@ -715,13 +715,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Corner capture height" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockCornerHeight, StringFormat={}{0:0}px}" />
                                                 </Border>
                                             </Grid>
@@ -740,13 +740,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                     Text="Corner roundness" />
                                                 <Border Grid.Column="1" Style="{StaticResource Orbit.ValuePillStyle}">
                                                     <TextBlock
                                                         FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding FloatingMenuDockCornerRoundness, StringFormat={}{0:P0}}" />
                                                 </Border>
                                             </Grid>
@@ -794,12 +794,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Behavior" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Dial in fade timing, handle translucency, and background blending." />
                                     </StackPanel>
@@ -823,7 +823,7 @@
                                         Grid.Row="0"
                                         Grid.Column="0"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Hide after" />
                                     <Border
                                         Grid.Row="0"
@@ -832,7 +832,7 @@
                                         <TextBlock
                                             FontSize="11"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding FloatingMenuInactivitySeconds, StringFormat={}{0:0.0}s}" />
                                     </Border>
                                     <Slider
@@ -850,7 +850,7 @@
                                         Grid.Column="0"
                                         Margin="0,16,0,0"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Handle opacity" />
                                     <Border
                                         Grid.Row="2"
@@ -860,7 +860,7 @@
                                         <TextBlock
                                             FontSize="11"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding FloatingMenuOpacity, StringFormat={}{0:P0}}" />
                                     </Border>
                                     <Slider
@@ -877,7 +877,7 @@
                                         Grid.Column="0"
                                         Margin="0,16,0,0"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Menu background opacity" />
                                     <Border
                                         Grid.Row="4"
@@ -887,7 +887,7 @@
                                         <TextBlock
                                             FontSize="11"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding FloatingMenuBackgroundOpacity, StringFormat={}{0:P0}}" />
                                     </Border>
                                     <Slider
@@ -924,12 +924,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Placement and visibility" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Choose how the radial menu expands and which surfaces it follows." />
                                     </StackPanel>
@@ -948,7 +948,7 @@
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Manual direction" />
                                     <ComboBox
                                         Grid.Column="1"
@@ -966,7 +966,7 @@
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Quick toggle shortcut" />
                                     <ComboBox
                                         Grid.Column="1"
@@ -984,7 +984,7 @@
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     FontSize="11"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Opacity="0.85"
                                     Text="Choose which input snaps the launcher back if it hides or won't wake." />
 
@@ -993,7 +993,7 @@
                                 <TextBlock
                                     FontSize="12"
                                     FontWeight="SemiBold"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Opacity="0.85"
                                     Text="Where should the handle appear?"
                                     TextWrapping="Wrap" />
@@ -1021,7 +1021,7 @@
                                     Margin="0,24,0,8"
                                     FontSize="14"
                                     FontWeight="SemiBold"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Text="Welcome messages" />
 
                                 <StackPanel Margin="0,4,0,0">
@@ -1077,12 +1077,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Orbit View" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.7"
                                             Text="Customize session grid layout and UI density" />
                                     </StackPanel>
@@ -1094,12 +1094,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Session Launch Behavior" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Where should new sessions dock when launched?" />
                                     <ComboBox
@@ -1119,12 +1119,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Grid Density" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Default number of grid cells (1x1, 2x2, or 3x3)" />
                                     <ComboBox
@@ -1156,12 +1156,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="UI Spacing" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Control margin/padding density to reclaim vertical space" />
                                     <ComboBox
@@ -1193,12 +1193,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Tab Header Size" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Height of session tab headers" />
                                     <ComboBox
@@ -1230,12 +1230,12 @@
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="Cell Border Thickness" />
                                     <TextBlock
                                         Margin="0,4,0,8"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Thickness of borders around grid cells" />
                                     <ComboBox
@@ -1268,7 +1268,7 @@
                                     <TextBlock
                                         Margin="0,4,0,0"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Opacity="0.7"
                                         Text="Automatically open Orbit View when Orbit launches (preserves home screen)" />
                                 </StackPanel>
@@ -1336,12 +1336,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Injector DLL" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Select which DLL Orbit injects. Leave blank to use default XInput1_4_inject.dll." />
                                     </StackPanel>
@@ -1383,27 +1383,27 @@
                                         <TextBlock
                                             FontSize="12"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Detected Metadata" />
                                         <TextBlock
                                             Margin="0,6,0,0"
                                             FontFamily="Consolas"
                                             FontSize="11"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding InjectorDllMetadata}"
                                             TextWrapping="Wrap" />
                                         <TextBlock
                                             Margin="0,8,0,0"
                                             FontSize="11"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.85"
                                             Text="{Binding SelectedInjectorDllExists, StringFormat=File exists: {0}}" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="11"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.85"
                                             Text="{Binding SelectedInjectorLooksLikeMesharp, StringFormat=MESharp compatibility marker: {0}}" />
                                     </StackPanel>
@@ -1434,12 +1434,12 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Theme Diagnostics" />
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="Surface theme insights when you need them." />
                                     </StackPanel>
@@ -1470,7 +1470,7 @@
                                         CornerRadius="8">
                                         <TextBlock
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             TextWrapping="Wrap">
                                             <Run Text="Theme changes and resource assignments are logged to:" />
                                             <LineBreak />
@@ -1504,7 +1504,7 @@
                                         CornerRadius="8">
                                         <TextBlock
                                             FontSize="12"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             TextWrapping="Wrap">
                                             <Run Text="Orbit drag/drop/layout events are logged to:" />
                                             <LineBreak />

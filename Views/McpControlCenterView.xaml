@@ -45,7 +45,7 @@
                                    Margin="0,0,8,0"
                                    VerticalAlignment="Center"
                                    Text="{Binding StatusSummary}"
-                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                   Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="430" />
                         <Controls:ProgressRing DockPanel.Dock="Right"
@@ -75,14 +75,14 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Policy" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                            <TextBlock Grid.Row="0" Text="Policy" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
 
                             <Controls:ToggleSwitch Grid.Row="1" Margin="0,10,0,0"
                                                    Header="Auto-start MCP runtime on inject"
                                                    IsOn="{Binding AutoStartRuntimeOnInject, Mode=TwoWay}" />
 
                             <TextBlock Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap" Opacity="0.75"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                        Text="When enabled, Orbit sends START_RUNTIME after successful injection. Disable for manual runtime lifecycle control." />
 
                             <StackPanel Grid.Row="3" Margin="0,12,0,0">
@@ -96,11 +96,11 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Auto probe every"
-                                               Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                     <xctk:IntegerUpDown Grid.Column="1" Margin="8,0,8,0" Width="72" Minimum="1" Maximum="30"
                                                         Value="{Binding AutoProbeSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="seconds"
-                                               Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                     <Controls:ToggleSwitch Grid.Column="4" Margin="12,0,0,0" Header="Enabled"
                                                            IsOn="{Binding AutoProbeEnabled, Mode=TwoWay}" />
                                 </Grid>
@@ -121,27 +121,27 @@
 
                             <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Sidecar Artifacts" FontSize="18" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                 <Button DockPanel.Dock="Right" Command="{Binding ValidateSidecarCommand}" Padding="10,4"
                                         Content="Revalidate" />
                             </DockPanel>
 
                             <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="{Binding SidecarPath}" FontFamily="Consolas"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" TextWrapping="Wrap" />
 
                             <Border Grid.Row="2" Margin="0,10,0,0" Padding="10" CornerRadius="6"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
                                     Background="{DynamicResource MahApps.Brushes.Gray9}">
                                 <TextBlock Text="{Binding SidecarArtifactsSummary}" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                             </Border>
 
                             <Separator Grid.Row="3" Margin="0,12,0,8" />
 
                             <DockPanel Grid.Row="4" LastChildFill="False">
                                 <TextBlock Text="Native Injector MCP Settings" FontSize="16" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                 <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding SaveInjectorSettingsCommand}" Padding="10,4"
                                         Content="Save" />
                                 <Button DockPanel.Dock="Right" Command="{Binding ReloadInjectorSettingsCommand}" Padding="10,4"
@@ -157,7 +157,7 @@
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Text="{Binding InjectorSettingsPath}" FontFamily="Consolas"
-                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Opacity="0.8" TextWrapping="Wrap" />
+                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Opacity="0.8" TextWrapping="Wrap" />
                                 <Controls:ToggleSwitch Grid.Row="1" Margin="0,8,0,0" Header="MCP_AUTOSTART"
                                                        IsOn="{Binding BasicInjectorAutoStart, Mode=TwoWay}" />
                                 <Controls:ToggleSwitch Grid.Row="2"
@@ -171,11 +171,11 @@
                                     <TextBlock Text="Optional explicit path for MCP server launch. Leave override OFF for default Orbit sidecar discovery."
                                                TextWrapping="Wrap"
                                                Opacity="0.78"
-                                               Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                     <TextBlock Margin="0,6,0,2"
                                                Text="MCP_SERVER_PATH"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                     <TextBox Text="{Binding BasicInjectorServerPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              ToolTip="Example: C:\Orbit\MESharp.McpServer.exe" />
                                 </StackPanel>
@@ -195,7 +195,7 @@
 
                             <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Session Probes" FontSize="18" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                 <Button DockPanel.Dock="Right" Command="{Binding RefreshSessionsCommand}" Padding="10,4"
                                         Content="Refresh Sessions" />
                             </DockPanel>
@@ -216,7 +216,7 @@
                                        Text="{Binding SelectedSessionSummary}"
                                        TextWrapping="Wrap"
                                        Opacity="0.82"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
 
                             <WrapPanel Grid.Row="3" Margin="0,12,0,0">
                                 <Button Command="{Binding StartRuntimeCommand}" Content="Start Runtime" Margin="0,0,8,8" MinWidth="154" />
@@ -228,7 +228,7 @@
                             </WrapPanel>
 
                             <TextBlock Grid.Row="4" Margin="0,6,0,0" Text="{Binding StatusSummary}" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Opacity="0.85" />
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Opacity="0.85" />
                         </Grid>
                     </Border>
                 </StackPanel>
@@ -252,7 +252,7 @@
 
                         <DockPanel Grid.Row="0" LastChildFill="False">
                             <TextBlock Text="Response Payload" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                             <Button DockPanel.Dock="Right" Command="{Binding CopyResponseCommand}" Padding="10,4"
                                     Content="Copy JSON" />
                         </DockPanel>
@@ -275,7 +275,7 @@
 
                         <DockPanel Grid.Row="0" LastChildFill="False">
                             <TextBlock Text="Activity Log" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                             <Button DockPanel.Dock="Right" Command="{Binding ClearLogCommand}" Padding="10,4"
                                     Content="Clear" />
                         </DockPanel>

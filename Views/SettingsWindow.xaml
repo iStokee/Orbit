@@ -14,7 +14,7 @@
                       MinWidth="420"
                       MinHeight="420"
                       WindowStartupLocation="CenterOwner"
-                      Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                      Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                       TitleCharacterCasing="Normal">
 
     <Controls:MetroWindow.Resources>
@@ -31,36 +31,36 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20" Orientation="Vertical">
             <TextBlock Text="Floating Menu" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
-                       Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"/>
+                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
 
             <StackPanel Orientation="Vertical" Margin="0,4,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Hide after" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Slider Minimum="0.5" Maximum="8" TickFrequency="0.5" IsSnapToTickEnabled="True"
                         Value="{Binding FloatingMenuInactivitySeconds, Mode=TwoWay}"
                         Margin="0,0,0,2" />
                 <TextBlock FontSize="12"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            Text="{Binding FloatingMenuInactivitySeconds, StringFormat={}{0:0.0}s}" />
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="0,8,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Handle (button) opacity" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Slider Minimum="0.35" Maximum="1" TickFrequency="0.05" Margin="0,0,0,2"
                         Value="{Binding FloatingMenuOpacity, Mode=TwoWay}" />
                 <TextBlock FontSize="12"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            Text="{Binding FloatingMenuOpacity, StringFormat={}{0:P0}}" />
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="0,8,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Menu background opacity" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Slider Minimum="0.2" Maximum="1" TickFrequency="0.05" Margin="0,0,0,2"
                         Value="{Binding FloatingMenuBackgroundOpacity, Mode=TwoWay}" />
                 <TextBlock FontSize="12"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            Text="{Binding FloatingMenuBackgroundOpacity, StringFormat={}{0:P0}}" />
             </StackPanel>
 
@@ -70,7 +70,7 @@
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                            Text="Manual direction" />
                 <ComboBox Width="160"
                           Margin="12,0,0,0"
@@ -82,35 +82,35 @@
             <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
 
             <TextBlock Text="Dock Zones" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
-                       Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"/>
+                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
 
             <StackPanel Orientation="Vertical" Margin="0,4,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Edge snap distance" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <TextBlock FontSize="11" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            TextWrapping="Wrap"
                            Text="Distance from screen edges to trigger snap zones (pixels)" />
                 <Slider Minimum="40" Maximum="200" TickFrequency="10" IsSnapToTickEnabled="True"
                         Value="{Binding FloatingMenuDockEdgeThreshold, Mode=TwoWay}"
                         Margin="0,0,0,2" />
                 <TextBlock FontSize="12"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            Text="{Binding FloatingMenuDockEdgeThreshold, StringFormat={}{0:0}px}" />
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="0,12,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Corner snap distance" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <TextBlock FontSize="11" Margin="0,0,0,4"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            TextWrapping="Wrap"
                            Text="Distance from corners to trigger corner snap zones (pixels)" />
                 <Slider Minimum="60" Maximum="250" TickFrequency="10" IsSnapToTickEnabled="True"
                         Value="{Binding FloatingMenuDockCornerThreshold, Mode=TwoWay}"
                         Margin="0,0,0,2" />
                 <TextBlock FontSize="12"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                           Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                            Text="{Binding FloatingMenuDockCornerThreshold, StringFormat={}{0:0}px}" />
             </StackPanel>
         </StackPanel>

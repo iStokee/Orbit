@@ -122,6 +122,11 @@ namespace Orbit.ViewModels
 				if (!SetProperty(ref selectedCustomColor, value))
 					return;
 
+				if (SelectedCustomTheme != null)
+				{
+					SelectedCustomTheme.AccentHex = value.ToString();
+				}
+
 				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
@@ -543,6 +548,7 @@ namespace Orbit.ViewModels
 			selectedColorScheme = null;
 			OnPropertyChanged(nameof(SelectedColorScheme));
 
+			SelectedCustomTheme.AccentHex = SelectedCustomColor.ToString();
 			SelectedCustomTheme.OverrideForeground = UseCustomForeground;
 			SelectedCustomTheme.ForegroundHex = UseCustomForeground ? SelectedCustomForeground.ToString() : null;
 

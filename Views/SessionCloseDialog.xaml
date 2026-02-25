@@ -43,7 +43,7 @@
         <Style x:Key="InfoValueStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
         </Style>
     </Controls:MetroWindow.Resources>
 
@@ -77,12 +77,12 @@
                     <TextBlock
                         FontSize="20"
                         FontWeight="SemiBold"
-                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                         Text="Close this session?" />
                     <TextBlock
                         Margin="0,4,0,0"
                         FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                         Text="This action will terminate the session and close the game client." />
                 </StackPanel>
             </StackPanel>
@@ -181,7 +181,7 @@
                         Kind="InformationOutline" />
                     <TextBlock
                         FontSize="12"
-                        Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                         TextWrapping="Wrap">
                         <Run FontWeight="SemiBold" Text="Important:" />
                         <Run Text="Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />

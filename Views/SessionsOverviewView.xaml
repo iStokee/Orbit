@@ -6,7 +6,7 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
 
     <UserControl.Resources>
         <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
@@ -42,7 +42,7 @@
             <Setter Property="Margin" Value="0,0,0,10" />
             <Setter Property="Padding" Value="12" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="0,0,0,8" />
@@ -88,7 +88,7 @@
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Session Manager" />
                         <WrapPanel Margin="0,4,0,0" VerticalAlignment="Center">
                             <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
                             </Border>
                             <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
                                 <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
@@ -146,7 +146,7 @@
 
                                     <Grid Grid.Column="0" Width="44" Height="44" Margin="0,0,10,0" VerticalAlignment="Top">
                                         <Border CornerRadius="12" Background="{Binding State, Converter={StaticResource SessionStateToColorConverter}}" />
-                                        <iconPacks:PackIconMaterial Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" Kind="Monitor" />
+                                        <iconPacks:PackIconMaterial Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Kind="Monitor" />
                                         <Ellipse Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Fill="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}" Stroke="{DynamicResource MahApps.Brushes.Gray8}" StrokeThickness="1" />
                                     </Grid>
 
@@ -154,28 +154,28 @@
                                         <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding DisplayName}" />
                                         <WrapPanel Margin="0,4,0,0">
                                             <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-                                                <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Text="{Binding State}" />
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding State}" />
                                             </Border>
                                             <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
                                                 <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectionState}" />
                                             </Border>
-                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
                                         </WrapPanel>
                                     </StackPanel>
                                 </Grid>
 
                                 <Border Margin="0,8,0,0" Padding="8,6" Background="{DynamicResource MahApps.Brushes.Gray8}" BorderBrush="{DynamicResource MahApps.Brushes.Gray6}" BorderThickness="1" CornerRadius="4">
                                     <StackPanel>
-                                        <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Text="{Binding ScriptRuntimeStatus, StringFormat=Script: {0}}" />
-                                        <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}" Text="{Binding ActiveScriptName, StringFormat=Active: {0}}" />
-                                        <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="{DynamicResource MahApps.Brushes.Gray4}" Text="{Binding ScriptLastChangedAt, StringFormat=Last Action: {0:g}}" />
+                                        <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding ScriptRuntimeStatus, StringFormat=Script: {0}}" />
+                                        <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding ActiveScriptName, StringFormat=Active: {0}}" />
+                                        <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}" Text="{Binding ScriptLastChangedAt, StringFormat=Last Action: {0:g}}" />
                                     </StackPanel>
                                 </Border>
 
                                 <Border Margin="0,8,0,0" Padding="8,5" Background="{DynamicResource MahApps.Brushes.Gray9}" BorderBrush="{DynamicResource MahApps.Brushes.Accent3}" BorderThickness="1" CornerRadius="3" Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
                                     <StackPanel Orientation="Horizontal">
                                         <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.Accent}" Kind="AlertCircle" />
-                                        <TextBlock MaxWidth="700" FontSize="11" Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" Text="{Binding LastError}" TextWrapping="Wrap" />
+                                        <TextBlock MaxWidth="700" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding LastError}" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
 

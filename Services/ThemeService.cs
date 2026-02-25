@@ -45,6 +45,12 @@ namespace Orbit.Services
 	{
 		private const string CustomAccentPrefix = "custom:";
 		private const string CustomAccentDictionaryMarkerKey = "__Orbit.CustomAccentDictionary";
+		private const string OrbitTextPrimaryKey = "Orbit.Brushes.Text.Primary";
+		private const string OrbitTextSecondaryKey = "Orbit.Brushes.Text.Secondary";
+		private const string OrbitTextOnAccentKey = "Orbit.Brushes.Text.OnAccent";
+		private const string OrbitTextOnHeaderKey = "Orbit.Brushes.Text.OnHeader";
+		private const string OrbitTextOnHeaderSecondaryKey = "Orbit.Brushes.Text.OnHeaderSecondary";
+		private const string OrbitTextOnOverlayKey = "Orbit.Brushes.Text.OnOverlay";
 
 		/// <summary>
 		/// Get available base themes (Light, Dark)
@@ -190,6 +196,7 @@ namespace Orbit.Services
 				ThemeLogger.Log($"Applying theme: {themeName}");
 				ThemeManager.Current.ChangeTheme(Application.Current, theme);
 				ApplyAccentResourcesFromTheme(theme);
+				ApplyOrbitSemanticTextResources();
 				SaveCurrentTheme(baseTheme, colorScheme);
 				ThemeLogger.Log($"Theme applied successfully");
 			}
@@ -202,6 +209,7 @@ namespace Orbit.Services
 				{
 					ThemeManager.Current.ChangeTheme(Application.Current, fallback);
 					ApplyAccentResourcesFromTheme(fallback);
+					ApplyOrbitSemanticTextResources();
 					SaveCurrentTheme("Dark", "Steel");
 				}
 			}
@@ -338,6 +346,7 @@ namespace Orbit.Services
 				RemoveCustomForegroundOverrides();
 			}
 
+			ApplyOrbitSemanticTextResources();
 			ThemeLogger.Log("<<< Custom theme applied successfully");
 
 			// Save the custom theme reference
@@ -357,7 +366,7 @@ namespace Orbit.Services
 			var accentColor3 = ChangeColorBrightness(accentColor, -0.2);
 			var accentColor4 = ChangeColorBrightness(accentColor, -0.4);
 			var highlightColor = ChangeColorBrightness(accentColor, 0.35);
-			var idealForeground = GetIdealForegroundColor(accentColor);
+			var idealForeground = GetSharedAccentForeground(accentColor, accentColor2, accentColor3, accentColor4, highlightColor);
 
 			ThemeLogger.Log($"ApplyAccentResources: Primary={accentColor}, IdealForeground={idealForeground}");
 
@@ -525,6 +534,145 @@ namespace Orbit.Services
 			ThemeLogger.Log($"Removed {removedCount} custom foreground resources");
 		}
 
+		private static void ApplyOrbitSemanticTextResources()
+		{
+			var resources = Application.Current.Resources;
+			var background = ResolveResourceColor(resources, "MahApps.Brushes.ThemeBackground", Colors.Black);
+			var themeForeground = ResolveResourceColor(resources, "MahApps.Brushes.ThemeForeground", Colors.White);
+			var accent = ResolveResourceColor(resources, "MahApps.Brushes.Accent", Colors.SteelBlue);
+			var accent2 = ResolveResourceColor(resources, "MahApps.Brushes.Accent2", ChangeColorBrightness(accent, 0.2));
+			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent, -0.2));
+			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent, -0.4));
+			var accentForeground = ResolveResourceColor(
+				resources,
+				"MahApps.Brushes.AccentForeground",
+				GetSharedAccentForeground(accent, accent2, accent3, accent4));
+
+			var primary = EnsureReadable(themeForeground, background, 4.5);
+			var secondary = DeriveSecondaryText(primary, background);
+			var onAccent = accentForeground;
+
+			var headerSurface = AverageColor(accent, accent2, accent3);
+			// Keep accent/header text decisions unified so controls on accent variants don't diverge.
+			var onHeader = EnsureReadable(accentForeground, headerSurface, 4.5);
+			var onHeaderSecondary = DeriveSecondaryText(onHeader, headerSurface);
+			if (GetContrastRatio(onHeaderSecondary, headerSurface) < 3.0)
+			{
+				onHeaderSecondary = onHeader;
+			}
+
+			var overlaySurface = Blend(Colors.Black, background, 0.6);
+			var onOverlay = EnsureReadable(themeForeground, overlaySurface, 4.5);
+
+			SetBrushResource(OrbitTextPrimaryKey, primary);
+			SetBrushResource(OrbitTextSecondaryKey, secondary);
+			SetBrushResource(OrbitTextOnAccentKey, onAccent);
+			SetBrushResource(OrbitTextOnHeaderKey, onHeader);
+			SetBrushResource(OrbitTextOnHeaderSecondaryKey, onHeaderSecondary);
+			SetBrushResource(OrbitTextOnOverlayKey, onOverlay);
+		}
+
+		private static Color ResolveResourceColor(ResourceDictionary resources, object key, Color fallback)
+		{
+			if (!resources.Contains(key))
+			{
+				return fallback;
+			}
+
+			var candidate = resources[key];
+			return candidate switch
+			{
+				Color color => color,
+				SolidColorBrush brush => brush.Color,
+				_ => fallback
+			};
+		}
+
+		private static Color EnsureReadable(Color preferred, Color background, double minContrastRatio)
+		{
+			if (GetContrastRatio(preferred, background) >= minContrastRatio)
+			{
+				return preferred;
+			}
+
+			var black = Colors.Black;
+			var white = Colors.White;
+			return GetContrastRatio(black, background) >= GetContrastRatio(white, background)
+				? black
+				: white;
+		}
+
+		private static Color DeriveSecondaryText(Color primary, Color background)
+		{
+			var candidate = Blend(primary, background, 0.72);
+			return GetContrastRatio(candidate, background) >= 3.0
+				? candidate
+				: EnsureReadable(primary, background, 3.0);
+		}
+
+		private static Color AverageColor(params Color[] colors)
+		{
+			if (colors == null || colors.Length == 0)
+			{
+				return Colors.Black;
+			}
+
+			double a = 0;
+			double r = 0;
+			double g = 0;
+			double b = 0;
+			foreach (var color in colors)
+			{
+				a += color.A;
+				r += color.R;
+				g += color.G;
+				b += color.B;
+			}
+
+			var count = colors.Length;
+			return Color.FromArgb(
+				(byte)Math.Round(a / count),
+				(byte)Math.Round(r / count),
+				(byte)Math.Round(g / count),
+				(byte)Math.Round(b / count));
+		}
+
+		private static Color Blend(Color foreground, Color background, double foregroundWeight)
+		{
+			var clamped = Math.Clamp(foregroundWeight, 0.0, 1.0);
+			var bgWeight = 1.0 - clamped;
+			return Color.FromArgb(
+				(byte)Math.Round((foreground.A * clamped) + (background.A * bgWeight)),
+				(byte)Math.Round((foreground.R * clamped) + (background.R * bgWeight)),
+				(byte)Math.Round((foreground.G * clamped) + (background.G * bgWeight)),
+				(byte)Math.Round((foreground.B * clamped) + (background.B * bgWeight)));
+		}
+
+		private static double GetContrastRatio(Color colorA, Color colorB)
+		{
+			var luminanceA = GetRelativeLuminance(colorA);
+			var luminanceB = GetRelativeLuminance(colorB);
+			var lighter = Math.Max(luminanceA, luminanceB);
+			var darker = Math.Min(luminanceA, luminanceB);
+			return (lighter + 0.05) / (darker + 0.05);
+		}
+
+		private static double GetRelativeLuminance(Color color)
+		{
+			static double ToLinear(byte component)
+			{
+				var srgb = component / 255.0;
+				return srgb <= 0.03928
+					? srgb / 12.92
+					: Math.Pow((srgb + 0.055) / 1.055, 2.4);
+			}
+
+			var r = ToLinear(color.R);
+			var g = ToLinear(color.G);
+			var b = ToLinear(color.B);
+			return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+		}
+
 		private static void SetBrushResource(object key, Color color)
 		{
 			var brush = CreateFrozenBrush(color);
@@ -648,6 +796,28 @@ namespace Orbit.Services
 		{
 			double luma = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255;
 			return luma > 0.5 ? Colors.Black : Colors.White;
+		}
+
+		private static Color GetSharedAccentForeground(params Color[] accentSurfaces)
+		{
+			if (accentSurfaces == null || accentSurfaces.Length == 0)
+			{
+				return Colors.White;
+			}
+
+			var black = Colors.Black;
+			var white = Colors.White;
+			var minBlackContrast = double.MaxValue;
+			var minWhiteContrast = double.MaxValue;
+
+			foreach (var surface in accentSurfaces)
+			{
+				minBlackContrast = Math.Min(minBlackContrast, GetContrastRatio(black, surface));
+				minWhiteContrast = Math.Min(minWhiteContrast, GetContrastRatio(white, surface));
+			}
+
+			// Pick the color with the strongest worst-case contrast across all accent variants.
+			return minBlackContrast >= minWhiteContrast ? black : white;
 		}
 	}
 }

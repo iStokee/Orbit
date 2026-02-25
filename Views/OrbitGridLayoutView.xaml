@@ -10,7 +10,7 @@
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
     xmlns:selectors="clr-namespace:Orbit.Selectors"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
 
     <UserControl.Resources>
         <converters:OrbitViewCompactnessToMarginConverter x:Key="CompactnessToMarginConverter" />
@@ -46,7 +46,7 @@
                         VerticalAlignment="Center"
                         FontSize="12"
                         FontWeight="SemiBold"
-                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                         Text="{Binding DisplayName}" />
                 </StackPanel>
             </Border>
@@ -241,7 +241,7 @@
                         <TextBlock
                             Margin="0,4,0,0"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Opacity="0.75"
                             Text="{Binding SuggestedGridLabel}" />
                     </StackPanel>
@@ -331,7 +331,7 @@
                                             Margin="0,0,6,0"
                                             VerticalAlignment="Center"
                                             FontSize="11"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Rows" />
                                         <Controls:NumericUpDown
                                             Width="70"
@@ -348,7 +348,7 @@
                                             Margin="0,0,6,0"
                                             VerticalAlignment="Center"
                                             FontSize="11"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="Cols" />
                                         <Controls:NumericUpDown
                                             Width="70"
@@ -413,7 +413,7 @@
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Header:" />
                         <ToggleButton
                             Margin="0,0,4,0"
@@ -485,7 +485,7 @@
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
                                     FontSize="11"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Text="R" />
                                 <Controls:NumericUpDown
                                     Width="60"
@@ -497,7 +497,7 @@
                                     Margin="8,0,6,0"
                                     VerticalAlignment="Center"
                                     FontSize="11"
-                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     Text="C" />
                                 <Controls:NumericUpDown
                                     Width="60"
@@ -546,7 +546,7 @@
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
                             FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Header:" />
                         <ToggleButton
                             Margin="0,0,4,0"
@@ -594,7 +594,7 @@
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
                             Background="Transparent"
-                            BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            BorderBrush="{DynamicResource Orbit.Brushes.Text.Primary}"
                             BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                             ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"

@@ -153,11 +153,11 @@
                                             <TextBlock
                                                 FontSize="16"
                                                 FontWeight="SemiBold"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Text="{Binding DisplayName}" />
                                             <TextBlock
                                                 Margin="0,4,0,0"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Opacity="0.75">
                                                 <Run Text="v" />
                                                 <Run Text="{Binding Version}" />
@@ -220,7 +220,7 @@
                                             Grid.Column="0"
                                             Grid.ColumnSpan="2"
                                             Margin="0,8,0,0"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Opacity="0.75"
                                             Text="{Binding Description}"
                                             TextWrapping="Wrap" />
@@ -233,7 +233,7 @@
                                             Margin="0,8,0,0">
                                             <TextBlock
                                                 FontSize="11"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Opacity="0.6">
                                                 <Run Text="Key:" />
                                                 <Run FontFamily="Consolas" Text="{Binding Key}" />
@@ -241,7 +241,7 @@
                                             <TextBlock
                                                 Margin="0,2,0,0"
                                                 FontSize="11"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Opacity="0.6">
                                                 <Run Text="Loaded:" />
                                                 <Run Text="{Binding LoadedAt}" />
@@ -260,7 +260,7 @@
                                                 Margin="0,4,0,0"
                                                 FontFamily="Consolas"
                                                 FontSize="11"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Opacity="0.6"
                                                 Text="{Binding PluginPath}"
                                                 TextWrapping="Wrap" />
@@ -297,12 +297,12 @@
                             HorizontalAlignment="Center"
                             FontSize="16"
                             FontWeight="SemiBold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="No plugins loaded yet." />
                         <TextBlock
                             HorizontalAlignment="Center"
                             FontSize="12"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Opacity="0.75"
                             Text="Use 'Load Plugin' to add a new tool or 'Auto-Load All' to import plugins from your library."
                             TextWrapping="Wrap" />
@@ -322,7 +322,7 @@
             <Grid>
                 <TextBlock
                     VerticalAlignment="Center"
-                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                     Opacity="0.75"
                     Text="{Binding StatusMessage}" />
 

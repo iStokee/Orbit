@@ -5,7 +5,7 @@
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+             Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
              mc:Ignorable="d">
 
     <Grid>

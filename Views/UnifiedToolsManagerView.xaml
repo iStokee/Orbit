@@ -10,7 +10,7 @@
     d:DesignHeight="700"
     d:DesignWidth="900"
     Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     mc:Ignorable="d">
     <UserControl.Resources>
         <converters:BooleanToAccentBrushConverter x:Key="BooleanToAccentBrushConverter" />
@@ -197,7 +197,7 @@
                                         <iconPacks:PackIconMaterial
                                             Width="24"
                                             Height="24"
-                                            Foreground="White"
+                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                             Kind="{Binding Icon}" />
                                     </Border>
 
@@ -206,7 +206,7 @@
                                         <TextBlock
                                             FontSize="16"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding DisplayName}" />
                                         <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
                                             <Border
@@ -216,14 +216,14 @@
                                                 <TextBlock
                                                     FontSize="10"
                                                     FontWeight="SemiBold"
-                                                    Foreground="White"
+                                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                                     Text="{Binding ToolType}" />
                                             </Border>
                                             <TextBlock
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"
                                                 FontSize="11"
-                                                Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                 Text="{Binding Version, StringFormat='v{0}'}"
                                                 Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         </StackPanel>
@@ -244,7 +244,7 @@
                                     Grid.Row="1"
                                     Margin="0,12,0,0"
                                     FontSize="13"
-                                    Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                     Text="{Binding Description}"
                                     TextWrapping="Wrap" />
 
@@ -253,14 +253,14 @@
                                     Grid.Row="2"
                                     Margin="0,12,0,0"
                                     Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}">
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}">
                                         <Run Text="Author:" />
                                         <Run Foreground="{DynamicResource MahApps.Brushes.Accent}" Text="{Binding Author, Mode=OneWay}" />
                                     </TextBlock>
                                     <TextBlock
                                         Margin="0,2,0,0"
                                         FontSize="11"
-                                        Foreground="{DynamicResource MahApps.Brushes.Gray3}">
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}">
                                         <Run Text="Loaded:" />
                                         <Run Text="{Binding LoadedAt, Mode=OneWay}" />
                                     </TextBlock>
@@ -272,7 +272,7 @@
                                             Margin="0,4,0,0"
                                             FontFamily="Consolas"
                                             FontSize="10"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray4}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
                                             Text="{Binding PluginPath}"
                                             TextWrapping="Wrap" />
                                     </Expander>
@@ -337,12 +337,12 @@
             Grid.Row="3"
             Padding="20,10"
             Background="{DynamicResource MahApps.Brushes.Gray10}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+            BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
             BorderThickness="0,1,0,0">
             <Grid>
                 <TextBlock
                     VerticalAlignment="Center"
-                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                     Text="{Binding StatusMessage}" />
 
                 <mah:ProgressRing

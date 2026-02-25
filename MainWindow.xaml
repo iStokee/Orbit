@@ -61,7 +61,7 @@
                     VerticalAlignment="Center"
                     FontSize="18"
                     FontWeight="SemiBold"
-                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}"
                     Text="{Binding}" />
             </StackPanel>
         </DataTemplate>
@@ -95,7 +95,7 @@
             <Setter Property="Height" Value="52" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
             <Setter Property="Tag" Value="1.5" />
             <Setter Property="Background">
@@ -221,7 +221,7 @@
                             </Trigger>
 
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                 <Setter TargetName="Glow" Property="Opacity" Value="0.6" />
                                 <Setter TargetName="HoverRing" Property="Opacity" Value="0.6" />
                                 <Setter TargetName="BaseCircle" Property="StrokeThickness" Value="2" />
@@ -496,10 +496,13 @@
                                         <iconPacks:PackIconMaterial.Style>
                                             <Style TargetType="iconPacks:PackIconMaterial">
                                                 <Setter Property="Visibility" Value="Collapsed" />
-                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -547,7 +550,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Text="{Binding DisplayName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -586,12 +589,13 @@
                                                                         </DoubleAnimation>
                                                                     </Storyboard>
                                                                 </BeginStoryboard>
-                                                            </DataTrigger.ExitActions>
-                                                            <Setter Property="FontWeight" Value="Bold" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
+                                                        </DataTrigger.ExitActions>
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
                                         </TextBlock>
 
                                         <TextBox
@@ -603,7 +607,7 @@
                                             BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                                             BorderThickness="0,0,0,1"
                                             FontWeight="SemiBold"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             IsVisibleChanged="SessionRenameTextBox_IsVisibleChanged"
                                             KeyDown="SessionRenameTextBox_KeyDown"
                                             LostKeyboardFocus="SessionRenameTextBox_LostKeyboardFocus"
@@ -647,7 +651,7 @@
                                         <iconPacks:PackIconMaterial
                                             Width="14"
                                             Height="14"
-                                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                             Kind="Pencil" />
                                     </Button>
 
@@ -681,7 +685,7 @@
                                             <iconPacks:PackIconMaterial
                                                 Width="14"
                                                 Height="14"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Kind="Check" />
                                         </Button>
 
@@ -699,7 +703,7 @@
                                             <iconPacks:PackIconMaterial
                                                 Width="14"
                                                 Height="14"
-                                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Kind="Close" />
                                         </Button>
                                     </StackPanel>
@@ -733,11 +737,11 @@
                                         Kind="{Binding Icon}">
                                         <iconPacks:PackIconMaterial.Style>
                                             <Style TargetType="iconPacks:PackIconMaterial">
-                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
                                                 <Setter Property="Opacity" Value="0.8" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                                         <Setter Property="Opacity" Value="1" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -747,7 +751,7 @@
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
-                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                         Text="{Binding Name}">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -784,6 +788,7 @@
                                                             </BeginStoryboard>
                                                         </DataTrigger.ExitActions>
                                                         <Setter Property="FontWeight" Value="Bold" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -1159,7 +1164,7 @@
                             <iconPacks:PackIconGameIcons
                                 Width="32"
                                 Height="32"
-                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                 Kind="Orbital" />
                             <ToggleButton.ContextMenu>
                                 <ContextMenu>

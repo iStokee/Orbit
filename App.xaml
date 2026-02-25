@@ -29,6 +29,13 @@
             <!-- Shared outer margin for tool pages (tighter than the original 16px). -->
             <Thickness x:Key="Orbit.ToolPageMargin">12</Thickness>
             <SolidColorBrush x:Key="Orbit.UpdateBadgeBrush" Color="#FFFFC44D" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="#CCFFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="#99FFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnAccent" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeader" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeaderSecondary" Color="#DDFFFFFF" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnOverlay" Color="#FFFFFFFF" />
 
             <!--  Orbit Grid Cell Style - for TabablzControls in Orbit View grid layout  -->
             <Style
@@ -52,7 +59,7 @@
                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ToggleButton">
@@ -76,7 +83,7 @@
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="Border" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter TargetName="Border" Property="Opacity" Value="0.5" />
@@ -104,7 +111,7 @@
                         </LinearGradientBrush>
                     </Setter.Value>
                 </Setter>
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
                         <Setter Property="Opacity" Value="0.95" />
@@ -171,7 +178,7 @@
                 <Setter Property="Height" Value="26" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderGameIcon" TargetType="iconPacks:PackIconGameIcons">
@@ -179,7 +186,7 @@
                 <Setter Property="Height" Value="26" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderIconPath" TargetType="Path">
@@ -188,27 +195,27 @@
                 <Setter Property="Stretch" Value="Uniform" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="Fill" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Fill" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderTitle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="22" />
                 <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderSubtitle" TargetType="TextBlock">
                 <Setter Property="Margin" Value="0,6,0,0" />
                 <Setter Property="FontSize" Value="12" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
                 <Setter Property="Opacity" Value="0.85" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderMetaText" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
@@ -245,7 +252,7 @@
                             </GeometryDrawing.Geometry>
                         </GeometryDrawing>
                         <!--  Main icon with theme-adaptive foreground  -->
-                        <GeometryDrawing Brush="{DynamicResource MahApps.Brushes.IdealForeground}" Geometry="{StaticResource Orbit.IconGeometry}" />
+                        <GeometryDrawing Brush="{DynamicResource Orbit.Brushes.Text.OnHeader}" Geometry="{StaticResource Orbit.IconGeometry}" />
                     </DrawingGroup>
                 </DrawingImage.Drawing>
             </DrawingImage>

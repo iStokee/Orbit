@@ -39,12 +39,12 @@
                         <TextBlock Text="Registered Tools"
                                   FontSize="18"
                                   FontWeight="SemiBold"
-                                  Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                  Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                   Margin="0,0,0,16" />
 
                         <TextBlock Text="Control which tools appear in the floating menu. All tools remain accessible via direct navigation."
                                   FontSize="12"
-                                  Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                  Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                   Opacity="0.75"
                                   TextWrapping="Wrap"
                                   Margin="0,0,0,20" />
@@ -87,15 +87,15 @@
                                                 <TextBlock Text="{Binding DisplayName, Mode=OneWay}"
                                                           FontSize="16"
                                                           FontWeight="SemiBold"
-                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                          Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                                 <TextBlock Text="{Binding Description, Mode=OneWay}"
                                                           FontSize="12"
-                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                          Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                           Opacity="0.75"
                                                           TextWrapping="Wrap"
                                                           Margin="0,4,0,0" />
                                                 <TextBlock FontSize="11"
-                                                          Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                          Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                           Opacity="0.6"
                                                           Margin="0,6,0,0">
                                                     <Run Text="Key:" />

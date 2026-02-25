@@ -12,7 +12,7 @@
     xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewmodels:SessionGalleryViewModel,
                                      IsDesignTimeCreatable=False}"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -176,7 +176,7 @@
                         <TextBlock
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Thumbnail Size:" />
                         <Slider
                             Width="150"
@@ -191,18 +191,18 @@
                             Width="60"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="{Binding EffectiveThumbnailSize, StringFormat='{}{0}px'}" />
                         <TextBlock
                             Margin="18,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Opacity="0.6"
                             Text="|" />
                         <CheckBox
                             VerticalAlignment="Center"
                             Content="Custom Size:"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             IsChecked="{Binding UseCustomThumbnailSize}" />
                         <Controls:NumericUpDown
                             Width="100"
@@ -219,7 +219,7 @@
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Auto-refresh:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AutoRefreshEnabled}"
@@ -229,7 +229,7 @@
                         <TextBlock
                             Margin="16,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Overrides:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AllowSessionOverrides}"
@@ -239,7 +239,7 @@
                         <TextBlock
                             Margin="16,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Rate:" />
                         <Slider
                             Width="200"
@@ -253,7 +253,7 @@
                         <TextBlock
                             Margin="12,0,0,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="{Binding GlobalRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
                     </WrapPanel>
 
@@ -277,7 +277,7 @@
                                 Margin="0,0,8,0"
                                 VerticalAlignment="Center"
                                 FontSize="11"
-                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                 Text="Header:" />
                             <ToggleButton
                                 Margin="0,0,4,0"
@@ -385,7 +385,7 @@
                                                     Height="64"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"
-                                                    Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                     Kind="ImageOff" />
                                             </Grid>
 
@@ -404,7 +404,7 @@
                                                         Grid.Row="0"
                                                         FontSize="14"
                                                         FontWeight="SemiBold"
-                                                        Foreground="White"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding Name}"
                                                         TextTrimming="CharacterEllipsis" />
 
@@ -423,7 +423,7 @@
 
                                                         <TextBlock
                                                             FontSize="10"
-                                                            Foreground="White"
+                                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                             Opacity="0.8"
                                                             Text="{Binding State, FallbackValue='Unknown'}" />
                                                     </StackPanel>
@@ -441,7 +441,7 @@
                                                 <iconPacks:PackIconMaterial
                                                     Width="16"
                                                     Height="16"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                                     Kind="ApplicationCog" />
                                             </Border>
                                         </Grid>
@@ -455,7 +455,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Text="Override global:" />
                                             <Controls:ToggleSwitch
                                                 Margin="8,0,0,0"
@@ -471,7 +471,7 @@
                                             Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Text="Auto refresh:" />
                                             <Controls:ToggleSwitch
                                                 Margin="8,0,0,0"
@@ -487,7 +487,7 @@
                                             Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Text="Custom rate:" />
                                             <Slider
                                                 Width="140"
@@ -501,28 +501,28 @@
                                             <TextBlock
                                                 Margin="8,0,0,0"
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                 Text="{Binding GalleryRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
                                         </StackPanel>
 
                                         <TextBlock
                                             Margin="0,6,0,0"
                                             FontSize="10"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Text="Overrides disabled by global policy"
                                             Visibility="{Binding DataContext.AllowSessionOverrides, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
 
                                         <TextBlock
                                             Margin="0,6,0,0"
                                             FontSize="10"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Text="Following global refresh rate"
                                             Visibility="{Binding UsesGlobalGallerySettings, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                                         <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="10"
-                                            Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Text="Manual refresh only"
                                             Visibility="{Binding GalleryAutoRefreshEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
                                     </StackPanel>

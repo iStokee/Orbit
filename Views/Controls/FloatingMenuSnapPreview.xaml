@@ -35,7 +35,7 @@
                     Margin="20"
                     CornerRadius="14"
                     Background="{DynamicResource MahApps.Brushes.Gray7}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray5}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
                     BorderThickness="1">
                     <Grid>
                         <Border
@@ -142,7 +142,7 @@
                             VerticalAlignment="Top"
                             FontSize="18"
                             FontWeight="SemiBold"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="Preview" />
                     </Grid>
                 </Border>

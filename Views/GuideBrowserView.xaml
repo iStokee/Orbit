@@ -134,7 +134,7 @@
                         <StackPanel Margin="0,10,0,0">
                             <TextBlock
                                 Margin="0,0,0,12"
-                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 FontWeight="Normal"
                                 Text="Select a guide section to load." />
                             <ListBox
@@ -179,7 +179,7 @@
                                                         Text="{Binding Title}" />
                                                     <TextBlock
                                                         Margin="0,2,0,0"
-                                                        Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                         Text="{Binding Description}"
                                                         TextWrapping="Wrap" />
                                                 </StackPanel>
@@ -200,11 +200,11 @@
                         Header="Tips">
                         <StackPanel Margin="0,10,0,0">
                             <TextBlock
-                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="Use Refresh after pulling doc updates." />
                             <TextBlock
                                 Margin="0,6,0,0"
-                                Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="Use Open Folder to edit docs in-place." />
                         </StackPanel>
                     </Expander>
@@ -239,7 +239,7 @@
                                 IsActive="True" />
                             <TextBlock
                                 Margin="0,12,0,0"
-                                Foreground="White"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.OnOverlay}"
                                 Text="{Binding StatusMessage}"
                                 TextAlignment="Center" />
                         </StackPanel>
@@ -265,7 +265,7 @@
                 <TextBlock
                     Margin="12,0,0,0"
                     VerticalAlignment="Center"
-                    Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                     Text="{Binding StatusMessage}" />
             </StackPanel>
         </Border>
