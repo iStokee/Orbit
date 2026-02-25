@@ -67,10 +67,10 @@
         </Border>
 
         <!--  Tabbed Content  -->
-        <Controls:MetroTabControl Grid.Row="1" Margin="0,16,0,0">
+        <TabControl Grid.Row="1" Margin="0,16,0,0">
             <!--  General Tab  -->
-            <Controls:MetroTabItem Header="General">
-                <Controls:MetroTabItem.HeaderTemplate>
+            <TabItem Header="General">
+                <TabItem.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -82,7 +82,7 @@
                             <TextBlock VerticalAlignment="Center" Text="General" />
                         </StackPanel>
                     </DataTemplate>
-                </Controls:MetroTabItem.HeaderTemplate>
+                </TabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
                         <Border Margin="0,0,0,16" Style="{StaticResource Orbit.ToolCard}">
@@ -508,11 +508,11 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-            </Controls:MetroTabItem>
+            </TabItem>
 
             <!--  Floating Menu Tab  -->
-            <Controls:MetroTabItem Header="Floating Menu">
-                <Controls:MetroTabItem.HeaderTemplate>
+            <TabItem Header="Floating Menu">
+                <TabItem.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -524,7 +524,7 @@
                             <TextBlock VerticalAlignment="Center" Text="Floating Menu" />
                         </StackPanel>
                     </DataTemplate>
-                </Controls:MetroTabItem.HeaderTemplate>
+                </TabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
                         <Border Style="{StaticResource Orbit.ToolCard}">
@@ -1035,11 +1035,11 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </Controls:MetroTabItem>
+            </TabItem>
 
             <!--  Orbit View Tab  -->
-            <Controls:MetroTabItem Header="Orbit View">
-                <Controls:MetroTabItem.HeaderTemplate>
+            <TabItem Header="Orbit View">
+                <TabItem.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -1051,7 +1051,7 @@
                             <TextBlock VerticalAlignment="Center" Text="Orbit View" />
                         </StackPanel>
                     </DataTemplate>
-                </Controls:MetroTabItem.HeaderTemplate>
+                </TabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
                         <!--  Orbit View Settings  -->
@@ -1276,10 +1276,10 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-            </Controls:MetroTabItem>
+            </TabItem>
 
-            <Controls:MetroTabItem Header="Tools &amp; Plugins">
-                <Controls:MetroTabItem.HeaderTemplate>
+            <TabItem Header="Tools &amp; Plugins">
+                <TabItem.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -1291,15 +1291,15 @@
                             <TextBlock VerticalAlignment="Center" Text="Tools &amp; Plugins" />
                         </StackPanel>
                     </DataTemplate>
-                </Controls:MetroTabItem.HeaderTemplate>
+                </TabItem.HeaderTemplate>
                 <Grid Margin="16">
                     <ContentControl x:Name="ToolsDashboardHost" />
                 </Grid>
-            </Controls:MetroTabItem>
+            </TabItem>
 
             <!--  Advanced Tab  -->
-            <Controls:MetroTabItem Header="Advanced">
-                <Controls:MetroTabItem.HeaderTemplate>
+            <TabItem Header="Advanced">
+                <TabItem.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -1311,7 +1311,7 @@
                             <TextBlock VerticalAlignment="Center" Text="Advanced" />
                         </StackPanel>
                     </DataTemplate>
-                </Controls:MetroTabItem.HeaderTemplate>
+                </TabItem.HeaderTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
                         <Border Margin="0,0,0,16" Style="{StaticResource Orbit.ToolCard}">
@@ -1531,7 +1531,7 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-            </Controls:MetroTabItem>
-        </Controls:MetroTabControl>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

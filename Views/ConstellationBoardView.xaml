@@ -1,0 +1,198 @@
+<UserControl
+    x:Class="Orbit.Views.ConstellationBoardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Orbit.Converters"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
+        <converters:InjectionStateToColorConverter x:Key="InjectionStateToColorConverter" />
+
+        <Style x:Key="ConstellationToolButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Card.Background}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Card.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="16">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource Orbit.Brushes.Accent.Primary}" />
+                                <Setter Property="Foreground" Value="#FF0B1020" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.CanvasNebulaA}" />
+                <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.CanvasNebulaB}" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <ScrollViewer
+            x:Name="BoardScroller"
+            HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Auto"
+            PreviewMouseWheel="BoardScroller_PreviewMouseWheel"
+            PreviewMouseMove="BoardScroller_PreviewMouseMove"
+            PreviewMouseDown="BoardScroller_PreviewMouseDown"
+            PreviewMouseUp="BoardScroller_PreviewMouseUp"
+            PanningMode="Both">
+            <Grid>
+                <Grid.LayoutTransform>
+                    <ScaleTransform x:Name="BoardScale" ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
+                </Grid.LayoutTransform>
+
+                <Canvas
+                    x:Name="BoardCanvas"
+                    Width="{Binding CanvasWidth}"
+                    Height="{Binding CanvasHeight}">
+
+                    <ItemsControl ItemsSource="{Binding SessionNodes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Canvas>
+                                        <ItemsControl
+                                            Canvas.Left="{Binding CenterX}"
+                                            Canvas.Top="{Binding CenterY}"
+                                            ItemsSource="{Binding Tools}"
+                                            Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Canvas>
+                                                        <Line
+                                                            Stroke="{DynamicResource Orbit.Brushes.Orbit.Line}"
+                                                            StrokeThickness="1.2"
+                                                            X1="0"
+                                                            Y1="0"
+                                                            X2="{Binding LineEndX}"
+                                                            Y2="{Binding LineEndY}" />
+                                                        <Button
+                                                            Canvas.Left="{Binding LineEndX}"
+                                                            Canvas.Top="{Binding LineEndY}"
+                                                            Click="ToolNode_Click"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource ConstellationToolButtonStyle}"
+                                                            ToolTip="{Binding Hint}">
+                                                            <iconPacks:PackIconMaterial Kind="{Binding Icon}" Width="14" Height="14" />
+                                                        </Button>
+                                                    </Canvas>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Canvas>
+
+                                    <Button
+                                        Width="{Binding Size}"
+                                        Height="{Binding Size}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Click="SessionSun_Click"
+                                        CommandParameter="{Binding}"
+                                        Cursor="Hand"
+                                        MouseEnter="SessionSun_MouseEnter"
+                                        MouseLeave="SessionSun_MouseLeave">
+                                        <Grid>
+                                            <Ellipse
+                                                Fill="{Binding Session.State, Converter={StaticResource SessionStateToColorConverter}}"
+                                                Opacity="0.23" />
+                                            <Ellipse
+                                                Margin="4"
+                                                Fill="{Binding Session.InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
+                                                Stroke="{DynamicResource Orbit.Brushes.Accent.Strong}"
+                                                StrokeThickness="1.4">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="StrokeThickness" Value="2.6" />
+                                                                <Setter Property="Opacity" Value="1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <iconPacks:PackIconMaterial
+                                                    HorizontalAlignment="Center"
+                                                    Width="20"
+                                                    Height="20"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                    Kind="WhiteBalanceSunny" />
+                                                <TextBlock
+                                                    Margin="0,4,0,0"
+                                                    MaxWidth="140"
+                                                    HorizontalAlignment="Center"
+                                                    FontSize="11"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                    Text="{Binding Session.DisplayName}"
+                                                    TextAlignment="Center"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                </Canvas>
+            </Grid>
+        </ScrollViewer>
+
+        <Border
+            Margin="16"
+            Padding="14,10"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="{DynamicResource Orbit.Brushes.Card.Background}"
+            BorderBrush="{DynamicResource Orbit.Brushes.Card.Border}"
+            BorderThickness="1"
+            CornerRadius="10">
+            <StackPanel>
+                <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Title}" />
+                <TextBlock Margin="0,4,0,0" FontSize="12" Opacity="0.85" Text="{Binding Subtitle}" />
+                <TextBlock Margin="0,8,0,0" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="Middle mouse drag to pan. Ctrl + wheel to zoom." />
+                <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding ZoomPercent, StringFormat=Zoom: {0}}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -12,11 +12,11 @@ using System.Windows.Shell;
 using System.Windows.Threading;
 using ControlzEx.Theming;
 using Dragablz;
-using MahApps.Metro.Controls;
 using Orbit.API;
 using Orbit.Models;
 using Orbit.ViewModels;
 using Orbit.Views;
+using FluentWindow = Wpf.Ui.Controls.FluentWindow;
 using Color = System.Windows.Media.Color;
 using ComboBox = System.Windows.Controls.ComboBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -30,7 +30,7 @@ using TextBoxBase = System.Windows.Controls.Primitives.TextBoxBase;
 
 namespace Orbit
 {
-	public partial class MainWindow : MetroWindow
+	public partial class MainWindow : FluentWindow
 	{
 	private readonly DispatcherTimer resizeTimer;
 	private readonly MainWindowViewModel viewModel;

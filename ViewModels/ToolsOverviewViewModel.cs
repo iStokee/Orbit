@@ -108,6 +108,7 @@ namespace Orbit.ViewModels
 				"Sessions" => Settings.Default.ShowMenuSessions,
 				"SessionGallery" => Settings.Default.ShowMenuSessionGallery,
 				"OrbitView" => Settings.Default.ShowMenuOrbitView,
+				"ConstellationBoard" => Settings.Default.ShowMenuOrbitView,
 				"AccountManager" => Settings.Default.ShowMenuAccountManager,
 				"ScriptManager" => Settings.Default.ShowMenuScriptControls,
 				"ThemeManager" => Settings.Default.ShowMenuThemeManager,
@@ -136,6 +137,9 @@ namespace Orbit.ViewModels
 						_mainWindowViewModel!.ShowMenuSessionGallery = value;
 						break;
 					case "OrbitView":
+						_mainWindowViewModel!.ShowMenuOrbitView = value;
+						break;
+					case "ConstellationBoard":
 						_mainWindowViewModel!.ShowMenuOrbitView = value;
 						break;
 					case "AccountManager":
@@ -181,6 +185,9 @@ namespace Orbit.ViewModels
 						Settings.Default.ShowMenuSessionGallery = value;
 						break;
 					case "OrbitView":
+						Settings.Default.ShowMenuOrbitView = value;
+						break;
+					case "ConstellationBoard":
 						Settings.Default.ShowMenuOrbitView = value;
 						break;
 					case "AccountManager":
@@ -238,6 +245,7 @@ namespace Orbit.ViewModels
 			{
 				"SessionsOverview" => "Overview and management of all RuneScape 3 sessions",
 				"Sessions" => "Manage RuneScape 3 sessions and embedded client windows",
+				"ConstellationBoard" => "Infinite canvas where each session is a sun with expandable tool constellations",
 				"AccountManager" => "Manage account credentials and quick login",
 				"ScriptControls" => "Load and control C# scripts via hot reload",
 				"ThemeManager" => "Customize themes, accents, and appearance",

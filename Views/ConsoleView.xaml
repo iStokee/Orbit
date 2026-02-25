@@ -187,7 +187,7 @@
 
         <!--  Tabbed Console Content  -->
         <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}" Padding="0">
-            <Controls:MetroTabControl
+            <TabControl
                 SelectedIndex="{Binding SelectedTabIndex}"
                 TabStripPlacement="Top">
 
@@ -411,7 +411,7 @@
                         Style="{StaticResource ConsoleListBoxStyle}" />
                 </TabItem>
 
-            </Controls:MetroTabControl>
+            </TabControl>
         </Border>
     </Grid>
 </UserControl>

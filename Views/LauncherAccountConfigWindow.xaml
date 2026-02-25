@@ -1,13 +1,15 @@
-<Controls:MetroWindow
+<ui:FluentWindow
     x:Class="Orbit.Views.LauncherAccountConfigWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Launcher Account Config"
     Width="860"
     Height="520"
+    Background="{DynamicResource Orbit.Brushes.Canvas.Background}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
     <Grid Margin="16">
@@ -47,4 +49,4 @@
             </StackPanel>
         </DockPanel>
     </Grid>
-</Controls:MetroWindow>
+</ui:FluentWindow>

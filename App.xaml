@@ -5,10 +5,15 @@
     xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     ShutdownMode="OnLastWindowClose">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!--  WPF UI base resources required for FluentWindow templates  -->
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+
                 <!--  MahApps.Metro v2 - Combined theme file (replaces separate base + accent)  -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
@@ -19,6 +24,8 @@
 
                 <!--  Orbit Session Templates - Unified across Main and Orbit View  -->
                 <ResourceDictionary Source="Resources/SessionTemplates.xaml" />
+                <!--  WinUI-style semantic tokens used during MahApps -> WPF UI migration  -->
+                <ResourceDictionary Source="Resources/OrbitWinUiTokens.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <Style BasedOn="{StaticResource MahAppsTabablzControlStyle}" TargetType="{x:Type dragablz:TabablzControl}">
@@ -47,6 +54,135 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+            </Style>
+
+            <!--  Orbit compatibility styles that replace common MahApps style keys  -->
+            <Style x:Key="MahApps.Styles.Button" TargetType="Button">
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="Background" Value="#22000000" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#33000000" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.85" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="MahApps.Styles.Button.Square" BasedOn="{StaticResource MahApps.Styles.Button}" TargetType="Button">
+                <Setter Property="Padding" Value="12,7" />
+                <Setter Property="MinWidth" Value="88" />
+            </Style>
+
+            <Style x:Key="MahApps.Styles.Button.Square.Accent" BasedOn="{StaticResource MahApps.Styles.Button.Square}" TargetType="Button">
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
+                            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
+            </Style>
+
+            <Style x:Key="MahApps.Styles.Button.Circle" BasedOn="{StaticResource MahApps.Styles.Button}" TargetType="Button">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="16">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#33000000" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.85" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="MahApps.Styles.ToggleButton" TargetType="ToggleButton">
+                <Setter Property="Padding" Value="10,5" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="Background" Value="#22000000" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border
+                                x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#33000000" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="MahApps.Styles.TextBox" TargetType="TextBox">
+                <Setter Property="Padding" Value="6,4" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="Background" Value="#1A000000" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                <Setter Property="BorderThickness" Value="1" />
             </Style>
 
             <!--  Fallback style for MahApps toggle buttons (Orbit only consumes the square variant)  -->

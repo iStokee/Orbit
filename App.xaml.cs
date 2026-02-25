@@ -132,6 +132,7 @@ public partial class App : Application
 			sp.GetRequiredService<SessionCollectionService>(),
 			sp.GetRequiredService<OrbitLayoutStateService>(),
 			sp.GetRequiredService<TearOffHostRegistry>()));
+		services.AddSingleton<IOrbitTool, ConstellationBoardTool>();
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();

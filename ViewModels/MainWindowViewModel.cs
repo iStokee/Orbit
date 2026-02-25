@@ -43,6 +43,7 @@ namespace Orbit.ViewModels
 	private const string ThemeManagerToolKey = "ThemeManager";
 	private const string SessionsOverviewToolKey = "SessionsOverview";
 	private const string ScriptManagerToolKey = "ScriptManager";
+	private const string ConstellationBoardToolKey = "ConstellationBoard";
 	private const string GuideToolKey = "ApiDocumentation";
 	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
 	private const string McpControlToolKey = "McpControl";
@@ -142,7 +143,8 @@ namespace Orbit.ViewModels
 		InjectCommand = new AsyncRelayCommand(InjectAsync, CanInject);
 		ShowSessionsCommand = new RelayCommand(ShowSessions, () => Sessions.Count > 0);
 		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey("SessionGallery"));
-	OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
+		OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
+		OpenConstellationBoardCommand = new RelayCommand(OpenConstellationBoardTab);
 	MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
 	MoveSessionToIndividualTabsCommand = new RelayCommand<object?>(MoveSessionToIndividualTabs, CanMoveSessionToIndividualTabs);
 	OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
@@ -204,6 +206,7 @@ namespace Orbit.ViewModels
 	public IRelayCommand ShowSessionsCommand { get; }
 	public IRelayCommand OpenSessionGalleryCommand { get; }
 	public IRelayCommand OpenOrbitViewCommand { get; }
+	public IRelayCommand OpenConstellationBoardCommand { get; }
 	public IRelayCommand<object?> MoveTabToOrbitCommand { get; }
 	public IRelayCommand<object?> MoveSessionToIndividualTabsCommand { get; }
 	public IRelayCommand OpenThemeManagerCommand { get; }
@@ -883,6 +886,14 @@ namespace Orbit.ViewModels
 		if (!TryOpenToolByKey(McpControlToolKey))
 		{
 			ConsoleLog.Append("[Orbit] MCP Control tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
+		}
+	}
+
+	public void OpenConstellationBoardTab()
+	{
+		if (!TryOpenToolByKey(ConstellationBoardToolKey))
+		{
+			ConsoleLog.Append("[Orbit] Constellation board tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
 		}
 	}
 

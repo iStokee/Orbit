@@ -1,4 +1,3 @@
-using ControlzEx.Theming;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,6 +9,8 @@ using Application = System.Windows.Application;
 using ColorConverter = System.Windows.Media.ColorConverter;
 using Color = System.Windows.Media.Color;
 using SystemColors = System.Windows.SystemColors;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
 
 namespace Orbit.Services
 {
@@ -22,9 +23,6 @@ namespace Orbit.Services
 		public string? ForegroundHex { get; set; }
 	}
 
-	/// <summary>
-	/// Theme descriptor for UI display
-	/// </summary>
 	public class ThemeDescriptor
 	{
 		public string Name { get; set; } = string.Empty;
@@ -44,7 +42,6 @@ namespace Orbit.Services
 	public class ThemeService
 	{
 		private const string CustomAccentPrefix = "custom:";
-		private const string CustomAccentDictionaryMarkerKey = "__Orbit.CustomAccentDictionary";
 		private const string OrbitTextPrimaryKey = "Orbit.Brushes.Text.Primary";
 		private const string OrbitTextSecondaryKey = "Orbit.Brushes.Text.Secondary";
 		private const string OrbitTextOnAccentKey = "Orbit.Brushes.Text.OnAccent";
@@ -52,49 +49,47 @@ namespace Orbit.Services
 		private const string OrbitTextOnHeaderSecondaryKey = "Orbit.Brushes.Text.OnHeaderSecondary";
 		private const string OrbitTextOnOverlayKey = "Orbit.Brushes.Text.OnOverlay";
 
-		/// <summary>
-		/// Get available base themes (Light, Dark)
-		/// </summary>
+		private static readonly IReadOnlyDictionary<string, Color> BuiltInSchemes =
+			new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
+			{
+				["Steel"] = Color.FromRgb(0x47, 0x8C, 0xD1),
+				["Cyan"] = Color.FromRgb(0x1B, 0xA1, 0xE2),
+				["Blue"] = Color.FromRgb(0x00, 0x78, 0xD7),
+				["Cobalt"] = Color.FromRgb(0x00, 0x50, 0xEF),
+				["Emerald"] = Color.FromRgb(0x00, 0xA3, 0x00),
+				["Green"] = Color.FromRgb(0x60, 0xA9, 0x17),
+				["Lime"] = Color.FromRgb(0xA4, 0xC4, 0x00),
+				["Teal"] = Color.FromRgb(0x00, 0xAB, 0xA9),
+				["Sienna"] = Color.FromRgb(0xA0, 0x52, 0x2D),
+				["Brown"] = Color.FromRgb(0x82, 0x52, 0x1B),
+				["Orange"] = Color.FromRgb(0xFA, 0x68, 0x00),
+				["Red"] = Color.FromRgb(0xE5, 0x14, 0x00),
+				["Crimson"] = Color.FromRgb(0xA2, 0x00, 0x25),
+				["Magenta"] = Color.FromRgb(0xD8, 0x00, 0x73),
+				["Purple"] = Color.FromRgb(0xA2, 0x00, 0xFF)
+			};
+
 		public ObservableCollection<string> GetAvailableBaseThemes()
-		{
-			var baseThemes = new HashSet<string>();
-			foreach (var theme in ThemeManager.Current.Themes)
-			{
-				if (!string.IsNullOrEmpty(theme.BaseColorScheme))
-					baseThemes.Add(theme.BaseColorScheme);
-			}
-			return new ObservableCollection<string>(baseThemes.OrderBy(x => x));
-		}
+			=> new(new[] { "Dark", "Light" });
 
-		/// <summary>
-		/// Get available color schemes (accent colors)
-		/// </summary>
 		public ObservableCollection<string> GetAvailableColorSchemes()
-		{
-			var schemes = new HashSet<string>();
-			foreach (var theme in ThemeManager.Current.Themes)
-			{
-				if (!string.IsNullOrEmpty(theme.ColorScheme))
-					schemes.Add(theme.ColorScheme);
-			}
-			return new ObservableCollection<string>(schemes.OrderBy(x => x));
-		}
+			=> new(BuiltInSchemes.Keys.OrderBy(x => x));
 
-		/// <summary>
-		/// Get all available themes as descriptors
-		/// </summary>
 		public ObservableCollection<ThemeDescriptor> GetAvailableThemes()
 		{
 			var themes = new List<ThemeDescriptor>();
-			foreach (var theme in ThemeManager.Current.Themes)
+			foreach (var baseTheme in GetAvailableBaseThemes())
 			{
-				themes.Add(new ThemeDescriptor(
-					theme.Name,
-					theme.DisplayName ?? theme.Name,
-					theme.BaseColorScheme ?? "Unknown",
-					theme.ColorScheme ?? "Unknown"
-				));
+				foreach (var scheme in GetAvailableColorSchemes())
+				{
+					themes.Add(new ThemeDescriptor(
+						$"{baseTheme}.{scheme}",
+						$"{baseTheme} {scheme}",
+						baseTheme,
+						scheme));
+				}
 			}
+
 			return new ObservableCollection<ThemeDescriptor>(themes.OrderBy(t => t.DisplayName));
 		}
 
@@ -114,7 +109,6 @@ namespace Orbit.Services
 			}
 			catch
 			{
-				// Corrupt settings; reset entry.
 				Settings.Default.CustomThemes = string.Empty;
 				Settings.Default.Save();
 				return new ObservableCollection<CustomThemeDefinition>();
@@ -133,9 +127,8 @@ namespace Orbit.Services
 			var savedThemeName = Settings.Default.Theme;
 			var savedAccentKey = Settings.Default.Accent;
 
-			// Handle custom themes
-			if (!string.IsNullOrWhiteSpace(savedAccentKey) &&
-			    savedAccentKey.StartsWith(CustomAccentPrefix, StringComparison.OrdinalIgnoreCase))
+			if (!string.IsNullOrWhiteSpace(savedAccentKey)
+			    && savedAccentKey.StartsWith(CustomAccentPrefix, StringComparison.OrdinalIgnoreCase))
 			{
 				var customName = savedAccentKey.Substring(CustomAccentPrefix.Length);
 				var custom = LoadCustomThemes().FirstOrDefault(t =>
@@ -148,36 +141,26 @@ namespace Orbit.Services
 				}
 			}
 
-			// Handle built-in themes
-			// v1 saved "BaseDark" + "Cyan", need to convert to v2 format "Dark.Cyan"
 			var baseTheme = ConvertLegacyBaseTheme(savedThemeName);
-			var colorScheme = savedAccentKey ?? "Cyan";
-
-			// Remove "custom:" prefix if it exists
+			var colorScheme = savedAccentKey ?? "Steel";
 			if (colorScheme.StartsWith(CustomAccentPrefix, StringComparison.OrdinalIgnoreCase))
 			{
-				colorScheme = "Cyan"; // Fallback
+				colorScheme = "Steel";
 			}
 
 			ApplyBuiltInTheme(baseTheme, colorScheme);
 		}
 
-		/// <summary>
-		/// Convert v1.6 theme names to v2.0 format
-		/// </summary>
-		private string ConvertLegacyBaseTheme(string? oldThemeName)
+		private static string ConvertLegacyBaseTheme(string? oldThemeName)
 		{
 			if (string.IsNullOrWhiteSpace(oldThemeName))
 				return "Dark";
 
-			// v1.6 used "BaseDark" and "BaseLight"
-			// v2.0 uses "Dark" and "Light"
 			if (oldThemeName.Equals("BaseDark", StringComparison.OrdinalIgnoreCase))
 				return "Dark";
 			if (oldThemeName.Equals("BaseLight", StringComparison.OrdinalIgnoreCase))
 				return "Light";
 
-			// If already in new format or unknown, return as-is
 			return oldThemeName;
 		}
 
@@ -187,32 +170,15 @@ namespace Orbit.Services
 			RemoveCustomForegroundOverrides();
 			RemoveCustomAccentOverrides();
 
-			// v2 format: "Dark.Cyan", "Light.Blue", etc.
-			var themeName = $"{baseTheme}.{colorScheme}";
-			var theme = ThemeManager.Current.GetTheme(themeName);
+			var normalizedBaseTheme = NormalizeBaseTheme(baseTheme);
+			var normalizedScheme = BuiltInSchemes.ContainsKey(colorScheme) ? colorScheme : "Steel";
 
-			if (theme != null)
-			{
-				ThemeLogger.Log($"Applying theme: {themeName}");
-				ThemeManager.Current.ChangeTheme(Application.Current, theme);
-				ApplyAccentResourcesFromTheme(theme);
-				ApplyOrbitSemanticTextResources();
-				SaveCurrentTheme(baseTheme, colorScheme);
-				ThemeLogger.Log($"Theme applied successfully");
-			}
-			else
-			{
-				// Fallback to Dark.Steel
-				ThemeLogger.Log($"Theme {themeName} not found, falling back to Dark.Steel");
-				var fallback = ThemeManager.Current.GetTheme("Dark.Steel");
-				if (fallback != null)
-				{
-					ThemeManager.Current.ChangeTheme(Application.Current, fallback);
-					ApplyAccentResourcesFromTheme(fallback);
-					ApplyOrbitSemanticTextResources();
-					SaveCurrentTheme("Dark", "Steel");
-				}
-			}
+			ApplyBaseTheme(normalizedBaseTheme);
+			ApplyAccentResources(BuiltInSchemes[normalizedScheme]);
+			ApplyBaseForegroundForTheme(normalizedBaseTheme);
+			ApplyOrbitSemanticTextResources();
+			SaveCurrentTheme(normalizedBaseTheme, normalizedScheme);
+			ThemeLogger.Log($"Theme applied successfully: {normalizedBaseTheme}.{normalizedScheme}");
 		}
 
 		public Color GetCurrentAccentColor()
@@ -236,53 +202,17 @@ namespace Orbit.Services
 		{
 			var resources = Application.Current.Resources;
 
-			if (resources.Contains("MahApps.Brushes.ThemeForeground") &&
-			    resources["MahApps.Brushes.ThemeForeground"] is SolidColorBrush brush)
+			if (resources.Contains("MahApps.Brushes.ThemeForeground") && resources["MahApps.Brushes.ThemeForeground"] is SolidColorBrush brush)
 			{
 				return brush.Color;
 			}
 
-			if (resources.Contains("MahApps.Colors.ThemeForeground") &&
-			    resources["MahApps.Colors.ThemeForeground"] is Color color)
+			if (resources.Contains("MahApps.Colors.ThemeForeground") && resources["MahApps.Colors.ThemeForeground"] is Color color)
 			{
 				return color;
 			}
 
 			return Colors.White;
-		}
-
-		private static void ApplyAccentResourcesFromTheme(Theme theme)
-		{
-			Color? ResolveColor(object? candidate)
-				=> candidate switch
-				{
-					Color color => color,
-					SolidColorBrush brush => brush.Color,
-					_ => null
-				};
-
-			var resources = theme?.Resources;
-			if (resources == null)
-			{
-				ApplyAccentResources(Colors.SteelBlue);
-				return;
-			}
-
-			Color? accent = resources.Contains("MahApps.Colors.Accent")
-				? ResolveColor(resources["MahApps.Colors.Accent"])
-				: null;
-			if (accent == null && resources.Contains("MahApps.Brushes.Accent"))
-			{
-				accent = ResolveColor(resources["MahApps.Brushes.Accent"]);
-			}
-
-			if (accent == null)
-			{
-				var fallback = Application.Current.TryFindResource("MahApps.Brushes.Accent");
-				accent = ResolveColor(fallback) ?? Colors.SteelBlue;
-			}
-
-			ApplyAccentResources(accent.Value);
 		}
 
 		public void ApplyCustomTheme(CustomThemeDefinition customTheme)
@@ -295,37 +225,12 @@ namespace Orbit.Services
 				accentColor = Colors.SteelBlue;
 			}
 
-			// Get base theme name and ensure it's in v2 format
 			var baseTheme = ConvertLegacyBaseTheme(customTheme.BaseTheme);
 			ThemeLogger.Log($"Using base theme: {baseTheme}");
 
-			// Remove any existing custom accent overrides first
 			RemoveCustomForegroundOverrides();
 			RemoveCustomAccentOverrides();
-
-			// Apply base theme first (using a standard color scheme)
-			var baseThemeObj = ThemeManager.Current.GetTheme($"{baseTheme}.Steel");
-			if (baseThemeObj == null)
-			{
-				// Fallback to any theme with matching base
-				baseThemeObj = ThemeManager.Current.Themes.FirstOrDefault(t =>
-					t.BaseColorScheme?.Equals(baseTheme, StringComparison.OrdinalIgnoreCase) == true);
-			}
-
-			if (baseThemeObj == null)
-			{
-				// Cannot create custom theme without base
-				ApplyBuiltInTheme("Dark", "Steel");
-				return;
-			}
-
-			// Apply the base theme
-			ThemeLogger.Log($"Applying base theme: {baseTheme}.Steel");
-			ThemeManager.Current.ChangeTheme(Application.Current, baseThemeObj);
-
-			// IMPORTANT: After ChangeTheme, MahApps adds dictionaries to the collection.
-			// We need to apply our custom accents AFTER to ensure they override Steel colors
-			ThemeLogger.Log("Applying custom accent colors");
+			ApplyBaseTheme(baseTheme);
 			ApplyAccentResources(accentColor);
 
 			if (customTheme.OverrideForeground && !string.IsNullOrWhiteSpace(customTheme.ForegroundHex))
@@ -337,19 +242,17 @@ namespace Orbit.Services
 				}
 				else
 				{
-					ThemeLogger.Log($"Failed to parse custom foreground {customTheme.ForegroundHex}, keeping theme defaults");
-					RemoveCustomForegroundOverrides();
+					ThemeLogger.Log($"Failed to parse custom foreground {customTheme.ForegroundHex}, using theme default");
+					ApplyBaseForegroundForTheme(baseTheme);
 				}
 			}
 			else
 			{
-				RemoveCustomForegroundOverrides();
+				ApplyBaseForegroundForTheme(baseTheme);
 			}
 
 			ApplyOrbitSemanticTextResources();
 			ThemeLogger.Log("<<< Custom theme applied successfully");
-
-			// Save the custom theme reference
 			SaveCurrentTheme(baseTheme, $"{CustomAccentPrefix}{customTheme.Name}");
 		}
 
@@ -369,13 +272,8 @@ namespace Orbit.Services
 			var idealForeground = GetSharedAccentForeground(accentColor, accentColor2, accentColor3, accentColor4, highlightColor);
 
 			ThemeLogger.Log($"ApplyAccentResources: Primary={accentColor}, IdealForeground={idealForeground}");
-
-			// Instead of using a custom dictionary in MergedDictionaries,
-			// set the resources directly on Application.Current.Resources
-			// This ensures they override all theme resources
 			var resources = Application.Current.Resources;
 
-			// MahApps v2 uses MahApps.* prefixed keys
 			resources["MahApps.Colors.Accent"] = accentColor;
 			ThemeLogger.LogResourceSet("MahApps.Colors.Accent", accentColor);
 			resources["MahApps.Colors.Accent2"] = accentColor2;
@@ -417,55 +315,34 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet("MahApps.Brushes.HighlightForeground", resources["MahApps.Brushes.HighlightForeground"]);
 			resources["ControlzEx.Brushes.AccentForeground"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("ControlzEx.Brushes.AccentForeground", resources["ControlzEx.Brushes.AccentForeground"]);
-
-			// Legacy aliases for backward compatibility
-			resources["AccentColor"] = accentColor;
-			ThemeLogger.LogResourceSet("AccentColor", accentColor);
-			resources["AccentColor2"] = accentColor2;
-			ThemeLogger.LogResourceSet("AccentColor2", accentColor2);
-			resources["AccentColor3"] = accentColor3;
-			ThemeLogger.LogResourceSet("AccentColor3", accentColor3);
-			resources["AccentColor4"] = accentColor4;
-			ThemeLogger.LogResourceSet("AccentColor4", accentColor4);
-			resources["HighlightColor"] = highlightColor;
-			ThemeLogger.LogResourceSet("HighlightColor", highlightColor);
-			resources["IdealForegroundColor"] = idealForeground;
-			ThemeLogger.LogResourceSet("IdealForegroundColor", idealForeground);
-			resources["AccentForegroundColor"] = idealForeground;
-			ThemeLogger.LogResourceSet("AccentForegroundColor", idealForeground);
-
-			resources["AccentColorBrush"] = CreateFrozenBrush(accentColor);
-			ThemeLogger.LogResourceSet("AccentColorBrush", resources["AccentColorBrush"]);
-			resources["AccentColorBrush2"] = CreateFrozenBrush(accentColor2);
-			ThemeLogger.LogResourceSet("AccentColorBrush2", resources["AccentColorBrush2"]);
-			resources["AccentColorBrush3"] = CreateFrozenBrush(accentColor3);
-			ThemeLogger.LogResourceSet("AccentColorBrush3", resources["AccentColorBrush3"]);
-			resources["AccentColorBrush4"] = CreateFrozenBrush(accentColor4);
-			ThemeLogger.LogResourceSet("AccentColorBrush4", resources["AccentColorBrush4"]);
-			resources["HighlightBrush"] = CreateFrozenBrush(highlightColor);
-			ThemeLogger.LogResourceSet("HighlightBrush", resources["HighlightBrush"]);
-			resources["IdealForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
-			ThemeLogger.LogResourceSet("IdealForegroundColorBrush", resources["IdealForegroundColorBrush"]);
-			resources["AccentForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
-			ThemeLogger.LogResourceSet("AccentForegroundColorBrush", resources["AccentForegroundColorBrush"]);
-			resources["AccentSelectedForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
-			ThemeLogger.LogResourceSet("AccentSelectedForegroundColorBrush", resources["AccentSelectedForegroundColorBrush"]);
-
-			// MahApps v2 window title brushes
 			resources["MahApps.Brushes.WindowTitle"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("MahApps.Brushes.WindowTitle", resources["MahApps.Brushes.WindowTitle"]);
 
-			// Additional UI-specific brushes
+			resources["Orbit.Brushes.Accent.Primary"] = CreateFrozenBrush(accentColor);
+			ThemeLogger.LogResourceSet("Orbit.Brushes.Accent.Primary", resources["Orbit.Brushes.Accent.Primary"]);
+			resources["Orbit.Brushes.Accent.Strong"] = CreateFrozenBrush(accentColor2);
+			ThemeLogger.LogResourceSet("Orbit.Brushes.Accent.Strong", resources["Orbit.Brushes.Accent.Strong"]);
+
+			resources["AccentColor"] = accentColor;
+			resources["AccentColor2"] = accentColor2;
+			resources["AccentColor3"] = accentColor3;
+			resources["AccentColor4"] = accentColor4;
+			resources["HighlightColor"] = highlightColor;
+			resources["IdealForegroundColor"] = idealForeground;
+			resources["AccentForegroundColor"] = idealForeground;
+			resources["AccentColorBrush"] = CreateFrozenBrush(accentColor);
+			resources["AccentColorBrush2"] = CreateFrozenBrush(accentColor2);
+			resources["AccentColorBrush3"] = CreateFrozenBrush(accentColor3);
+			resources["AccentColorBrush4"] = CreateFrozenBrush(accentColor4);
+			resources["HighlightBrush"] = CreateFrozenBrush(highlightColor);
+			resources["IdealForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
+			resources["AccentForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
+			resources["AccentSelectedForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
 			resources["AccentSelectedColorBrush"] = CreateFrozenBrush(accentColor);
-			ThemeLogger.LogResourceSet("AccentSelectedColorBrush", resources["AccentSelectedColorBrush"]);
-			resources["WindowTitleColorBrush"] = CreateFrozenBrush(accentColor); // Legacy alias
-			ThemeLogger.LogResourceSet("WindowTitleColorBrush", resources["WindowTitleColorBrush"]);
+			resources["WindowTitleColorBrush"] = CreateFrozenBrush(accentColor);
 			resources["ProgressBrush"] = CreateFrozenBrush(accentColor);
-			ThemeLogger.LogResourceSet("ProgressBrush", resources["ProgressBrush"]);
 			resources["CheckmarkFill"] = CreateFrozenBrush(idealForeground);
-			ThemeLogger.LogResourceSet("CheckmarkFill", resources["CheckmarkFill"]);
 			resources["RightArrowFill"] = CreateFrozenBrush(idealForeground);
-			ThemeLogger.LogResourceSet("RightArrowFill", resources["RightArrowFill"]);
 		}
 
 		private static void ApplyForegroundResources(Color foregroundColor)
@@ -494,6 +371,20 @@ namespace Orbit.Services
 			SetBrushResource(SystemColors.ControlTextBrushKey, foregroundColor);
 			SetBrushResource(SystemColors.MenuTextBrushKey, foregroundColor);
 			SetBrushResource(SystemColors.HighlightTextBrushKey, foregroundColor);
+		}
+
+		private static void ApplyBaseForegroundForTheme(string baseTheme)
+		{
+			var foreground = baseTheme.Equals("Light", StringComparison.OrdinalIgnoreCase)
+				? Colors.Black
+				: Colors.White;
+			var background = baseTheme.Equals("Light", StringComparison.OrdinalIgnoreCase)
+				? Color.FromRgb(0xF5, 0xF5, 0xF5)
+				: Color.FromRgb(0x1F, 0x1F, 0x1F);
+
+			ApplyForegroundResources(foreground);
+			SetBrushResource("MahApps.Brushes.ThemeBackground", background);
+			Application.Current.Resources["MahApps.Colors.ThemeBackground"] = background;
 		}
 
 		private static void RemoveCustomForegroundOverrides()
@@ -543,17 +434,13 @@ namespace Orbit.Services
 			var accent2 = ResolveResourceColor(resources, "MahApps.Brushes.Accent2", ChangeColorBrightness(accent, 0.2));
 			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent, -0.2));
 			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent, -0.4));
-			var accentForeground = ResolveResourceColor(
-				resources,
-				"MahApps.Brushes.AccentForeground",
-				GetSharedAccentForeground(accent, accent2, accent3, accent4));
+			var accentForeground = ResolveResourceColor(resources, "MahApps.Brushes.AccentForeground", GetSharedAccentForeground(accent, accent2, accent3, accent4));
 
 			var primary = EnsureReadable(themeForeground, background, 4.5);
 			var secondary = DeriveSecondaryText(primary, background);
 			var onAccent = accentForeground;
 
 			var headerSurface = AverageColor(accent, accent2, accent3);
-			// Keep accent/header text decisions unified so controls on accent variants don't diverge.
 			var onHeader = EnsureReadable(accentForeground, headerSurface, 4.5);
 			var onHeaderSecondary = DeriveSecondaryText(onHeader, headerSurface);
 			if (GetContrastRatio(onHeaderSecondary, headerSurface) < 3.0)
@@ -597,17 +484,13 @@ namespace Orbit.Services
 
 			var black = Colors.Black;
 			var white = Colors.White;
-			return GetContrastRatio(black, background) >= GetContrastRatio(white, background)
-				? black
-				: white;
+			return GetContrastRatio(black, background) >= GetContrastRatio(white, background) ? black : white;
 		}
 
 		private static Color DeriveSecondaryText(Color primary, Color background)
 		{
 			var candidate = Blend(primary, background, 0.72);
-			return GetContrastRatio(candidate, background) >= 3.0
-				? candidate
-				: EnsureReadable(primary, background, 3.0);
+			return GetContrastRatio(candidate, background) >= 3.0 ? candidate : EnsureReadable(primary, background, 3.0);
 		}
 
 		private static Color AverageColor(params Color[] colors)
@@ -630,11 +513,7 @@ namespace Orbit.Services
 			}
 
 			var count = colors.Length;
-			return Color.FromArgb(
-				(byte)Math.Round(a / count),
-				(byte)Math.Round(r / count),
-				(byte)Math.Round(g / count),
-				(byte)Math.Round(b / count));
+			return Color.FromArgb((byte)Math.Round(a / count), (byte)Math.Round(r / count), (byte)Math.Round(g / count), (byte)Math.Round(b / count));
 		}
 
 		private static Color Blend(Color foreground, Color background, double foregroundWeight)
@@ -662,9 +541,7 @@ namespace Orbit.Services
 			static double ToLinear(byte component)
 			{
 				var srgb = component / 255.0;
-				return srgb <= 0.03928
-					? srgb / 12.92
-					: Math.Pow((srgb + 0.055) / 1.055, 2.4);
+				return srgb <= 0.03928 ? srgb / 12.92 : Math.Pow((srgb + 0.055) / 1.055, 2.4);
 			}
 
 			var r = ToLinear(color.R);
@@ -680,29 +557,15 @@ namespace Orbit.Services
 			ThemeLogger.LogResourceSet(key.ToString() ?? key.GetType().Name, brush);
 		}
 
-		private static ResourceDictionary EnsureCustomAccentDictionary()
+		private static string NormalizeBaseTheme(string? baseTheme)
+			=> string.Equals(baseTheme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+
+		private static void ApplyBaseTheme(string baseTheme)
 		{
-			var resources = Application.Current.Resources;
-
-			// Check if custom dictionary already exists
-			foreach (var dictionary in resources.MergedDictionaries)
-			{
-				if (dictionary.Contains(CustomAccentDictionaryMarkerKey))
-				{
-					// Move it to the end for highest priority
-					resources.MergedDictionaries.Remove(dictionary);
-					resources.MergedDictionaries.Add(dictionary);
-					return dictionary;
-				}
-			}
-
-			// Create new custom dictionary at the end (highest priority)
-			var customDictionary = new ResourceDictionary
-			{
-				{ CustomAccentDictionaryMarkerKey, true }
-			};
-			resources.MergedDictionaries.Add(customDictionary);
-			return customDictionary;
+			var appTheme = NormalizeBaseTheme(baseTheme).Equals("Light", StringComparison.OrdinalIgnoreCase)
+				? ApplicationTheme.Light
+				: ApplicationTheme.Dark;
+			ApplicationThemeManager.Apply(appTheme, WindowBackdropType.None, updateAccent: false);
 		}
 
 		private static void RemoveCustomAccentOverrides()
@@ -710,8 +573,6 @@ namespace Orbit.Services
 			ThemeLogger.Log("RemoveCustomAccentOverrides: Cleaning up custom accent resources");
 			var resources = Application.Current.Resources;
 
-			// Remove custom resource keys from Application.Current.Resources
-			// This allows the base theme resources to show through
 			var keysToRemove = new[]
 			{
 				"MahApps.Colors.Accent", "MahApps.Colors.Accent2", "MahApps.Colors.Accent3", "MahApps.Colors.Accent4",
@@ -722,6 +583,7 @@ namespace Orbit.Services
 				"MahApps.Brushes.Highlight", "MahApps.Brushes.IdealForeground", "MahApps.Brushes.WindowTitle",
 				"MahApps.Brushes.AccentForeground", "MahApps.Brushes.AccentSelectedForeground", "MahApps.Brushes.HighlightForeground",
 				"ControlzEx.Brushes.AccentForeground",
+				"Orbit.Brushes.Accent.Primary", "Orbit.Brushes.Accent.Strong",
 				"AccentColor", "AccentColor2", "AccentColor3", "AccentColor4", "HighlightColor", "IdealForegroundColor",
 				"AccentForegroundColor",
 				"AccentColorBrush", "AccentColorBrush2", "AccentColorBrush3", "AccentColorBrush4",
@@ -755,7 +617,6 @@ namespace Orbit.Services
 			}
 			catch
 			{
-				// Ignore and fallback below.
 			}
 
 			color = Colors.SteelBlue;
@@ -792,12 +653,6 @@ namespace Orbit.Services
 			return Color.FromArgb(color.A, (byte)red, (byte)green, (byte)blue);
 		}
 
-		private static Color GetIdealForegroundColor(Color color)
-		{
-			double luma = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255;
-			return luma > 0.5 ? Colors.Black : Colors.White;
-		}
-
 		private static Color GetSharedAccentForeground(params Color[] accentSurfaces)
 		{
 			if (accentSurfaces == null || accentSurfaces.Length == 0)
@@ -816,7 +671,6 @@ namespace Orbit.Services
 				minWhiteContrast = Math.Min(minWhiteContrast, GetContrastRatio(white, surface));
 			}
 
-			// Pick the color with the strongest worst-case contrast across all accent variants.
 			return minBlackContrast >= minWhiteContrast ? black : white;
 		}
 	}

@@ -1,13 +1,13 @@
 using System.Windows;
-using MahApps.Metro.Controls;
 using Orbit.ViewModels;
+using FluentWindow = Wpf.Ui.Controls.FluentWindow;
 
 namespace Orbit.Views;
 
 /// <summary>
 /// Interaction logic for SessionCloseDialog.xaml
 /// </summary>
-public partial class SessionCloseDialog : MetroWindow
+public partial class SessionCloseDialog : FluentWindow
 {
 	public SessionCloseDialog(SessionCloseDialogViewModel viewModel)
 	{

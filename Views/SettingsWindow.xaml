@@ -1,11 +1,11 @@
-﻿<Controls:MetroWindow x:Class="Orbit.Views.SettingsWindow"
+﻿<ui:FluentWindow x:Class="Orbit.Views.SettingsWindow"
                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                      xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
                       xmlns:converters="clr-namespace:Orbit.Converters"
                       xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+                      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                       mc:Ignorable="d"
                       Title="Orbit Settings"
                       Icon="{DynamicResource Orbit.IconImage}"
@@ -14,21 +14,15 @@
                       MinWidth="420"
                       MinHeight="420"
                       WindowStartupLocation="CenterOwner"
-                      Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                      TitleCharacterCasing="Normal">
+                      Background="{DynamicResource Orbit.Brushes.Canvas.Background}"
+                      Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
 
-    <Controls:MetroWindow.Resources>
+    <Window.Resources>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-    </Controls:MetroWindow.Resources>
+    </Window.Resources>
 
-    <Controls:MetroWindow.IconTemplate>
-        <DataTemplate>
-            <iconPacks:PackIconMaterial Kind="Tune" Height="20" Width="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </DataTemplate>
-    </Controls:MetroWindow.IconTemplate>
-
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent">
         <StackPanel Margin="20" Orientation="Vertical">
             <TextBlock Text="Floating Menu" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
@@ -64,9 +58,10 @@
                            Text="{Binding FloatingMenuBackgroundOpacity, StringFormat={}{0:P0}}" />
             </StackPanel>
 
-            <Controls:ToggleSwitch Header="Auto direction (expand inward from nearest edge)"
-                                   IsOn="{Binding FloatingMenuAutoDirection, Mode=TwoWay}"
-                                   Margin="0,12,0,0" />
+            <CheckBox
+                Content="Auto direction (expand inward from nearest edge)"
+                IsChecked="{Binding FloatingMenuAutoDirection, Mode=TwoWay}"
+                Margin="0,12,0,0" />
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
@@ -79,7 +74,7 @@
                           SelectedItem="{Binding FloatingMenuDirection, Mode=TwoWay}" />
             </StackPanel>
 
-            <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+            <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Card.Border}" />
 
             <TextBlock Text="Dock Zones" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
@@ -115,4 +110,4 @@
             </StackPanel>
         </StackPanel>
     </ScrollViewer>
-</Controls:MetroWindow>
+</ui:FluentWindow>

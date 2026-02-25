@@ -2,7 +2,6 @@
     x:Class="Orbit.Views.ThemeManagerPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
     xmlns:colorpicker="clr-namespace:ColorPicker;assembly=ColorPicker"
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
@@ -579,8 +578,8 @@
                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="{Binding SelectedBaseTheme, StringFormat='Base mode: {0} (applies globally). Choose Presets or Custom below for colors.'}" />
 
-                        <Controls:MetroTabControl Grid.Row="2">
-                            <Controls:MetroTabItem Header="Presets">
+                        <TabControl Grid.Row="2">
+                            <TabItem Header="Presets">
                                 <Grid Margin="0,10,0,0">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*" />
@@ -636,9 +635,9 @@
                                         </StackPanel>
                                     </Button>
                                 </Grid>
-                            </Controls:MetroTabItem>
+                            </TabItem>
 
-                            <Controls:MetroTabItem Header="Custom">
+                            <TabItem Header="Custom">
                                 <ListBox
                                         Margin="0,10,0,0"
                                         BorderThickness="0"
@@ -683,8 +682,8 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                            </Controls:MetroTabItem>
-                        </Controls:MetroTabControl>
+                            </TabItem>
+                        </TabControl>
                     </Grid>
                 </Border>
             </Grid>

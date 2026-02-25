@@ -1,14 +1,14 @@
-using MahApps.Metro.Controls;
 using Orbit.Models;
 using Orbit.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using FluentWindow = Wpf.Ui.Controls.FluentWindow;
 
 namespace Orbit.Views;
 
-public partial class LauncherAccountConfigWindow : MetroWindow
+public partial class LauncherAccountConfigWindow : FluentWindow
 {
 	private sealed class EditableLauncherAccount : INotifyPropertyChanged
 	{
