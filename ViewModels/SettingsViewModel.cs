@@ -20,6 +20,9 @@ using Orbit.Services;
 using Orbit.Services.Updates;
 using Orbit.Utilities;
 using Orbit.Models;
+using System.Windows.Media;
+using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
@@ -58,10 +61,13 @@ namespace Orbit.ViewModels
 		private string _injectorDllMetadata = string.Empty;
 		private bool _selectedInjectorDllExists;
 		private bool _selectedInjectorLooksLikeMesharp;
+		private string _updateBadgeColorHex = "#FFFFC44D";
 
 		private const string ExpectedGitHubAuthor = UpdateConfig.ExpectedAuthor;
 		private const string DefaultInjectorDllName = "XInput1_4_inject.dll";
 		private const int MaxRecentInjectorDlls = 10;
+		private const string DefaultUpdateBadgeColorHex = "#FFFFC44D";
+		private const string UpdateBadgeBrushKey = "Orbit.UpdateBadgeBrush";
 
 		public SettingsViewModel()
 		{
@@ -83,8 +89,10 @@ namespace Orbit.ViewModels
 			BrowseInjectorDllCommand = new RelayCommand(BrowseInjectorDll);
 			UseDefaultInjectorDllCommand = new RelayCommand(UseDefaultInjectorDll);
 			ClearInjectorHistoryCommand = new RelayCommand(ClearInjectorHistory);
+			ResetUpdateBadgeColorCommand = new RelayCommand(ResetUpdateBadgeColor);
 
 			InitializeInjectorDllSelection();
+			InitializeUpdateBadgeColor();
 
 			// Check for updates on startup (silently)
 			_ = CheckForUpdatesAsync(silent: true);
@@ -228,6 +236,32 @@ namespace Orbit.ViewModels
 			}
 		}
 
+		public string UpdateBadgeColorHex
+		{
+			get => _updateBadgeColorHex;
+			set
+			{
+				var candidate = value?.Trim() ?? string.Empty;
+				if (!TryParseColor(candidate, out var color))
+				{
+					OnPropertyChanged();
+					return;
+				}
+
+				var normalized = color.ToString();
+				if (string.Equals(_updateBadgeColorHex, normalized, StringComparison.OrdinalIgnoreCase))
+				{
+					return;
+				}
+
+				_updateBadgeColorHex = normalized;
+				Settings.Default.UpdateBadgeColorHex = normalized;
+				Settings.Default.Save();
+				ApplyUpdateBadgeBrush(color);
+				OnPropertyChanged();
+			}
+		}
+
 		#endregion
 
 		#region Commands
@@ -243,6 +277,7 @@ namespace Orbit.ViewModels
 		public IRelayCommand BrowseInjectorDllCommand { get; }
 		public IRelayCommand UseDefaultInjectorDllCommand { get; }
 		public IRelayCommand ClearInjectorHistoryCommand { get; }
+		public IRelayCommand ResetUpdateBadgeColorCommand { get; }
 
 		#endregion
 
@@ -1058,6 +1093,85 @@ namespace Orbit.ViewModels
 	#endregion
 
 	#region Helpers
+
+	private void InitializeUpdateBadgeColor()
+	{
+		var configured = Settings.Default.UpdateBadgeColorHex;
+		if (!TryParseColor(configured, out var color))
+		{
+			TryParseColor(DefaultUpdateBadgeColorHex, out color);
+			Settings.Default.UpdateBadgeColorHex = DefaultUpdateBadgeColorHex;
+			Settings.Default.Save();
+		}
+
+		_updateBadgeColorHex = color.ToString();
+		ApplyUpdateBadgeBrush(color);
+	}
+
+	private void ResetUpdateBadgeColor()
+	{
+		UpdateBadgeColorHex = DefaultUpdateBadgeColorHex;
+	}
+
+	private static bool TryParseColor(string? value, out MediaColor color)
+	{
+		color = default;
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			return false;
+		}
+
+		try
+		{
+			var parsed = MediaColorConverter.ConvertFromString(value);
+			if (parsed is MediaColor resolved)
+			{
+				color = resolved;
+				return true;
+			}
+		}
+		catch
+		{
+			// Invalid color format.
+		}
+
+		return false;
+	}
+
+	private static void ApplyUpdateBadgeBrush(MediaColor color)
+	{
+		var app = Application.Current;
+		if (app == null)
+		{
+			return;
+		}
+
+		void UpdateResource()
+		{
+			if (app.Resources[UpdateBadgeBrushKey] is SolidColorBrush existing)
+			{
+				if (!existing.IsFrozen)
+				{
+					existing.Color = color;
+					return;
+				}
+
+				app.Resources[UpdateBadgeBrushKey] = new SolidColorBrush(color);
+				return;
+			}
+
+			app.Resources[UpdateBadgeBrushKey] = new SolidColorBrush(color);
+		}
+
+		if (app.Dispatcher.CheckAccess())
+		{
+			UpdateResource();
+		}
+		else
+		{
+			app.Dispatcher.Invoke(UpdateResource);
+		}
+	}
 
 	private static bool TryApplyToMain(Action<MainWindowViewModel> action)
 	{

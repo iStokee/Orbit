@@ -242,25 +242,48 @@ namespace Orbit
 
 		private void RestoreWindowPlacementFromSettingsIfPrimary()
 		{
-			if (!isPrimaryShellWindow)
-			{
-				return;
-			}
-
 			var savedWidth = Settings.Default.MainWindowWidth;
 			var savedHeight = Settings.Default.MainWindowHeight;
 			var savedLeft = Settings.Default.MainWindowLeft;
 			var savedTop = Settings.Default.MainWindowTop;
 			var savedMaximized = Settings.Default.MainWindowMaximized;
+			var referencePrimaryWindow = System.Windows.Application.Current?.MainWindow;
 
-			if (IsFinitePositive(savedWidth) && savedWidth >= 640)
+			// All windows (including tear-offs) should inherit primary shell dimensions.
+			var sizeSourceWindow = !ReferenceEquals(referencePrimaryWindow, this) ? referencePrimaryWindow : null;
+			if (sizeSourceWindow is { IsLoaded: true } && sizeSourceWindow.WindowState != WindowState.Minimized)
 			{
-				Width = savedWidth;
+				var sourceBounds = sizeSourceWindow.WindowState == WindowState.Normal
+					? new Rect(sizeSourceWindow.Left, sizeSourceWindow.Top, sizeSourceWindow.Width, sizeSourceWindow.Height)
+					: sizeSourceWindow.RestoreBounds;
+
+				if (IsFinitePositive(sourceBounds.Width) && sourceBounds.Width >= 640)
+				{
+					Width = sourceBounds.Width;
+				}
+
+				if (IsFinitePositive(sourceBounds.Height) && sourceBounds.Height >= 480)
+				{
+					Height = sourceBounds.Height;
+				}
+			}
+			else
+			{
+				if (IsFinitePositive(savedWidth) && savedWidth >= 640)
+				{
+					Width = savedWidth;
+				}
+
+				if (IsFinitePositive(savedHeight) && savedHeight >= 480)
+				{
+					Height = savedHeight;
+				}
 			}
 
-			if (IsFinitePositive(savedHeight) && savedHeight >= 480)
+			// Only the primary shell controls persisted position/maximized state.
+			if (!isPrimaryShellWindow)
 			{
-				Height = savedHeight;
+				return;
 			}
 
 			var hasSavedPosition = !NearlyEquals(savedLeft, -1d) && !NearlyEquals(savedTop, -1d);

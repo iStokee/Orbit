@@ -59,6 +59,7 @@ namespace Orbit.ViewModels
 	private readonly ConsoleLogService consoleLogService;
 	private readonly IToolRegistry toolRegistry;
 	private readonly InterTabClient interTabClient;
+	private readonly SettingsViewModel settingsViewModel;
 	private SessionModel selectedSession;
 	private SessionModel? hotReloadTargetSession;
 	private string hotReloadScriptPath;
@@ -85,6 +86,7 @@ namespace Orbit.ViewModels
 	private readonly HashSet<Guid> closingSessionIds = new();
 	private readonly HashSet<Guid> pendingOrphanValidationSessionIds = new();
 	private bool isLauncherBatchLaunchInProgress;
+	private bool hasUpdateNotification;
 
 	/// <summary>
 	/// Creates the main window view model. Most dependencies are long-lived services shared via DI;
@@ -101,6 +103,7 @@ namespace Orbit.ViewModels
 		OrbitLayoutStateService orbitLayoutStateService,
 		ConsoleLogService consoleLogService,
 		InterTabClient interTabClient,
+		SettingsViewModel settingsViewModel,
 		IToolRegistry toolRegistry)
 	{
 		this.sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
@@ -110,10 +113,11 @@ namespace Orbit.ViewModels
 		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
 		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
-		this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
-		this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
-		this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
-		this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
+			this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
+			this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
+			this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
+			this.settingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
+			this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 
 		ScriptManager = this.scriptManagerService;
 		AccountService = this.accountService;
@@ -183,9 +187,11 @@ namespace Orbit.ViewModels
 			?? Sessions.FirstOrDefault();
 		HotReloadTargetSession = initialHotReloadTarget;
 
-		ApplyThemeFromSettings();
-		UpdateFloatingMenuWelcomeHint(Settings.Default.ShowThemeManagerWelcomeMessage);
-	}
+			ApplyThemeFromSettings();
+			UpdateFloatingMenuWelcomeHint(Settings.Default.ShowThemeManagerWelcomeMessage);
+			hasUpdateNotification = this.settingsViewModel.HasUpdate;
+			this.settingsViewModel.PropertyChanged += OnSettingsViewModelPropertyChanged;
+		}
 
 	public ObservableCollection<SessionModel> Sessions { get; }
 	public ObservableCollection<object> Tabs { get; }
@@ -220,6 +226,20 @@ namespace Orbit.ViewModels
 	public IRelayCommand OpenMcpControlCommand { get; }
 	public Array FloatingMenuDirectionOptions { get; }
 	public Array FloatingMenuQuickToggleModes { get; }
+	public bool HasUpdateNotification
+	{
+		get => hasUpdateNotification;
+		private set
+		{
+			if (hasUpdateNotification == value)
+			{
+				return;
+			}
+
+			hasUpdateNotification = value;
+			OnPropertyChanged(nameof(HasUpdateNotification));
+		}
+	}
 
 	public bool AutoInjectOnReady
 	{
@@ -888,6 +908,16 @@ namespace Orbit.ViewModels
 		}
 
 		return service;
+	}
+
+	private void OnSettingsViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (!string.Equals(e.PropertyName, nameof(SettingsViewModel.HasUpdate), StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		HasUpdateNotification = settingsViewModel.HasUpdate;
 	}
 
 	/// <summary>
@@ -2683,8 +2713,9 @@ namespace Orbit.ViewModels
 			{
 				Tabs.CollectionChanged -= OnTabsCollectionChanged;
 				Sessions.CollectionChanged -= OnSessionsCollectionChanged;
-				sessionCollectionService.PropertyChanged -= OnGlobalSessionChanged;
-				lock (sessionCloseSync)
+					sessionCollectionService.PropertyChanged -= OnGlobalSessionChanged;
+					settingsViewModel.PropertyChanged -= OnSettingsViewModelPropertyChanged;
+					lock (sessionCloseSync)
 				{
 					pendingOrphanValidationSessionIds.Clear();
 				}

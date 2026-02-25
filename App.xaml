@@ -28,6 +28,7 @@
 
             <!-- Shared outer margin for tool pages (tighter than the original 16px). -->
             <Thickness x:Key="Orbit.ToolPageMargin">12</Thickness>
+            <SolidColorBrush x:Key="Orbit.UpdateBadgeBrush" Color="#FFFFC44D" />
 
             <!--  Orbit Grid Cell Style - for TabablzControls in Orbit View grid layout  -->
             <Style

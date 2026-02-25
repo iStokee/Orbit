@@ -17,20 +17,25 @@ namespace Orbit.ViewModels
 	public enum ThemeColorEditorMode
 	{
 		Accent,
-		Foreground
+		Foreground,
+		UpdateBadge
 	}
 
 	public class ThemeManagerViewModel : ObservableObject
 	{
-		private readonly ThemeService themeService;
-		private string customThemeName = string.Empty;
-		private MediaColor selectedCustomColor = MediaColors.SteelBlue;
-		private CustomThemeDefinition? selectedCustomTheme;
+	private readonly ThemeService themeService;
+	private string customThemeName = string.Empty;
+	private MediaColor selectedCustomColor = MediaColors.SteelBlue;
+	private MediaColor updateBadgeColor = MediaColor.FromRgb(255, 196, 77);
+	private string updateBadgeColorHex = "#FFFFC44D";
+	private CustomThemeDefinition? selectedCustomTheme;
 		private string? selectedBaseTheme;
 		private string? selectedColorScheme;
-		private bool useCustomForeground;
-		private MediaColor selectedCustomForeground = MediaColors.White;
+	private bool useCustomForeground;
+	private MediaColor selectedCustomForeground = MediaColors.White;
 		private ThemeColorEditorMode activeColorEditor = ThemeColorEditorMode.Accent;
+		private const string UpdateBadgeBrushKey = "Orbit.UpdateBadgeBrush";
+		private const string DefaultUpdateBadgeColorHex = "#FFFFC44D";
 
 		public ThemeManagerViewModel() : this(ResolveThemeService())
 		{
@@ -60,9 +65,11 @@ namespace Orbit.ViewModels
 			SaveCustomThemeCommand = new RelayCommand(SaveCustomTheme, CanSaveCustomTheme);
 			ApplyCustomThemeCommand = new RelayCommand(ApplyCustomTheme, () => SelectedCustomTheme != null);
 			DeleteCustomThemeCommand = new RelayCommand(DeleteCustomTheme, () => SelectedCustomTheme != null);
+			ResetActiveColorCommand = new RelayCommand(ResetActiveColor);
 
 			// Detect current theme
 			DetectCurrentTheme();
+			InitializeUpdateBadgeColor();
 		}
 
 		public ObservableCollection<string> BaseThemes { get; }
@@ -118,6 +125,7 @@ namespace Orbit.ViewModels
 				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
+					OnPropertyChanged(nameof(ActiveColorHex));
 				}
 			}
 		}
@@ -156,6 +164,7 @@ namespace Orbit.ViewModels
 				if (ActiveColorEditor == ThemeColorEditorMode.Foreground)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
+					OnPropertyChanged(nameof(ActiveColorHex));
 				}
 
 				if (UseCustomForeground && SelectedCustomTheme != null)
@@ -261,11 +270,20 @@ namespace Orbit.ViewModels
 				if (activeColorEditor == value)
 					return;
 				activeColorEditor = value;
+				if (activeColorEditor == ThemeColorEditorMode.Foreground && !UseCustomForeground)
+				{
+					UseCustomForeground = true;
+				}
+
 				OnPropertyChanged();
 				OnPropertyChanged(nameof(IsAccentEditorSelected));
 				OnPropertyChanged(nameof(IsForegroundEditorSelected));
+				OnPropertyChanged(nameof(IsUpdateBadgeEditorSelected));
 				OnPropertyChanged(nameof(ActiveColorSelection));
+				OnPropertyChanged(nameof(ActiveColorHex));
 				OnPropertyChanged(nameof(IsActiveColorEditable));
+				OnPropertyChanged(nameof(ActiveColorEditorLabel));
+				OnPropertyChanged(nameof(ActiveColorEditorDescription));
 			}
 		}
 
@@ -296,28 +314,131 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		public MediaColor ActiveColorSelection
+		public bool IsUpdateBadgeEditorSelected
 		{
-			get => ActiveColorEditor == ThemeColorEditorMode.Accent ? SelectedCustomColor : SelectedCustomForeground;
+			get => ActiveColorEditor == ThemeColorEditorMode.UpdateBadge;
 			set
 			{
-				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
+				if (value)
 				{
-					SelectedCustomColor = value;
-				}
-				else
-				{
-					SelectedCustomForeground = value;
+					ActiveColorEditor = ThemeColorEditorMode.UpdateBadge;
 				}
 			}
 		}
 
-		public bool IsActiveColorEditable => ActiveColorEditor == ThemeColorEditorMode.Accent || UseCustomForeground;
+		public MediaColor ActiveColorSelection
+		{
+			get => ActiveColorEditor switch
+			{
+				ThemeColorEditorMode.Accent => SelectedCustomColor,
+				ThemeColorEditorMode.Foreground => SelectedCustomForeground,
+				ThemeColorEditorMode.UpdateBadge => UpdateBadgeColor,
+				_ => SelectedCustomColor
+			};
+			set
+			{
+				switch (ActiveColorEditor)
+				{
+					case ThemeColorEditorMode.Accent:
+						SelectedCustomColor = value;
+						break;
+					case ThemeColorEditorMode.Foreground:
+						SelectedCustomForeground = value;
+						break;
+					case ThemeColorEditorMode.UpdateBadge:
+						UpdateBadgeColor = value;
+						break;
+				}
+			}
+		}
+
+		public bool IsActiveColorEditable => true;
+
+		public string ActiveColorHex
+		{
+			get => ActiveColorSelection.ToString();
+			set
+			{
+				var candidate = value?.Trim() ?? string.Empty;
+				if (!TryParseColor(candidate, out var color))
+				{
+					OnPropertyChanged();
+					return;
+				}
+
+				ActiveColorSelection = color;
+				OnPropertyChanged();
+			}
+		}
+
+		public string ActiveColorEditorLabel => ActiveColorEditor switch
+		{
+			ThemeColorEditorMode.Accent => "Accent",
+			ThemeColorEditorMode.Foreground => "Foreground",
+			ThemeColorEditorMode.UpdateBadge => "Update badge",
+			_ => "Color"
+		};
+
+		public string ActiveColorEditorDescription => ActiveColorEditor switch
+		{
+			ThemeColorEditorMode.Accent => "Used for highlights, selected controls, and accent surfaces.",
+			ThemeColorEditorMode.Foreground => "Used for text and icon foreground. Selecting this enables custom foreground override.",
+			ThemeColorEditorMode.UpdateBadge => "Used for update indicators in menu and settings.",
+			_ => string.Empty
+		};
+
+		public MediaColor UpdateBadgeColor
+		{
+			get => updateBadgeColor;
+			set
+			{
+				if (!SetProperty(ref updateBadgeColor, value))
+				{
+					return;
+				}
+
+				var normalized = value.ToString();
+				if (!string.Equals(updateBadgeColorHex, normalized, StringComparison.OrdinalIgnoreCase))
+				{
+					updateBadgeColorHex = normalized;
+					OnPropertyChanged(nameof(UpdateBadgeColorHex));
+				}
+
+				if (ActiveColorEditor == ThemeColorEditorMode.UpdateBadge)
+				{
+					OnPropertyChanged(nameof(ActiveColorSelection));
+					OnPropertyChanged(nameof(ActiveColorHex));
+				}
+
+				Settings.Default.UpdateBadgeColorHex = normalized;
+				Settings.Default.Save();
+				ApplyUpdateBadgeBrush(value);
+			}
+		}
+
+		public string UpdateBadgeColorHex
+		{
+			get => updateBadgeColorHex;
+			set
+			{
+				var candidate = value?.Trim() ?? string.Empty;
+				if (!TryParseColor(candidate, out var color))
+				{
+					OnPropertyChanged();
+					return;
+				}
+
+				UpdateBadgeColor = color;
+				OnPropertyChanged();
+			}
+		}
 
 		public IRelayCommand ApplyThemeCommand { get; }
 		public IRelayCommand SaveCustomThemeCommand { get; }
 		public IRelayCommand ApplyCustomThemeCommand { get; }
 		public IRelayCommand DeleteCustomThemeCommand { get; }
+		public IRelayCommand ResetActiveColorCommand { get; }
+		public IRelayCommand ResetUpdateBadgeColorCommand => ResetActiveColorCommand;
 
 		private void DetectCurrentTheme()
 		{
@@ -439,6 +560,102 @@ namespace Orbit.ViewModels
 			CustomThemes.Remove(toRemove);
 			themeService.SaveCustomThemes(CustomThemes);
 			SelectedCustomTheme = CustomThemes.FirstOrDefault();
+		}
+
+		private void InitializeUpdateBadgeColor()
+		{
+			var configured = Settings.Default.UpdateBadgeColorHex;
+			if (!TryParseColor(configured, out var color))
+			{
+				TryParseColor(DefaultUpdateBadgeColorHex, out color);
+				Settings.Default.UpdateBadgeColorHex = DefaultUpdateBadgeColorHex;
+				Settings.Default.Save();
+			}
+
+			updateBadgeColor = color;
+			updateBadgeColorHex = color.ToString();
+			OnPropertyChanged(nameof(UpdateBadgeColor));
+			OnPropertyChanged(nameof(UpdateBadgeColorHex));
+			ApplyUpdateBadgeBrush(color);
+		}
+
+		private void ResetActiveColor()
+		{
+			switch (ActiveColorEditor)
+			{
+				case ThemeColorEditorMode.Accent:
+					SelectedCustomColor = themeService.GetCurrentAccentColor();
+					break;
+				case ThemeColorEditorMode.Foreground:
+					SelectedCustomForeground = themeService.GetCurrentForegroundColor();
+					break;
+				case ThemeColorEditorMode.UpdateBadge:
+					UpdateBadgeColorHex = DefaultUpdateBadgeColorHex;
+					break;
+			}
+
+			OnPropertyChanged(nameof(ActiveColorSelection));
+			OnPropertyChanged(nameof(ActiveColorHex));
+		}
+
+		private static bool TryParseColor(string? value, out MediaColor color)
+		{
+			color = default;
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				return false;
+			}
+
+			try
+			{
+				var parsed = MediaColorConverter.ConvertFromString(value);
+				if (parsed is MediaColor resolved)
+				{
+					color = resolved;
+					return true;
+				}
+			}
+			catch
+			{
+				// invalid format
+			}
+
+			return false;
+		}
+
+		private static void ApplyUpdateBadgeBrush(MediaColor color)
+		{
+			var app = Application.Current;
+			if (app == null)
+			{
+				return;
+			}
+
+			void UpdateResource()
+			{
+				if (app.Resources[UpdateBadgeBrushKey] is SolidColorBrush existing)
+				{
+					if (!existing.IsFrozen)
+					{
+						existing.Color = color;
+						return;
+					}
+
+					app.Resources[UpdateBadgeBrushKey] = new SolidColorBrush(color);
+					return;
+				}
+
+				app.Resources[UpdateBadgeBrushKey] = new SolidColorBrush(color);
+			}
+
+			if (app.Dispatcher.CheckAccess())
+			{
+				UpdateResource();
+			}
+			else
+			{
+				app.Dispatcher.Invoke(UpdateResource);
+			}
 		}
 	}
 }

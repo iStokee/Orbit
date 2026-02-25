@@ -6,7 +6,6 @@
     xmlns:colorpicker="clr-namespace:ColorPicker;assembly=ColorPicker"
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-    xmlns:viewModels="clr-namespace:Orbit.ViewModels"
     xmlns:local="clr-namespace:Orbit"
     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
 
@@ -198,62 +197,81 @@
                     <TextBlock
                             Margin="0,0,0,4"
                             FontSize="12"
-                            Text="Custom Colors" />
+                            Text="Theme Colors" />
                     <TextBlock
                             Margin="0,6,0,0"
                             FontSize="11"
                             Foreground="{DynamicResource MahApps.Brushes.Gray2}"
-                            Text="Adjust colors to see changes reflected instantly in the Live Preview above." />
+                            Text="Use one editor for accent, foreground, and update indicators." />
 
-                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
-                        <RadioButton
-                                Margin="0,0,10,0"
-                                Content="Accent background"
-                                GroupName="ThemeColorEditing"
-                                IsChecked="{Binding IsAccentEditorSelected, Mode=TwoWay}" />
-                        <RadioButton
-                                Margin="0,0,8,0"
-                                Content="Text foreground"
-                                GroupName="ThemeColorEditing"
-                                IsChecked="{Binding IsForegroundEditorSelected, Mode=TwoWay}" />
-                        <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="11"
-                                FontStyle="Italic"
-                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                Text="(overriding theme default)">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsForegroundEditorSelected}" Value="True" />
-                                                <Condition Binding="{Binding UseCustomForeground}" Value="True" />
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
+                    <Border
+                            Margin="0,12,0,0"
+                            Padding="12"
+                            Background="Transparent"
+                            CornerRadius="14">
+                        <StackPanel>
+                            <TextBlock
+                                    Margin="0,0,0,8"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource MahApps.Brushes.Gray2}"
+                                    Text="{Binding ActiveColorEditorDescription}" />
 
-                    <TextBlock
-                            Margin="0,6,0,0"
-                            FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray2}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Adjusting accent background" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ActiveColorEditor}" Value="{x:Static viewModels:ThemeColorEditorMode.Foreground}">
-                                        <Setter Property="Text" Value="Adjusting text foreground (will override theme default)" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton
+                                        Margin="0,0,12,0"
+                                        Content="Accent"
+                                        GroupName="ThemeColorEditing"
+                                        IsChecked="{Binding IsAccentEditorSelected, Mode=TwoWay}" />
+                                <RadioButton
+                                        Margin="0,0,12,0"
+                                        Content="Foreground"
+                                        GroupName="ThemeColorEditing"
+                                        IsChecked="{Binding IsForegroundEditorSelected, Mode=TwoWay}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton
+                                            Content="Update Badge"
+                                            GroupName="ThemeColorEditing"
+                                            IsChecked="{Binding IsUpdateBadgeEditorSelected, Mode=TwoWay}" />
+                                    <TextBlock
+                                            Margin="6,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="16"
+                                            FontWeight="Black"
+                                            Foreground="{DynamicResource Orbit.UpdateBadgeBrush}"
+                                            Text="!" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <colorpicker:StandardColorPicker
+                                    Margin="0,10,0,0"
+                                    MinHeight="300"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="{Binding IsActiveColorEditable}"
+                                    PickerType="HSV"
+                                    SelectedColor="{Binding ActiveColorSelection, Mode=TwoWay}"
+                                    ShowAlpha="False"
+                                    Style="{StaticResource DefaultColorPickerStyle}" />
+
+                            <StackPanel Margin="0,10,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                                <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                        Opacity="0.85"
+                                        Text="{Binding ActiveColorEditorLabel, StringFormat='Hex ({0}):'}" />
+                                <TextBox
+                                        Width="120"
+                                        Margin="8,0,8,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding ActiveColorHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <Button
+                                        Width="96"
+                                        Height="30"
+                                        Command="{Binding ResetActiveColorCommand}">
+                                    <TextBlock Text="Reset" />
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
                     <StackPanel Margin="0,10,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                             <Button
@@ -299,39 +317,6 @@
                                 </StackPanel>
                             </Button>
                         </StackPanel>
-
-                    <Border
-                            Margin="0,12,0,0"
-                            Padding="12"
-                            Background="{DynamicResource MahApps.Brushes.Gray8}"
-                            CornerRadius="14">
-                        <StackPanel>
-                            <colorpicker:StandardColorPicker
-                                    MinHeight="300"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="{Binding IsActiveColorEditable}"
-                                    PickerType="HSV"
-                                    SelectedColor="{Binding ActiveColorSelection, Mode=TwoWay}"
-                                    ShowAlpha="False"
-                                    Style="{StaticResource DefaultColorPickerStyle}" />
-                            <TextBlock
-                                    Margin="0,8,0,0"
-                                    FontSize="11"
-                                    Foreground="{DynamicResource MahApps.Brushes.Gray2}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Setter Property="Text" Value="Enable text override above to edit the foreground color." />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsActiveColorEditable}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
 
                 </StackPanel>
             </Border>

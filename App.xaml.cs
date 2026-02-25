@@ -8,6 +8,9 @@ using Orbit.Tooling;
 using Orbit.ViewModels;
 using Orbit.Views;
 using Application = System.Windows.Application;
+using SolidColorBrush = System.Windows.Media.SolidColorBrush;
+using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
 
 namespace Orbit;
 
@@ -28,6 +31,7 @@ public partial class App : Application
 		ConfigureServices(services);
 
 		_serviceProvider = services.BuildServiceProvider();
+		ApplyUpdateBadgeBrushFromSettings();
 
 		var consoleLog = _serviceProvider.GetRequiredService<ConsoleLogService>();
 		consoleLog.StartCapture();
@@ -96,7 +100,7 @@ public partial class App : Application
 		services.AddSingleton<TearOffHostRegistry>();
 		services.AddSingleton<InterTabClient>();
 
-		services.AddTransient<SettingsViewModel>();
+			services.AddSingleton<SettingsViewModel>();
 		services.AddTransient<SettingsView>(sp => new SettingsView(
 			sp.GetRequiredService<SettingsViewModel>(),
 			sp.GetRequiredService<IToolRegistry>()));
@@ -146,6 +150,61 @@ public partial class App : Application
 
 		services.AddTransient<MainWindowViewModel>();
 		services.AddTransient<MainWindow>();
+	}
+
+	private static void ApplyUpdateBadgeBrushFromSettings()
+	{
+		var configured = Settings.Default.UpdateBadgeColorHex;
+		if (!TryParseColor(configured, out var color))
+		{
+			if (!TryParseColor("#FFFFC44D", out color))
+			{
+				return;
+			}
+		}
+
+		var app = Current;
+		if (app == null)
+		{
+			return;
+		}
+
+		const string key = "Orbit.UpdateBadgeBrush";
+		if (app.Resources[key] is SolidColorBrush existing)
+		{
+			if (!existing.IsFrozen)
+			{
+				existing.Color = color;
+				return;
+			}
+		}
+
+		app.Resources[key] = new SolidColorBrush(color);
+	}
+
+	private static bool TryParseColor(string? value, out MediaColor color)
+	{
+		color = default;
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			return false;
+		}
+
+		try
+		{
+			var parsed = MediaColorConverter.ConvertFromString(value);
+			if (parsed is MediaColor resolved)
+			{
+				color = resolved;
+				return true;
+			}
+		}
+		catch
+		{
+			// Ignore malformed values and fall back to default.
+		}
+
+		return false;
 	}
 
 	private async Task AutoLoadPluginsAsync()

@@ -1150,42 +1150,44 @@
                             <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
                         </LinearGradientBrush>
                     </Border.Background>
-                    <ToggleButton
-                        x:Name="FloatingMenuToggleButton"
-                        IsChecked="{Binding IsFloatingMenuExpanded, Mode=TwoWay}"
-                        Style="{StaticResource Orbit.FloatingMenuToggleStyle}"
-                        ToolTip="Orbit Controls">
-                        <iconPacks:PackIconGameIcons
-                            Width="32"
-                            Height="32"
-                            Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                            Kind="Orbital" />
-                        <ToggleButton.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem
-                                    Header="Auto direction"
-                                    IsCheckable="True"
-                                    IsChecked="{Binding FloatingMenuAutoDirection, Mode=TwoWay}" />
-                                <Separator />
-                                <MenuItem
-                                    Click="FloatingMenuSetSide_Click"
-                                    Header="Left"
-                                    Tag="Left" />
-                                <MenuItem
-                                    Click="FloatingMenuSetSide_Click"
-                                    Header="Right"
-                                    Tag="Right" />
-                                <MenuItem
-                                    Click="FloatingMenuSetSide_Click"
-                                    Header="Up"
-                                    Tag="Up" />
-                                <MenuItem
-                                    Click="FloatingMenuSetSide_Click"
-                                    Header="Down"
-                                    Tag="Down" />
-                            </ContextMenu>
-                        </ToggleButton.ContextMenu>
-                    </ToggleButton>
+                    <Grid>
+                        <ToggleButton
+                            x:Name="FloatingMenuToggleButton"
+                            IsChecked="{Binding IsFloatingMenuExpanded, Mode=TwoWay}"
+                            Style="{StaticResource Orbit.FloatingMenuToggleStyle}"
+                            ToolTip="Orbit Controls">
+                            <iconPacks:PackIconGameIcons
+                                Width="32"
+                                Height="32"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                Kind="Orbital" />
+                            <ToggleButton.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem
+                                        Header="Auto direction"
+                                        IsCheckable="True"
+                                        IsChecked="{Binding FloatingMenuAutoDirection, Mode=TwoWay}" />
+                                    <Separator />
+                                    <MenuItem
+                                        Click="FloatingMenuSetSide_Click"
+                                        Header="Left"
+                                        Tag="Left" />
+                                    <MenuItem
+                                        Click="FloatingMenuSetSide_Click"
+                                        Header="Right"
+                                        Tag="Right" />
+                                    <MenuItem
+                                        Click="FloatingMenuSetSide_Click"
+                                        Header="Up"
+                                        Tag="Up" />
+                                    <MenuItem
+                                        Click="FloatingMenuSetSide_Click"
+                                        Header="Down"
+                                        Tag="Down" />
+                                </ContextMenu>
+                            </ToggleButton.ContextMenu>
+                        </ToggleButton>
+                    </Grid>
                 </Border>
 
                 <Popup
@@ -1364,13 +1366,58 @@
                                     Visibility="{Binding ShowMenuGuide, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" />
                                 </Button>
-                                <Button
-                                    Command="{Binding OpenSettingsCommand}"
-                                    Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="Settings"
-                                    Visibility="{Binding ShowMenuSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="Cog" />
-                                </Button>
+                                <Grid Visibility="{Binding ShowMenuSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Button
+                                        Command="{Binding OpenSettingsCommand}"
+                                        Style="{StaticResource FloatingMenuButtonStyle}"
+                                        ToolTip="Settings">
+                                        <iconPacks:PackIconMaterial Kind="Cog" />
+                                    </Button>
+                                    <TextBlock
+                                        Margin="-3,-4,0,0"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        FontSize="20"
+                                        FontWeight="Black"
+                                        Foreground="{DynamicResource Orbit.UpdateBadgeBrush}"
+                                        IsHitTestVisible="False"
+                                        Text="!"
+                                        Visibility="{Binding HasUpdateNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock.RenderTransform>
+                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                        </TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                        <DoubleAnimation
+                                                            Storyboard.TargetProperty="Opacity"
+                                                            From="1"
+                                                            To="0.65"
+                                                            Duration="0:0:0.8" />
+                                                        <DoubleAnimation
+                                                            Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                                            From="1"
+                                                            To="1.06"
+                                                            Duration="0:0:0.8" />
+                                                        <DoubleAnimation
+                                                            Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                                            From="1"
+                                                            To="1.06"
+                                                            Duration="0:0:0.8" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect
+                                                BlurRadius="10"
+                                                Opacity="0.6"
+                                                ShadowDepth="0"
+                                                Color="#AA000000" />
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                </Grid>
                                 <Button
                                     Command="{Binding OpenFsmNodeEditorCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
