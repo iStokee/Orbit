@@ -7,14 +7,15 @@ using System.IO;
 using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
-using System.Linq;
 using Orbit.Models;
 using Orbit.Services;
 using static Orbit.Classes.Win32;
 using System.ComponentModel;
+using System.Runtime.Versioning;
 
 namespace Orbit
 {
+	[SupportedOSPlatform("windows")]
 	public partial class RSForm : Form
 	{
 		private enum ClientLaunchMode
@@ -23,46 +24,31 @@ namespace Orbit
 			Launcher
 		}
 
-		private string rs2clientWindowTitle;
-		private Process RuneScapeProcess;
-		private Process process;
-		internal IntPtr rsMainWindowHandle;
-		internal Process pDocked;
+		internal Process pDocked = null!;
 		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private readonly TaskCompletionSource<bool> injectionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private readonly TaskCompletionSource<bool> injectionStartedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		private static readonly TimeSpan InjectionWaitTimeout = TimeSpan.FromSeconds(6);
-		private static readonly TimeSpan InjectionStartGracePeriod = TimeSpan.FromSeconds(2);
 		private static readonly TimeSpan ProcessDetectionTimeout = TimeSpan.FromSeconds(45);
 		private static readonly TimeSpan ProcessPollInterval = TimeSpan.FromMilliseconds(250);
 		private static readonly TimeSpan WindowHandleTimeout = TimeSpan.FromSeconds(25);
 		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
 		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
-		private static readonly TimeSpan LauncherStartSettleDelay = TimeSpan.FromMilliseconds(1200);
 		private static readonly string LauncherUri = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws";
-		private static readonly SemaphoreSlim LauncherStartSync = new(1, 1);
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private uint? originalWindowStyle;
 		private bool dockedStylesApplied;
 		private bool isCurrentlyDocked;
 		private IntPtr dockedHandleCache;
-		private const int SW_MAXIMIZE = 3;
 		//internal static List<RuneScapeHandler> rsHandlerList = new List<RuneScapeHandler>();
 		private bool hasStarted = false;
-		Thread StartRS;
 		private IntPtr rsWindow;
 		private int rs2ClientID;
 		private int runescapeProcessID;
 		private IntPtr _dockedHandle;
-		private Process rs2client = null;
-		private Process runescape = null;
-		private IntPtr jagOpenGLViewWindowHandler;
 		private IntPtr JagWindow;
 		private IntPtr wxWindowNR;
-		private static readonly object ClientClaimSync = new();
-		private static readonly Dictionary<int, WeakReference<RSForm>> ClaimedClientPids = new();
-		private int? _claimedClientPid;
 
 		public int? ParentProcessId { get; private set; }
 
@@ -141,7 +127,7 @@ namespace Orbit
 		[DefaultValue(true)]
 		internal bool WaitForInjectionBeforeDock { get; set; } = true;
 
-		public event EventHandler<DockedEventArgs> Docked;
+		public event EventHandler<DockedEventArgs>? Docked;
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr SetFocus(IntPtr hWnd);
@@ -159,7 +145,6 @@ namespace Orbit
 		public RSForm()
 		{
 			InitializeComponent();
-			FormClosed += (_, _) => ReleaseClaimedClientPid();
 			// set back color to DarkSlate from dynamic resources
 			//this.BackColor = System.Drawing.ColorTranslator.FromHtml("#2f2f2f");
 		}
@@ -225,7 +210,7 @@ namespace Orbit
 
 				if (ClientSettings.rs2cPID > 0)
 				{
-						ResizeWindow();
+						await ResizeWindow();
 						Console.WriteLine("Game client resized successfully");
 					}
 				}
@@ -326,7 +311,6 @@ namespace Orbit
 				}
 
 				dockedHandleCache = IntPtr.Zero;
-				ReleaseClaimedClientPid();
 			}
 
 			try
@@ -389,47 +373,25 @@ namespace Orbit
 			{
 				var launchMode = ResolveLaunchMode();
 				var launchTarget = ResolveLaunchTarget(launchMode);
-				async Task StartProcessCoreAsync()
+				ApplyConfiguredLauncherAccountEnvironment(launchMode);
+				pDocked = new Process
 				{
-					ApplyConfiguredLauncherAccountEnvironment(launchMode);
-					pDocked = new Process
+					StartInfo = new ProcessStartInfo
 					{
-						StartInfo = new ProcessStartInfo
-						{
-							FileName = launchTarget,
-							UseShellExecute = true
-						}
-					};
-					pDocked.Start();
-					Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
-					await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
-					try
-					{
-						pDocked.Refresh();
+						FileName = launchTarget,
+						UseShellExecute = true
 					}
-					catch (InvalidOperationException)
-					{
-						// Launcher may already have exited once the client starts.
-					}
+				};
+				pDocked.Start();
+				Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
+				await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
+				try
+				{
+					pDocked.Refresh();
 				}
-
-				if (launchMode == ClientLaunchMode.Launcher)
+				catch (InvalidOperationException)
 				{
-					await LauncherStartSync.WaitAsync().ConfigureAwait(false);
-					try
-					{
-						await StartProcessCoreAsync().ConfigureAwait(false);
-						// Keep launches serialized briefly so each process snapshots its own JX_* values.
-						await Task.Delay(LauncherStartSettleDelay).ConfigureAwait(false);
-					}
-					finally
-					{
-						LauncherStartSync.Release();
-					}
-				}
-				else
-				{
-					await StartProcessCoreAsync().ConfigureAwait(false);
+					// Launcher may already have exited once the client starts.
 				}
 			}
 			catch (Exception ex)
@@ -463,12 +425,6 @@ namespace Orbit
 				selected = configuredSingle;
 				Console.WriteLine($"[Orbit][Launcher] Falling back to single selected account '{selected.DisplayName}'.");
 			}
-			else if (LauncherAccountStore.TryGetFirstConfigured(out var firstConfigured) && firstConfigured != null)
-			{
-				// BasicInjector parity fallback for Launch_1_JX semantics: first account in env_vars.json.
-				selected = firstConfigured;
-				Console.WriteLine($"[Orbit][Launcher] Falling back to first configured account '{selected.DisplayName}'.");
-			}
 
 			if (selected == null)
 			{
@@ -491,8 +447,6 @@ namespace Orbit
 			{
 				throw new InvalidOperationException("Launcher process not initialized.");
 			}
-
-			ReleaseClaimedClientPid();
 
 			var launchMode = ResolveLaunchMode();
 			var launcherProcess = pDocked;
@@ -527,15 +481,7 @@ namespace Orbit
 				{
 					try
 					{
-						var candidate = Process.GetProcessById(launcherPid);
-						if (!IsProcessAlreadyBoundToAnotherSession(candidate.Id) && TryClaimClientPid(candidate.Id))
-						{
-							confirmedClient = candidate;
-						}
-						else
-						{
-							candidate.Dispose();
-						}
+						confirmedClient = Process.GetProcessById(launcherPid);
 					}
 					catch (Exception)
 					{
@@ -545,38 +491,14 @@ namespace Orbit
 
 				if (confirmedClient == null)
 				{
-					var candidates = Process.GetProcessesByName("rs2client")
-						.OrderByDescending(GetProcessStartTimeOrMinValue)
-						.ThenByDescending(p => p.Id)
-						.ToList();
-
-					foreach (var candidate in candidates)
+					foreach (var candidate in Process.GetProcessesByName("rs2client"))
 					{
 						try
 						{
-							if (IsProcessAlreadyBoundToAnotherSession(candidate.Id))
-							{
-								continue;
-							}
-
-							if (!TryClaimClientPid(candidate.Id))
-							{
-								continue;
-							}
-
 							var candidateParent = GetParentProcess(candidate.Id);
 							if (candidateParent == launcherPid)
 							{
-								try
-								{
-									confirmedClient = Process.GetProcessById(candidate.Id);
-								}
-								catch
-								{
-									ReleaseClaimedClientPid();
-									continue;
-								}
-
+								confirmedClient = Process.GetProcessById(candidate.Id);
 								break;
 							}
 
@@ -586,16 +508,7 @@ namespace Orbit
 								{
 									if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
 									{
-										try
-										{
-											confirmedClient = Process.GetProcessById(candidate.Id);
-										}
-										catch
-										{
-											ReleaseClaimedClientPid();
-											continue;
-										}
-
+										confirmedClient = Process.GetProcessById(candidate.Id);
 										break;
 									}
 								}
@@ -604,8 +517,6 @@ namespace Orbit
 									// Ignore StartTime access failures; continue scanning.
 								}
 							}
-
-							ReleaseClaimedClientPid();
 						}
 						finally
 						{
@@ -616,10 +527,8 @@ namespace Orbit
 
 				if (confirmedClient != null)
 				{
-					rs2client = confirmedClient;
-					ClientSettings.rs2client = confirmedClient;
-					runescape = launcherProcess;
-					ParentProcessId = confirmedClient.Id == launcherPid ? null : launcherProcess?.Id;
+						ClientSettings.rs2client = confirmedClient;
+						ParentProcessId = confirmedClient.Id == launcherPid ? null : launcherProcess.Id;
 					try
 					{
 						JagWindow = FindWindowEx(confirmedClient.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
@@ -629,16 +538,17 @@ namespace Orbit
 						JagWindow = IntPtr.Zero;
 					}
 
-					try
-					{
-						wxWindowNR = launcherProcess?.MainWindowHandle != IntPtr.Zero
-							? FindWindowEx(launcherProcess.MainWindowHandle, IntPtr.Zero, "wxWindowNR", null)
-							: IntPtr.Zero;
-					}
-					catch (Exception)
-					{
-						wxWindowNR = IntPtr.Zero;
-					}
+						try
+						{
+							var launcherMainWindowHandle = launcherProcess.MainWindowHandle;
+							wxWindowNR = launcherMainWindowHandle != IntPtr.Zero
+								? FindWindowEx(launcherMainWindowHandle, IntPtr.Zero, "wxWindowNR", null)
+								: IntPtr.Zero;
+						}
+						catch (Exception)
+						{
+							wxWindowNR = IntPtr.Zero;
+						}
 
 					rs2ClientID = confirmedClient.Id;
 					ClientSettings.rs2cPID = confirmedClient.Id;
@@ -662,19 +572,8 @@ namespace Orbit
 			if (launchMode == ClientLaunchMode.Legacy && !launcherProcess.HasExited)
 			{
 				Console.WriteLine("[Orbit] Falling back to started process as dock target for legacy mode.");
-				if (!TryClaimClientPid(launcherProcess.Id))
-				{
-					var claimMessage = $"[Orbit] Legacy fallback process PID {launcherProcess.Id} is already claimed by another session.";
-					Console.WriteLine(claimMessage);
-					var claimException = new InvalidOperationException(claimMessage);
-					processReadyTcs.TrySetException(claimException);
-					throw claimException;
-				}
-
-				rs2client = launcherProcess;
-				ClientSettings.rs2client = launcherProcess;
-				runescape = launcherProcess;
-				ParentProcessId = null;
+					ClientSettings.rs2client = launcherProcess;
+					ParentProcessId = null;
 				rs2ClientID = launcherProcess.Id;
 				ClientSettings.rs2cPID = launcherProcess.Id;
 				runescapeProcessID = launcherPid;
@@ -687,7 +586,6 @@ namespace Orbit
 			var message = "[Orbit] RuneScape client process could not be located within the allotted timeout.";
 			Console.WriteLine(message);
 			var timeoutException = new TimeoutException(message);
-			ReleaseClaimedClientPid();
 			processReadyTcs.TrySetException(timeoutException);
 			throw timeoutException;
 		}
@@ -741,108 +639,6 @@ namespace Orbit
 			}
 
 			return string.Empty;
-		}
-
-		private static DateTime GetProcessStartTimeOrMinValue(Process process)
-		{
-			try
-			{
-				return process.StartTime;
-			}
-			catch
-			{
-				return DateTime.MinValue;
-			}
-		}
-
-		private static bool IsProcessAlreadyBoundToAnotherSession(int pid)
-		{
-			try
-			{
-				var app = System.Windows.Application.Current;
-				if (app?.Dispatcher == null)
-				{
-					return false;
-				}
-
-				if (app.Dispatcher.CheckAccess())
-				{
-					return SessionCollectionService.Instance.Sessions.Any(s =>
-						s?.RSProcess != null &&
-						!s.RSProcess.HasExited &&
-						s.RSProcess.Id == pid &&
-						s.State != SessionState.Closed);
-				}
-
-				return app.Dispatcher.Invoke(() => SessionCollectionService.Instance.Sessions.Any(s =>
-					s?.RSProcess != null &&
-					!s.RSProcess.HasExited &&
-					s.RSProcess.Id == pid &&
-					s.State != SessionState.Closed));
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
-		private bool TryClaimClientPid(int pid)
-		{
-			lock (ClientClaimSync)
-			{
-				CleanupStaleClaims_NoLock();
-
-				if (ClaimedClientPids.TryGetValue(pid, out var existingRef))
-				{
-					if (existingRef.TryGetTarget(out var existingOwner))
-					{
-						if (ReferenceEquals(existingOwner, this))
-						{
-							_claimedClientPid = pid;
-							return true;
-						}
-
-						Console.WriteLine($"[Orbit][Launch] PID {pid} is already claimed by another pending session.");
-						return false;
-					}
-
-					ClaimedClientPids.Remove(pid);
-				}
-
-				ClaimedClientPids[pid] = new WeakReference<RSForm>(this);
-				_claimedClientPid = pid;
-				return true;
-			}
-		}
-
-		private void ReleaseClaimedClientPid()
-		{
-			lock (ClientClaimSync)
-			{
-				if (_claimedClientPid.HasValue &&
-					ClaimedClientPids.TryGetValue(_claimedClientPid.Value, out var ownerRef) &&
-					ownerRef.TryGetTarget(out var owner) &&
-					ReferenceEquals(owner, this))
-				{
-					ClaimedClientPids.Remove(_claimedClientPid.Value);
-				}
-
-				_claimedClientPid = null;
-				CleanupStaleClaims_NoLock();
-			}
-		}
-
-		private static void CleanupStaleClaims_NoLock()
-		{
-			var stalePids = ClaimedClientPids
-				.Where(kvp => !kvp.Value.TryGetTarget(out _))
-				.Select(kvp => kvp.Key)
-				.ToArray();
-
-			foreach (var pid in stalePids)
-			{
-				ClaimedClientPids.Remove(pid);
-			}
 		}
 
 		private async Task WaitForAndSetDockingWindowAsync()
@@ -1048,6 +844,7 @@ namespace Orbit
 		}
 	}
 
+	[SupportedOSPlatform("windows")]
 	public sealed class DockedEventArgs : EventArgs
 	{
 		public DockedEventArgs(IntPtr handle)

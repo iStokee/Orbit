@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -11,32 +12,33 @@ namespace Orbit.Plugins;
 internal class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
+    private readonly string _pluginDirectory;
 
     public PluginLoadContext(string pluginPath) : base(isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
+        _pluginDirectory = Path.GetDirectoryName(pluginPath) ?? string.Empty;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
+        if (ShouldUseDefaultContext(assemblyName.Name))
+        {
+            return null;
+        }
+
         // Try to resolve the assembly path using the dependency resolver
         string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         if (assemblyPath != null)
         {
-            return LoadFromAssemblyPath(assemblyPath);
+            // Load dependencies from memory so plugin DLL files are not held open.
+            return LoadFromStream(new MemoryStream(File.ReadAllBytes(assemblyPath)));
         }
 
-        // Don't load Orbit.dll or shared dependencies - use the host's version
-        if (assemblyName.Name == "Orbit" ||
-            assemblyName.Name == "csharp_interop" ||
-            assemblyName.Name?.StartsWith("System") == true ||
-            assemblyName.Name?.StartsWith("Microsoft") == true ||
-            assemblyName.Name?.StartsWith("WindowsBase") == true ||
-            assemblyName.Name?.StartsWith("PresentationCore") == true ||
-            assemblyName.Name?.StartsWith("PresentationFramework") == true ||
-            assemblyName.Name?.StartsWith("MahApps") == true)
+        var localAssemblyPath = Path.Combine(_pluginDirectory, $"{assemblyName.Name}.dll");
+        if (File.Exists(localAssemblyPath))
         {
-            return null; // Use host's version
+            return LoadFromStream(new MemoryStream(File.ReadAllBytes(localAssemblyPath)));
         }
 
         return null;
@@ -51,5 +53,18 @@ internal class PluginLoadContext : AssemblyLoadContext
         }
 
         return IntPtr.Zero;
+    }
+
+    private static bool ShouldUseDefaultContext(string? assemblyName)
+    {
+        return string.Equals(assemblyName, "Orbit", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assemblyName, "csharp_interop", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assemblyName, "netstandard", StringComparison.OrdinalIgnoreCase) ||
+               (assemblyName?.StartsWith("System", StringComparison.OrdinalIgnoreCase) == true) ||
+               (assemblyName?.StartsWith("Microsoft", StringComparison.OrdinalIgnoreCase) == true) ||
+               (assemblyName?.StartsWith("WindowsBase", StringComparison.OrdinalIgnoreCase) == true) ||
+               (assemblyName?.StartsWith("PresentationCore", StringComparison.OrdinalIgnoreCase) == true) ||
+               (assemblyName?.StartsWith("PresentationFramework", StringComparison.OrdinalIgnoreCase) == true) ||
+               (assemblyName?.StartsWith("MahApps", StringComparison.OrdinalIgnoreCase) == true);
     }
 }

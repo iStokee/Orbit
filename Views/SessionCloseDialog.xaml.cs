@@ -9,8 +9,6 @@ namespace Orbit.Views;
 /// </summary>
 public partial class SessionCloseDialog : MetroWindow
 {
-	public bool DialogResult { get; private set; }
-
 	public SessionCloseDialog(SessionCloseDialogViewModel viewModel)
 	{
 		InitializeComponent();

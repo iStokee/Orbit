@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Runtime.Versioning;
+
+[assembly: SupportedOSPlatform("windows")]
 
 [assembly: ThemeInfo(
 	ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located

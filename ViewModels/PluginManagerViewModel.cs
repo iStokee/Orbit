@@ -262,7 +262,7 @@ public class PluginManagerViewModel : INotifyPropertyChanged, IDisposable
     }
 }
 
-public class PluginItemViewModel : INotifyPropertyChanged
+public class PluginItemViewModel
 {
     private readonly PluginMetadata _metadata;
     private readonly PluginManager _pluginManager;
@@ -316,5 +316,4 @@ public class PluginItemViewModel : INotifyPropertyChanged
         }
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
 }

@@ -109,20 +109,19 @@ namespace Orbit.Services
 
 			// Surface the registered window into the active session presentation.
 			// Orbit View no longer auto-synchronizes sessions, so without this the tab could be "registered but invisible".
-			try
-			{
-				var launchBehavior = Orbit.Settings.Default.SessionLaunchBehavior ?? "OrbitView";
-				var mainVm = Application.Current?.Windows
-					.OfType<Orbit.MainWindow>()
-					.FirstOrDefault()
-					?.DataContext as MainWindowViewModel;
-
-				if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal) ||
-					string.Equals(launchBehavior, "SessionsTabbed", StringComparison.Ordinal))
+				try
 				{
-					_orbitLayoutState.AddItem(session);
-					mainVm?.OpenOrbitViewCommand?.Execute(null);
-					mainVm?.ActivateSession(session);
+					var launchBehavior = NormalizeSessionLaunchBehavior(Orbit.Settings.Default.SessionLaunchBehavior);
+					var mainVm = Application.Current?.Windows
+						.OfType<Orbit.MainWindow>()
+						.FirstOrDefault()
+						?.DataContext as MainWindowViewModel;
+
+					if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
+					{
+						_orbitLayoutState.AddItem(session);
+						mainVm?.OpenOrbitViewCommand?.Execute(null);
+						mainVm?.ActivateSession(session);
 				}
 				else // IndividualTabs/Ask/etc
 				{
@@ -137,10 +136,25 @@ namespace Orbit.Services
 			catch
 			{
 				// Best-effort only; registration should succeed even if the shell cannot be surfaced.
+				}
+
+				return session.Id;
 			}
 
-			return session.Id;
-		}
+			private static string NormalizeSessionLaunchBehavior(string? launchBehavior)
+			{
+				if (string.IsNullOrWhiteSpace(launchBehavior))
+				{
+					return "OrbitView";
+				}
+
+				if (string.Equals(launchBehavior, "SessionsTabbed", StringComparison.OrdinalIgnoreCase))
+				{
+					return "IndividualTabs";
+				}
+
+				return launchBehavior;
+			}
 
 		/// <summary>
 		/// Unregisters a script window from Orbit

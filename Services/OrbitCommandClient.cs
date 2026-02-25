@@ -369,18 +369,8 @@ internal static class OrbitCommandClient
                 return true;
             }
 
-            // Compatibility fallback: older injected ME builds expose only the global control pipe.
-            if (await TrySendAsync(PipeName, payload, cancellationToken).ConfigureAwait(false))
-            {
-                ConsoleLogService.Instance.Append(
-                    $"[MESharpCmd] {operation} for PID {processId.Value} succeeded via legacy global pipe.",
-                    ConsoleLogSource.Orbit,
-                    ConsoleLogLevel.Info);
-                return true;
-            }
-
             ConsoleLogService.Instance.Append(
-                $"[MESharpCmd] {operation} request failed for PID {processId.Value} (per-session and global pipes unavailable).",
+                $"[MESharpCmd] {operation} request failed for PID {processId.Value} (per-session pipe unavailable).",
                 ConsoleLogSource.Orbit,
                 ConsoleLogLevel.Warning);
             return false;

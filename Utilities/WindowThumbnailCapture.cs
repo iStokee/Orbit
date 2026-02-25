@@ -219,8 +219,6 @@ namespace Orbit.Utilities
 			{
 				return false;
 			}
-
-			return false;
 		}
 
 		/// <summary>

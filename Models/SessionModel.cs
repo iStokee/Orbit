@@ -25,8 +25,6 @@ namespace Orbit.Models
 		private bool _galleryAutoRefreshEnabled = true;
 		private double _galleryRefreshIntervalSeconds = 5;
 		private nint _renderSurfaceHandle;
-		private bool _gallerySizeOverrideEnabled;
-		private double _galleryCustomThumbnailSize = GallerySettingsDefaults.DefaultThumbnailSize;
 		private string? _activeScriptPath;
 		private string? _activeScriptId;
 		private string _scriptRuntimeStatus = "No script loaded";

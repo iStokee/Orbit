@@ -51,6 +51,7 @@ namespace Orbit
 	private HwndSourceHook? messageHook;
 	private readonly bool isPrimaryShellWindow;
 	private bool windowPlacementRestored;
+	private bool windowPlacementPersistenceReady;
 	private const int WM_MBUTTONUP = 0x0208;
 	
 
@@ -100,8 +101,7 @@ namespace Orbit
 			this.SessionTabControl.InterTabController = interTabController;
 			this.SessionTabControl.ClosingItemCallback += this.viewModel.TabControl_ClosingItemHandler;
 
-			//// Forward SizeChanged event to the ViewModel
-			this.SizeChanged += MetroWindow_SizeChanged;
+			//// Forward location/state events to window placement persistence
 			LocationChanged += MainWindow_LocationChanged;
 			StateChanged += MainWindow_StateChanged;
 			sessionsCollectionChangedHandler = (_, __) => ResizeWindows();
@@ -135,6 +135,7 @@ namespace Orbit
 			RestoreWindowPlacementFromSettingsIfPrimary();
 			windowPlacementRestored = true;
 		}
+		windowPlacementPersistenceReady = true;
 
 		hwndSource = PresentationSource.FromVisual(this) as HwndSource;
 		if (hwndSource != null)
@@ -188,12 +189,12 @@ namespace Orbit
 			{
 				Console.WriteLine($"[Orbit] Failed to close tracked RuneScape processes on exit: {ex}");
 			}
-			finally
-			{
-				forceAppClose = true;
-				Dispatcher.BeginInvoke(new Action(Close));
+				finally
+				{
+					forceAppClose = true;
+					_ = Dispatcher.BeginInvoke(new Action(Close));
+				}
 			}
-		}
 
 	protected override void OnClosed(EventArgs e)
 	{
@@ -213,7 +214,6 @@ namespace Orbit
 		Loaded -= MainWindow_Loaded;
 		Activated -= OnWindowActivated;
 		Deactivated -= OnWindowDeactivated;
-		SizeChanged -= MetroWindow_SizeChanged;
 		LocationChanged -= MainWindow_LocationChanged;
 		StateChanged -= MainWindow_StateChanged;
 		SessionTabControl.ClosingItemCallback -= this.viewModel.TabControl_ClosingItemHandler;
@@ -263,7 +263,7 @@ namespace Orbit
 				Height = savedHeight;
 			}
 
-			var hasSavedPosition = !NearlyEquals(savedLeft, -1d) || !NearlyEquals(savedTop, -1d);
+			var hasSavedPosition = !NearlyEquals(savedLeft, -1d) && !NearlyEquals(savedTop, -1d);
 			if (hasSavedPosition && double.IsFinite(savedLeft) && double.IsFinite(savedTop))
 			{
 				var candidate = new Rect(savedLeft, savedTop, Width, Height);
@@ -299,18 +299,28 @@ namespace Orbit
 
 		private void SaveWindowPlacementToSettings()
 		{
-			if (!isPrimaryShellWindow)
+			if (!isPrimaryShellWindow || !windowPlacementPersistenceReady)
 			{
 				return;
 			}
 
 			try
 			{
+				if (WindowState == WindowState.Minimized)
+				{
+					return;
+				}
+
 				var bounds = WindowState == WindowState.Normal
-					? new Rect(Left, Top, ActualWidth, ActualHeight)
+					? new Rect(Left, Top, Width, Height)
 					: RestoreBounds;
 
 				if (!IsFinitePositive(bounds.Width) || !IsFinitePositive(bounds.Height))
+				{
+					return;
+				}
+
+				if (!double.IsFinite(bounds.Left) || !double.IsFinite(bounds.Top))
 				{
 					return;
 				}
@@ -330,7 +340,7 @@ namespace Orbit
 
 		private void ScheduleWindowPlacementSave()
 		{
-			if (!isPrimaryShellWindow)
+			if (!isPrimaryShellWindow || !windowPlacementPersistenceReady || !IsLoaded)
 			{
 				return;
 			}
@@ -352,6 +362,11 @@ namespace Orbit
 
 		private void MainWindow_StateChanged(object? sender, EventArgs e)
 		{
+			if (WindowState == WindowState.Minimized)
+			{
+				return;
+			}
+
 			ScheduleWindowPlacementSave();
 		}
 
@@ -455,7 +470,13 @@ namespace Orbit
 
 		private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
 		{
-			Dispatcher.Invoke(UpdateTaskbarOverlay);
+			if (Dispatcher.CheckAccess())
+			{
+				UpdateTaskbarOverlay();
+				return;
+			}
+
+			Dispatcher.BeginInvoke((Action)UpdateTaskbarOverlay);
 		}
 
 		private void UpdateTaskbarOverlay()

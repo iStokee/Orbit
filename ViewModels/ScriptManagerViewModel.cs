@@ -518,7 +518,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			return;
 		}
 
-		var pid = targetSession.RSProcess?.Id;
+		var pid = targetSession.RSProcess.Id;
 
 		var verb = isReload ? "reload" : "load";
 		targetSession.SetScriptRuntimePending(isReload ? "Reloading script" : "Loading script");

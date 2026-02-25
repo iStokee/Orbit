@@ -50,8 +50,23 @@ public partial class App : Application
 		_pipeServer?.Dispose();
 		_orbitApiPipeServer?.Dispose();
 		OrbitInteractionLogger.Shutdown();
-		ConsoleLogService.Instance.StopCapture();
-		Settings.Default.Save();
+		try
+		{
+			ConsoleLogService.Instance.StopCapture();
+		}
+		catch
+		{
+			// best effort shutdown cleanup
+		}
+
+		try
+		{
+			Settings.Default.Save();
+		}
+		catch
+		{
+			// best effort settings persistence
+		}
 
 		if (_serviceProvider is IDisposable disposable)
 		{

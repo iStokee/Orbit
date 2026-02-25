@@ -94,10 +94,12 @@ namespace Orbit.Classes
             PAGE_WRITECOMBINE = 0x00000400
         }
 
+        #pragma warning disable CS0649 // Populated by Win32 APIs via interop marshaling.
         public struct RECT
         {
             public int Left, Top, Right, Bottom;
         }
+        #pragma warning restore CS0649
 
         [StructLayout(LayoutKind.Sequential)]
         public struct SECURITY_ATTRIBUTES
@@ -359,10 +361,10 @@ namespace Orbit.Classes
         public static extern int SetWindowLong(IntPtr hWnd, int nIndex, uint dwNewLong);
 
         [DllImport("user32.dll")]
-        public static extern IntPtr FindWindowEx(IntPtr intptr_4, IntPtr intptr_5, string string_3, string string_4);
+        public static extern IntPtr FindWindowEx(IntPtr intptr_4, IntPtr intptr_5, string? string_3, string? string_4);
 
         [DllImport("user32.dll", SetLastError = true)]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+        public static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);

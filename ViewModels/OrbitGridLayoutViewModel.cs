@@ -575,6 +575,30 @@ namespace Orbit.ViewModels
 					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(ownerByItem[item]);
 				}
 
+				// Sessions no longer present in the global session collection are stale UI shells.
+				// Remove them from Orbit-owned controls so reconcile cannot rehydrate them into Items.
+				foreach (var staleSession in actual
+					.OfType<SessionModel>()
+					.Where(session => !Sessions.Contains(session))
+					.ToList())
+				{
+					if (ownerByItem.TryGetValue(staleSession, out var staleOwner))
+					{
+						try
+						{
+							staleOwner.Items.Remove(staleSession);
+							CollapseIfEmpty(staleOwner);
+						}
+						catch
+						{
+							// best effort cleanup
+						}
+					}
+
+					actual.Remove(staleSession);
+					_preferredOwnerByItem.Remove(staleSession);
+				}
+
 				if (actual.Count == 0 && Items.Count == 0)
 				{
 					// Workspace is empty: purge stale owner hints so closed/moved tabs don't linger.
@@ -1047,23 +1071,28 @@ namespace Orbit.ViewModels
 
 			private void HandleTabClosing(ItemActionCallbackArgs<TabablzControl> args)
 			{
-			if (args == null)
-				return;
+				if (args == null)
+				{
+					return;
+				}
 
-			var item = args.DragablzItem?.DataContext;
-			if (item == null)
-				return;
+				var item = ResolveClosingItem(args);
+				if (item == null)
+				{
+					args.Cancel();
+					return;
+				}
 
-			// Handle session close
-			if (item is SessionModel session)
-			{
-				args.Cancel();
-				_closeSession(session);
-				return;
-			}
+				// Always route session close through the main shutdown pipeline.
+				if (item is SessionModel session)
+				{
+					args.Cancel();
+					_closeSession(session);
+					return;
+				}
 
 				// Handle tool/other tab close - remove from Items collection
-				// This prevents empty tab shells from being left behind
+				// This prevents empty tab shells from being left behind.
 				DisposeToolItem(item);
 				if (Items.Contains(item))
 				{
@@ -1071,10 +1100,26 @@ namespace Orbit.ViewModels
 					{
 						_preferredOwnerByItem.Remove(item);
 						Items.Remove(item);
-					RefreshCommandStates();
-				}, DispatcherPriority.Background);
+						RefreshCommandStates();
+					}, DispatcherPriority.Background);
+				}
 			}
-		}
+
+			private static object? ResolveClosingItem(ItemActionCallbackArgs<TabablzControl> args)
+			{
+				if (args?.DragablzItem == null)
+				{
+					return null;
+				}
+
+				var candidate = args.DragablzItem.DataContext ?? args.DragablzItem.Content;
+				if (candidate is FrameworkElement element && element.DataContext != null)
+				{
+					candidate = element.DataContext;
+				}
+
+				return candidate;
+			}
 
 			private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
 			{
@@ -1089,6 +1134,7 @@ namespace Orbit.ViewModels
 							foreach (var item in e.OldItems.Cast<object>())
 							{
 								_preferredOwnerByItem.Remove(item);
+								RemoveItemFromLayout(item);
 							}
 						}
 					}

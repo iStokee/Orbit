@@ -254,9 +254,19 @@ namespace Orbit.ViewModels
 			target.SetScriptRuntimePending("Stopping script");
 			await SetScriptCommandInFlightAsync(async () =>
 			{
-				var success = await OrbitCommandClient
-					.SendUnloadScriptWithRetryAsync(target.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
+				var scriptIdToUnload = !string.IsNullOrWhiteSpace(target.ActiveScriptId)
+					? target.ActiveScriptId!
+					: (!string.IsNullOrWhiteSpace(target.ActiveScriptPath)
+						? ScriptManagerService.DeriveScriptIdFromPath(target.ActiveScriptPath)
+						: string.Empty);
+
+				var success = string.IsNullOrWhiteSpace(scriptIdToUnload)
+					? await OrbitCommandClient
+						.SendUnloadScriptWithRetryAsync(target.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.ConfigureAwait(true)
+					: await OrbitCommandClient
+						.SendUnloadScriptWithRetryAsync(scriptIdToUnload, target.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.ConfigureAwait(true);
 
 				if (!success)
 				{
@@ -301,7 +311,13 @@ namespace Orbit.ViewModels
 				}
 
 				var success = await OrbitCommandClient
-					.SendReloadWithRetryAsync(scriptPath, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+					.SendReloadWithRetryAsync(
+						scriptPath,
+						ScriptManagerService.DeriveScriptIdFromPath(scriptPath),
+						pid,
+						maxAttempts: 4,
+						initialDelay: TimeSpan.FromMilliseconds(200),
+						cancellationToken: CancellationToken.None)
 					.ConfigureAwait(true);
 				if (!success)
 				{
@@ -313,7 +329,7 @@ namespace Orbit.ViewModels
 					return;
 				}
 
-				target.SetScriptLoaded(scriptPath);
+				target.SetScriptLoaded(scriptPath, ScriptManagerService.DeriveScriptIdFromPath(scriptPath));
 				ConsoleLogService.Instance.Append(
 					$"[Sessions] Script command sent for '{target.Name}' (script '{scriptPath}').",
 					ConsoleLogSource.Orbit,

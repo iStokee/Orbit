@@ -46,13 +46,13 @@ namespace Orbit.Tooling
 			}
 
 		// Create the layout-based implementation (Dragablz Layout control)
-		var viewModel = new OrbitGridLayoutViewModel(
-			_sessionCollectionService,
-			_layoutStateService,
-			mainVm.InterTabClient,
-			_tearOffRegistry,
-			mainVm.CloseSession,
-			session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session));
+			var viewModel = new OrbitGridLayoutViewModel(
+				_sessionCollectionService,
+				_layoutStateService,
+				mainVm.InterTabClient,
+				_tearOffRegistry,
+				mainVm.CloseSessionFromTab,
+				session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session));
 
 			return new OrbitGridLayoutView { DataContext = viewModel };
 		}

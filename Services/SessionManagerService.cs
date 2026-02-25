@@ -322,9 +322,18 @@ namespace Orbit.Services
 			{
 				try
 				{
-					await OrbitCommandClient
-						.SendUnloadScriptWithRetryAsync(session.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
-						.ConfigureAwait(false);
+					var scriptIdToUnload = !string.IsNullOrWhiteSpace(session.ActiveScriptId)
+						? session.ActiveScriptId
+						: (!string.IsNullOrWhiteSpace(session.ActiveScriptPath)
+							? ScriptManagerService.DeriveScriptIdFromPath(session.ActiveScriptPath)
+							: null);
+
+					if (!string.IsNullOrWhiteSpace(scriptIdToUnload))
+					{
+						await OrbitCommandClient
+							.SendUnloadScriptWithRetryAsync(scriptIdToUnload, session.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
+							.ConfigureAwait(false);
+					}
 				}
 				catch (Exception ex)
 				{
