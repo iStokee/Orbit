@@ -20,6 +20,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
     <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -53,7 +54,7 @@
         </Border>
 
         <!--  Main Content  -->
-        <Grid Grid.Row="1" Margin="0,0,0,0">
+        <Grid Grid.Row="1" Margin="0,0,0,0" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3*" />
                 <ColumnDefinition Width="2*" />
@@ -61,8 +62,10 @@
 
             <!--  Left Column: Custom Theme Creator  -->
             <Border
+                x:Name="ThemeBuilderCard"
                 Grid.Column="0"
                 Margin="0,0,10,0"
+                VerticalAlignment="Top"
                 Style="{StaticResource Orbit.ToolCard}">
                 <StackPanel>
                     <Grid Margin="0,0,0,12">
@@ -277,7 +280,7 @@
                                     FontSize="12"
                                     Text="Custom Theme Name" />
                             <TextBox
-                                    Height="32"
+                                    MinHeight="32"
                                     FontSize="13"
                                     Text="{Binding CustomThemeName, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -338,7 +341,7 @@
                                 </StackPanel>
                                 <Button
                                         Width="88"
-                                        Height="28"
+                                        MinHeight="28"
                                         Margin="12,0,0,0"
                                         VerticalAlignment="Center"
                                         Command="{Binding ResetActiveColorCommand}">
@@ -358,10 +361,98 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Border
+                            Margin="0,12,0,0"
+                            Padding="12"
+                            Background="{DynamicResource MahApps.Brushes.Gray8}"
+                            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                            BorderThickness="1"
+                            CornerRadius="12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                        Kind="FormatFont" />
+                                <TextBlock
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        FontWeight="SemiBold"
+                                        Text="Typography (Global)" />
+                            </StackPanel>
+                            <TextBlock
+                                    Margin="0,6,0,0"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                                    Text="Applies app-wide defaults for text controls. Explicit per-control overrides still win." />
+
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="170" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Font family" VerticalAlignment="Center" />
+                                <ComboBox
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Margin="10,0,0,0"
+                                        ItemsSource="{Binding AvailableFontFamilies}"
+                                        SelectedItem="{Binding SelectedFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="Base size" VerticalAlignment="Center" />
+                                <Grid Grid.Row="1" Grid.Column="1" Margin="10,10,0,0" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="40" />
+                                    </Grid.ColumnDefinitions>
+                                    <Slider
+                                            Grid.Column="0"
+                                            Width="120"
+                                            Minimum="10"
+                                            Maximum="22"
+                                            TickFrequency="0.5"
+                                            IsSnapToTickEnabled="True"
+                                            Value="{Binding BaseFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Right"
+                                            TextAlignment="Right"
+                                            Text="{Binding BaseFontSize, StringFormat=F1}" />
+                                </Grid>
+
+                                <TextBlock Grid.Row="2" Margin="0,10,0,0" Text="Body weight" VerticalAlignment="Center" />
+                                <ComboBox
+                                        Grid.Row="2"
+                                        Grid.Column="1"
+                                        Margin="10,10,0,0"
+                                        ItemsSource="{Binding AvailableFontWeights}"
+                                        SelectedItem="{Binding SelectedFontWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+
                             <Button
                                     Width="120"
-                                    Height="32"
+                                    MinHeight="30"
+                                    Margin="0,10,0,0"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding ResetTypographyCommand}">
+                                <TextBlock Text="Reset Typography" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Button
+                                    Width="120"
+                                    MinHeight="32"
                                     Margin="0,0,10,0"
                                     Command="{Binding DeleteCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
@@ -375,7 +466,7 @@
                             </Button>
                             <Button
                                     Width="120"
-                                    Height="32"
+                                    MinHeight="32"
                                     Margin="0,0,10,0"
                                     Command="{Binding ApplyCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
@@ -389,7 +480,7 @@
                             </Button>
                             <Button
                                     Width="130"
-                                    Height="32"
+                                    MinHeight="32"
                                     Command="{Binding SaveCustomThemeCommand}"
                                     Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
                                 <StackPanel Orientation="Horizontal">
@@ -401,15 +492,17 @@
                                     <TextBlock VerticalAlignment="Center" Text="Save" />
                                 </StackPanel>
                             </Button>
-                    </StackPanel>
+                    </WrapPanel>
 
                 </StackPanel>
             </Border>
 
-            <Grid Grid.Column="1">
+            <Grid
+                Grid.Column="1"
+                VerticalAlignment="Top"
+                MaxHeight="{Binding ElementName=ThemeBuilderCard, Path=ActualHeight}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
@@ -437,13 +530,13 @@
                         <StackPanel Margin="0,0,0,6" Orientation="Horizontal">
                             <Button
                                     Width="96"
-                                    Height="30"
+                                    MinHeight="30"
                                     Margin="0,0,8,0"
                                     Content="Primary"
                                     Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
                             <Button
                                     Width="96"
-                                    Height="30"
+                                    MinHeight="30"
                                     Content="Secondary" />
                             <StackPanel Margin="16,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
                                 <Ellipse
@@ -547,7 +640,6 @@
 
                 <Border
                         Grid.Row="1"
-                        Grid.RowSpan="2"
                         Margin="10,10,0,0"
                         Style="{StaticResource Orbit.ToolCard}">
                     <Grid>
@@ -579,7 +671,7 @@
                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="{Binding SelectedBaseTheme, StringFormat='Base mode: {0} (applies globally). Choose Presets or Custom below for colors.'}" />
 
-                        <Controls:MetroTabControl Grid.Row="2">
+                        <Controls:MetroTabControl Grid.Row="2" VerticalAlignment="Stretch">
                             <Controls:MetroTabItem Header="Presets">
                                 <Grid Margin="0,10,0,0">
                                     <Grid.RowDefinitions>
@@ -588,9 +680,10 @@
                                     </Grid.RowDefinitions>
                                     <ListBox
                                             Grid.Row="0"
-                                            Margin="0,0,0,12"
+                                            Margin="0,0,0,10"
                                             BorderThickness="0"
                                             ItemsSource="{Binding ColorSchemes}"
+                                            ScrollViewer.CanContentScroll="True"
                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                                             SelectedItem="{Binding SelectedColorScheme}">
                                         <ListBox.ItemTemplate>
@@ -622,7 +715,7 @@
                                     <Button
                                             Grid.Row="1"
                                             Width="150"
-                                            Height="34"
+                                            MinHeight="34"
                                             HorizontalAlignment="Left"
                                             Command="{Binding ApplyThemeCommand}"
                                             Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
@@ -643,6 +736,7 @@
                                         Margin="0,10,0,0"
                                         BorderThickness="0"
                                         ItemsSource="{Binding CustomThemes}"
+                                        ScrollViewer.CanContentScroll="True"
                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
                                         SelectedItem="{Binding SelectedCustomTheme}">
                                     <ListBox.ItemTemplate>
@@ -690,4 +784,5 @@
             </Grid>
         </Grid>
     </Grid>
+    </ScrollViewer>
 </UserControl>

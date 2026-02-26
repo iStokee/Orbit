@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -10,6 +11,7 @@ using Application = System.Windows.Application;
 using ColorConverter = System.Windows.Media.ColorConverter;
 using Color = System.Windows.Media.Color;
 using SystemColors = System.Windows.SystemColors;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace Orbit.Services
 {
@@ -44,13 +46,36 @@ namespace Orbit.Services
 	public class ThemeService
 	{
 		private const string CustomAccentPrefix = "custom:";
-		private const string CustomAccentDictionaryMarkerKey = "__Orbit.CustomAccentDictionary";
 		private const string OrbitTextPrimaryKey = "Orbit.Brushes.Text.Primary";
 		private const string OrbitTextSecondaryKey = "Orbit.Brushes.Text.Secondary";
+		private const string OrbitTextTertiaryKey = "Orbit.Brushes.Text.Tertiary";
 		private const string OrbitTextOnAccentKey = "Orbit.Brushes.Text.OnAccent";
 		private const string OrbitTextOnHeaderKey = "Orbit.Brushes.Text.OnHeader";
 		private const string OrbitTextOnHeaderSecondaryKey = "Orbit.Brushes.Text.OnHeaderSecondary";
 		private const string OrbitTextOnOverlayKey = "Orbit.Brushes.Text.OnOverlay";
+		private const string TypographyStorageFileName = "appearance.settings.json";
+		private const string FontFamilyResourceKey = "Orbit.Fonts.Family";
+		private const string FontSizeResourceKey = "Orbit.Fonts.Size.Base";
+		private const string FontWeightResourceKey = "Orbit.Fonts.Weight.Body";
+
+		private static readonly HashSet<string> SupportedFontWeights = new(StringComparer.OrdinalIgnoreCase)
+		{
+			"Normal",
+			"SemiBold",
+			"Bold"
+		};
+
+		private sealed class AppearanceSettingsStore
+		{
+			public TypographySettings Typography { get; set; } = new();
+		}
+
+		public sealed class TypographySettings
+		{
+			public string FontFamily { get; set; } = "Segoe UI";
+			public double BaseFontSize { get; set; } = 12;
+			public string FontWeight { get; set; } = "Normal";
+		}
 
 		/// <summary>
 		/// Get available base themes (Light, Dark)
@@ -96,6 +121,80 @@ namespace Orbit.Services
 				));
 			}
 			return new ObservableCollection<ThemeDescriptor>(themes.OrderBy(t => t.DisplayName));
+		}
+
+		public ObservableCollection<string> GetAvailableFontFamilies()
+		{
+			var fonts = Fonts.SystemFontFamilies
+				.Select(f => f.Source)
+				.Where(name => !string.IsNullOrWhiteSpace(name))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.OrderBy(name => name)
+				.ToList();
+
+			if (!fonts.Contains("Segoe UI", StringComparer.OrdinalIgnoreCase))
+			{
+				fonts.Insert(0, "Segoe UI");
+			}
+
+			return new ObservableCollection<string>(fonts);
+		}
+
+		public ObservableCollection<string> GetAvailableFontWeights()
+			=> new(SupportedFontWeights.OrderBy(weight => weight, StringComparer.OrdinalIgnoreCase));
+
+		public TypographySettings LoadTypographySettings()
+		{
+			try
+			{
+				var path = GetTypographySettingsPath();
+				if (!File.Exists(path))
+				{
+					return new TypographySettings();
+				}
+
+				var raw = File.ReadAllText(path);
+				if (string.IsNullOrWhiteSpace(raw))
+				{
+					return new TypographySettings();
+				}
+
+				var parsed = JsonConvert.DeserializeObject<AppearanceSettingsStore>(raw);
+				return SanitizeTypographySettings(parsed?.Typography);
+			}
+			catch
+			{
+				return new TypographySettings();
+			}
+		}
+
+		public void ApplyTypographySettings(TypographySettings settings, bool persist = true)
+		{
+			var sanitized = SanitizeTypographySettings(settings);
+			var resources = Application.Current.Resources;
+			resources[FontFamilyResourceKey] = new FontFamily(sanitized.FontFamily);
+			resources[FontSizeResourceKey] = sanitized.BaseFontSize;
+			resources[FontWeightResourceKey] = ResolveFontWeight(sanitized.FontWeight);
+
+			if (!persist)
+			{
+				return;
+			}
+
+			try
+			{
+				var path = GetTypographySettingsPath();
+				Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
+				var payload = new AppearanceSettingsStore
+				{
+					Typography = sanitized
+				};
+				File.WriteAllText(path, JsonConvert.SerializeObject(payload, Formatting.Indented));
+			}
+			catch
+			{
+				// Ignore persistence failures; runtime application should still work.
+			}
 		}
 
 		public ObservableCollection<CustomThemeDefinition> LoadCustomThemes()
@@ -144,6 +243,7 @@ namespace Orbit.Services
 				if (custom != null)
 				{
 					ApplyCustomTheme(custom);
+					ApplyTypographySettings(LoadTypographySettings(), persist: false);
 					return;
 				}
 			}
@@ -160,6 +260,7 @@ namespace Orbit.Services
 			}
 
 			ApplyBuiltInTheme(baseTheme, colorScheme);
+			ApplyTypographySettings(LoadTypographySettings(), persist: false);
 		}
 
 		/// <summary>
@@ -195,7 +296,6 @@ namespace Orbit.Services
 			{
 				ThemeLogger.Log($"Applying theme: {themeName}");
 				ThemeManager.Current.ChangeTheme(Application.Current, theme);
-				ApplyAccentResourcesFromTheme(theme);
 				ApplyOrbitSemanticTextResources();
 				SaveCurrentTheme(baseTheme, colorScheme);
 				ThemeLogger.Log($"Theme applied successfully");
@@ -208,7 +308,6 @@ namespace Orbit.Services
 				if (fallback != null)
 				{
 					ThemeManager.Current.ChangeTheme(Application.Current, fallback);
-					ApplyAccentResourcesFromTheme(fallback);
 					ApplyOrbitSemanticTextResources();
 					SaveCurrentTheme("Dark", "Steel");
 				}
@@ -249,40 +348,6 @@ namespace Orbit.Services
 			}
 
 			return Colors.White;
-		}
-
-		private static void ApplyAccentResourcesFromTheme(Theme theme)
-		{
-			Color? ResolveColor(object? candidate)
-				=> candidate switch
-				{
-					Color color => color,
-					SolidColorBrush brush => brush.Color,
-					_ => null
-				};
-
-			var resources = theme?.Resources;
-			if (resources == null)
-			{
-				ApplyAccentResources(Colors.SteelBlue);
-				return;
-			}
-
-			Color? accent = resources.Contains("MahApps.Colors.Accent")
-				? ResolveColor(resources["MahApps.Colors.Accent"])
-				: null;
-			if (accent == null && resources.Contains("MahApps.Brushes.Accent"))
-			{
-				accent = ResolveColor(resources["MahApps.Brushes.Accent"]);
-			}
-
-			if (accent == null)
-			{
-				var fallback = Application.Current.TryFindResource("MahApps.Brushes.Accent");
-				accent = ResolveColor(fallback) ?? Colors.SteelBlue;
-			}
-
-			ApplyAccentResources(accent.Value);
 		}
 
 		public void ApplyCustomTheme(CustomThemeDefinition customTheme)
@@ -378,6 +443,8 @@ namespace Orbit.Services
 			// MahApps v2 uses MahApps.* prefixed keys
 			resources["MahApps.Colors.Accent"] = accentColor;
 			ThemeLogger.LogResourceSet("MahApps.Colors.Accent", accentColor);
+			resources["MahApps.Colors.AccentBase"] = accentColor;
+			ThemeLogger.LogResourceSet("MahApps.Colors.AccentBase", accentColor);
 			resources["MahApps.Colors.Accent2"] = accentColor2;
 			ThemeLogger.LogResourceSet("MahApps.Colors.Accent2", accentColor2);
 			resources["MahApps.Colors.Accent3"] = accentColor3;
@@ -399,6 +466,8 @@ namespace Orbit.Services
 
 			resources["MahApps.Brushes.Accent"] = CreateFrozenBrush(accentColor);
 			ThemeLogger.LogResourceSet("MahApps.Brushes.Accent", resources["MahApps.Brushes.Accent"]);
+			resources["MahApps.Brushes.AccentBase"] = CreateFrozenBrush(accentColor);
+			ThemeLogger.LogResourceSet("MahApps.Brushes.AccentBase", resources["MahApps.Brushes.AccentBase"]);
 			resources["MahApps.Brushes.Accent2"] = CreateFrozenBrush(accentColor2);
 			ThemeLogger.LogResourceSet("MahApps.Brushes.Accent2", resources["MahApps.Brushes.Accent2"]);
 			resources["MahApps.Brushes.Accent3"] = CreateFrozenBrush(accentColor3);
@@ -537,39 +606,19 @@ namespace Orbit.Services
 		private static void ApplyOrbitSemanticTextResources()
 		{
 			var resources = Application.Current.Resources;
-			var background = ResolveResourceColor(resources, "MahApps.Brushes.ThemeBackground", Colors.Black);
 			var themeForeground = ResolveResourceColor(resources, "MahApps.Brushes.ThemeForeground", Colors.White);
-			var accent = ResolveResourceColor(resources, "MahApps.Brushes.Accent", Colors.SteelBlue);
-			var accent2 = ResolveResourceColor(resources, "MahApps.Brushes.Accent2", ChangeColorBrightness(accent, 0.2));
-			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent, -0.2));
-			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent, -0.4));
-			var accentForeground = ResolveResourceColor(
-				resources,
-				"MahApps.Brushes.AccentForeground",
-				GetSharedAccentForeground(accent, accent2, accent3, accent4));
+			var accentForeground = ResolveResourceColor(resources, "MahApps.Brushes.AccentForeground", Colors.White);
+			var secondary = CreateSecondaryFrom(themeForeground, 0.82);
+			var tertiary = CreateSecondaryFrom(themeForeground, 0.64);
+			var headerSecondary = CreateSecondaryFrom(accentForeground, 0.88);
 
-			var primary = EnsureReadable(themeForeground, background, 4.5);
-			var secondary = DeriveSecondaryText(primary, background);
-			var onAccent = accentForeground;
-
-			var headerSurface = AverageColor(accent, accent2, accent3);
-			// Keep accent/header text decisions unified so controls on accent variants don't diverge.
-			var onHeader = EnsureReadable(accentForeground, headerSurface, 4.5);
-			var onHeaderSecondary = DeriveSecondaryText(onHeader, headerSurface);
-			if (GetContrastRatio(onHeaderSecondary, headerSurface) < 3.0)
-			{
-				onHeaderSecondary = onHeader;
-			}
-
-			var overlaySurface = Blend(Colors.Black, background, 0.6);
-			var onOverlay = EnsureReadable(themeForeground, overlaySurface, 4.5);
-
-			SetBrushResource(OrbitTextPrimaryKey, primary);
+			SetBrushResource(OrbitTextPrimaryKey, themeForeground);
 			SetBrushResource(OrbitTextSecondaryKey, secondary);
-			SetBrushResource(OrbitTextOnAccentKey, onAccent);
-			SetBrushResource(OrbitTextOnHeaderKey, onHeader);
-			SetBrushResource(OrbitTextOnHeaderSecondaryKey, onHeaderSecondary);
-			SetBrushResource(OrbitTextOnOverlayKey, onOverlay);
+			SetBrushResource(OrbitTextTertiaryKey, tertiary);
+			SetBrushResource(OrbitTextOnAccentKey, accentForeground);
+			SetBrushResource(OrbitTextOnHeaderKey, accentForeground);
+			SetBrushResource(OrbitTextOnHeaderSecondaryKey, headerSecondary);
+			SetBrushResource(OrbitTextOnOverlayKey, themeForeground);
 		}
 
 		private static Color ResolveResourceColor(ResourceDictionary resources, object key, Color fallback)
@@ -586,66 +635,6 @@ namespace Orbit.Services
 				SolidColorBrush brush => brush.Color,
 				_ => fallback
 			};
-		}
-
-		private static Color EnsureReadable(Color preferred, Color background, double minContrastRatio)
-		{
-			if (GetContrastRatio(preferred, background) >= minContrastRatio)
-			{
-				return preferred;
-			}
-
-			var black = Colors.Black;
-			var white = Colors.White;
-			return GetContrastRatio(black, background) >= GetContrastRatio(white, background)
-				? black
-				: white;
-		}
-
-		private static Color DeriveSecondaryText(Color primary, Color background)
-		{
-			var candidate = Blend(primary, background, 0.72);
-			return GetContrastRatio(candidate, background) >= 3.0
-				? candidate
-				: EnsureReadable(primary, background, 3.0);
-		}
-
-		private static Color AverageColor(params Color[] colors)
-		{
-			if (colors == null || colors.Length == 0)
-			{
-				return Colors.Black;
-			}
-
-			double a = 0;
-			double r = 0;
-			double g = 0;
-			double b = 0;
-			foreach (var color in colors)
-			{
-				a += color.A;
-				r += color.R;
-				g += color.G;
-				b += color.B;
-			}
-
-			var count = colors.Length;
-			return Color.FromArgb(
-				(byte)Math.Round(a / count),
-				(byte)Math.Round(r / count),
-				(byte)Math.Round(g / count),
-				(byte)Math.Round(b / count));
-		}
-
-		private static Color Blend(Color foreground, Color background, double foregroundWeight)
-		{
-			var clamped = Math.Clamp(foregroundWeight, 0.0, 1.0);
-			var bgWeight = 1.0 - clamped;
-			return Color.FromArgb(
-				(byte)Math.Round((foreground.A * clamped) + (background.A * bgWeight)),
-				(byte)Math.Round((foreground.R * clamped) + (background.R * bgWeight)),
-				(byte)Math.Round((foreground.G * clamped) + (background.G * bgWeight)),
-				(byte)Math.Round((foreground.B * clamped) + (background.B * bgWeight)));
 		}
 
 		private static double GetContrastRatio(Color colorA, Color colorB)
@@ -673,36 +662,21 @@ namespace Orbit.Services
 			return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
 		}
 
+		private static Color CreateSecondaryFrom(Color source, double alphaScale)
+		{
+			var clamped = Math.Clamp(alphaScale, 0.0, 1.0);
+			return Color.FromArgb(
+				(byte)Math.Clamp((int)Math.Round(source.A * clamped), 0, 255),
+				source.R,
+				source.G,
+				source.B);
+		}
+
 		private static void SetBrushResource(object key, Color color)
 		{
 			var brush = CreateFrozenBrush(color);
 			Application.Current.Resources[key] = brush;
 			ThemeLogger.LogResourceSet(key.ToString() ?? key.GetType().Name, brush);
-		}
-
-		private static ResourceDictionary EnsureCustomAccentDictionary()
-		{
-			var resources = Application.Current.Resources;
-
-			// Check if custom dictionary already exists
-			foreach (var dictionary in resources.MergedDictionaries)
-			{
-				if (dictionary.Contains(CustomAccentDictionaryMarkerKey))
-				{
-					// Move it to the end for highest priority
-					resources.MergedDictionaries.Remove(dictionary);
-					resources.MergedDictionaries.Add(dictionary);
-					return dictionary;
-				}
-			}
-
-			// Create new custom dictionary at the end (highest priority)
-			var customDictionary = new ResourceDictionary
-			{
-				{ CustomAccentDictionaryMarkerKey, true }
-			};
-			resources.MergedDictionaries.Add(customDictionary);
-			return customDictionary;
 		}
 
 		private static void RemoveCustomAccentOverrides()
@@ -714,11 +688,11 @@ namespace Orbit.Services
 			// This allows the base theme resources to show through
 			var keysToRemove = new[]
 			{
-				"MahApps.Colors.Accent", "MahApps.Colors.Accent2", "MahApps.Colors.Accent3", "MahApps.Colors.Accent4",
+				"MahApps.Colors.Accent", "MahApps.Colors.AccentBase", "MahApps.Colors.Accent2", "MahApps.Colors.Accent3", "MahApps.Colors.Accent4",
 				"MahApps.Colors.Highlight", "MahApps.Colors.IdealForeground", "MahApps.Colors.AccentForeground",
 				"MahApps.Colors.AccentSelectedForeground", "MahApps.Colors.HighlightForeground",
 				"ControlzEx.Colors.AccentForeground",
-				"MahApps.Brushes.Accent", "MahApps.Brushes.Accent2", "MahApps.Brushes.Accent3", "MahApps.Brushes.Accent4",
+				"MahApps.Brushes.Accent", "MahApps.Brushes.AccentBase", "MahApps.Brushes.Accent2", "MahApps.Brushes.Accent3", "MahApps.Brushes.Accent4",
 				"MahApps.Brushes.Highlight", "MahApps.Brushes.IdealForeground", "MahApps.Brushes.WindowTitle",
 				"MahApps.Brushes.AccentForeground", "MahApps.Brushes.AccentSelectedForeground", "MahApps.Brushes.HighlightForeground",
 				"ControlzEx.Brushes.AccentForeground",
@@ -740,6 +714,42 @@ namespace Orbit.Services
 				}
 			}
 			ThemeLogger.Log($"Removed {removedCount} custom accent resources");
+		}
+
+		private static TypographySettings SanitizeTypographySettings(TypographySettings? settings)
+		{
+			var value = settings ?? new TypographySettings();
+			var normalizedWeight = SupportedFontWeights.Contains(value.FontWeight)
+				? value.FontWeight
+				: "Normal";
+
+			var normalizedFamily = string.IsNullOrWhiteSpace(value.FontFamily)
+				? "Segoe UI"
+				: value.FontFamily.Trim();
+
+			var normalizedSize = Math.Clamp(value.BaseFontSize, 10.0, 22.0);
+			return new TypographySettings
+			{
+				FontFamily = normalizedFamily,
+				BaseFontSize = Math.Round(normalizedSize, 1),
+				FontWeight = normalizedWeight
+			};
+		}
+
+		private static FontWeight ResolveFontWeight(string weight)
+			=> weight.Trim().ToLowerInvariant() switch
+			{
+				"semibold" => FontWeights.SemiBold,
+				"bold" => FontWeights.Bold,
+				_ => FontWeights.Normal
+			};
+
+		private static string GetTypographySettingsPath()
+		{
+			var baseDir = Path.Combine(
+				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				"Orbit");
+			return Path.Combine(baseDir, TypographyStorageFileName);
 		}
 
 		private static bool TryParseColor(string value, out Color color)

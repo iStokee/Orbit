@@ -61,7 +61,7 @@
                 </Grid.RowDefinitions>
 
                 <!--  Action Buttons  -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <WrapPanel Grid.Row="0" Orientation="Horizontal">
                     <Button
                         Margin="0,0,8,0"
                         Padding="16,8"
@@ -120,7 +120,7 @@
                             </DataTemplate>
                         </Button.ContentTemplate>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
 
                 <!--  Search Box  -->
                 <TextBox

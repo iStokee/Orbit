@@ -2,6 +2,7 @@
     x:Class="Orbit.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:dragablz="clr-namespace:Dragablz;assembly=Dragablz"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
@@ -29,13 +30,134 @@
             <!-- Shared outer margin for tool pages (tighter than the original 16px). -->
             <Thickness x:Key="Orbit.ToolPageMargin">12</Thickness>
             <SolidColorBrush x:Key="Orbit.UpdateBadgeBrush" Color="#FFFFC44D" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="#FFFFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="#CCFFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="#99FFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnAccent" Color="#FFFFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeader" Color="#FFFFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeaderSecondary" Color="#DDFFFFFF" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnOverlay" Color="#FFFFFFFF" />
+            <FontFamily x:Key="Orbit.Fonts.Family">Segoe UI</FontFamily>
+            <sys:Double x:Key="Orbit.Fonts.Size.Base">12</sys:Double>
+            <FontWeight x:Key="Orbit.Fonts.Weight.Body">Normal</FontWeight>
+
+            <Style TargetType="{x:Type Control}">
+                <Setter Property="FontFamily" Value="{DynamicResource Orbit.Fonts.Family}" />
+                <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
+                <Setter Property="FontWeight" Value="{DynamicResource Orbit.Fonts.Weight.Body}" />
+            </Style>
+            <Style TargetType="{x:Type TextBlock}">
+                <Setter Property="FontFamily" Value="{DynamicResource Orbit.Fonts.Family}" />
+                <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
+                <Setter Property="FontWeight" Value="{DynamicResource Orbit.Fonts.Weight.Body}" />
+            </Style>
+            <Style TargetType="{x:Type TextElement}">
+                <Setter Property="FontFamily" Value="{DynamicResource Orbit.Fonts.Family}" />
+                <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
+                <Setter Property="FontWeight" Value="{DynamicResource Orbit.Fonts.Weight.Body}" />
+            </Style>
+
+            <!-- 60-30-10 color system:
+                 60% base = ThemeBackground/ThemeForeground
+                 30% surfaces = Gray8/Gray7/Gray6 neutrals
+                 10% accent = Accent/Accent2/AccentForeground -->
+            <Style
+                x:Key="Orbit.Styles.Button.Default"
+                BasedOn="{StaticResource MahApps.Styles.Button}"
+                TargetType="Button">
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Opacity" Value="0.6" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="Button" BasedOn="{StaticResource Orbit.Styles.Button.Default}" />
+
+            <Style
+                x:Key="Orbit.Styles.TextBox.Default"
+                BasedOn="{StaticResource MahApps.Styles.TextBox}"
+                TargetType="TextBox">
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Padding" Value="8,4" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+            </Style>
+            <Style TargetType="TextBox" BasedOn="{StaticResource Orbit.Styles.TextBox.Default}" />
+
+            <Style
+                x:Key="Orbit.Styles.ComboBox.Default"
+                BasedOn="{StaticResource MahApps.Styles.ComboBox}"
+                TargetType="ComboBox">
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+            </Style>
+            <Style TargetType="ComboBox" BasedOn="{StaticResource Orbit.Styles.ComboBox.Default}" />
+
+            <Style
+                x:Key="Orbit.Styles.TextBox.InlineRename"
+                BasedOn="{StaticResource Orbit.Styles.TextBox.Default}"
+                TargetType="TextBox">
+                <Setter Property="MinWidth" Value="110" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="Padding" Value="2,0" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style
+                x:Key="Orbit.Styles.Button.Circle.Action"
+                BasedOn="{StaticResource MahApps.Styles.Button.Circle}"
+                TargetType="Button">
+                <Setter Property="Width" Value="26" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="Padding" Value="4" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+            </Style>
+
+            <Style
+                x:Key="Orbit.Styles.Button.Circle.Rename"
+                BasedOn="{StaticResource Orbit.Styles.Button.Circle.Action}"
+                TargetType="Button">
+                <Setter Property="Opacity" Value="0.75" />
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                        <Setter Property="Opacity" Value="1" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" Opacity="0.82" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" Opacity="0.64" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnAccent" Color="{DynamicResource MahApps.Colors.AccentForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeader" Color="{DynamicResource MahApps.Colors.AccentForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeaderSecondary" Color="{DynamicResource MahApps.Colors.AccentForeground}" Opacity="0.88" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnOverlay" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
 
             <!--  Orbit Grid Cell Style - for TabablzControls in Orbit View grid layout  -->
             <Style

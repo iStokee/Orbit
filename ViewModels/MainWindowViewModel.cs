@@ -85,6 +85,7 @@ namespace Orbit.ViewModels
 	private readonly object sessionCloseSync = new();
 	private readonly HashSet<Guid> closingSessionIds = new();
 	private readonly HashSet<Guid> pendingOrphanValidationSessionIds = new();
+	private static readonly TimeSpan LauncherBatchSpacing = TimeSpan.FromMilliseconds(120);
 	private bool isLauncherBatchLaunchInProgress;
 	private bool hasUpdateNotification;
 
@@ -425,7 +426,7 @@ namespace Orbit.ViewModels
 				}
 
 				isLauncherBatchLaunchInProgress = true;
-				_ = LaunchSelectedBatchAsync(batchCount);
+				await LaunchSelectedBatchAsync(batchCount);
 				return;
 			}
 
@@ -438,10 +439,17 @@ namespace Orbit.ViewModels
 			{
 				Console.WriteLine($"[Orbit][Launcher] Batch launch requested for {batchCount} selected account(s).");
 				LauncherAccountStore.BeginSelectedLaunchBatch();
+				var launches = new List<Task>(batchCount);
 				for (var i = 0; i < batchCount; i++)
 				{
-					await AddSingleSessionAsync();
+					launches.Add(AddSingleSessionAsync());
+					if (i < batchCount - 1)
+					{
+						await Task.Delay(LauncherBatchSpacing);
+					}
 				}
+
+				await Task.WhenAll(launches);
 			}
 			finally
 			{
@@ -2318,6 +2326,7 @@ namespace Orbit.ViewModels
 					}
 				}
 
+				var removeFromUiCollections = false;
 				try
 				{
 					var pid = session.RSProcess?.Id;
@@ -2327,6 +2336,7 @@ namespace Orbit.ViewModels
 						ConsoleLogLevel.Info);
 
 					await sessionManager.ShutdownSessionAsync(session, forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
+					removeFromUiCollections = true;
 				}
 				catch (Exception ex)
 				{
@@ -2334,28 +2344,88 @@ namespace Orbit.ViewModels
 						$"[Orbit] Failed to shutdown session '{session.Name}': {ex.Message}",
 						ConsoleLogSource.Orbit,
 						ConsoleLogLevel.Error);
+
+					removeFromUiCollections = !IsSessionProcessStillRunning(session);
+					if (!removeFromUiCollections)
+					{
+						var recoveryState = session.InjectionState == InjectionState.Injected
+							? SessionState.Injected
+							: SessionState.ClientReady;
+						session.UpdateState(recoveryState, clearError: false);
+						ConsoleLog.Append(
+							$"[Orbit] Session '{session.Name}' is still running after shutdown failure; keeping it in UI for manual recovery.",
+							ConsoleLogSource.Orbit,
+							ConsoleLogLevel.Warning);
+					}
 				}
 				finally
 				{
-					// Ensure the session is removed from any Orbit View workspace state (no-op if not present).
-					orbitLayoutState.RemoveItem(session);
-
-					if (Sessions.Contains(session))
+					if (removeFromUiCollections)
 					{
-						Sessions.Remove(session);
-					}
+						// Ensure the session is removed from any Orbit View workspace state (no-op if not present).
+						orbitLayoutState.RemoveItem(session);
 
-					if (Tabs.Contains(session))
+						if (Sessions.Contains(session))
+						{
+							Sessions.Remove(session);
+						}
+
+						if (Tabs.Contains(session))
+						{
+							Tabs.Remove(session);
+						}
+
+						HandleTabRemoval(session);
+					}
+					else
 					{
-						Tabs.Remove(session);
+						EnsureSessionRemainsVisible(session);
 					}
-
-					HandleTabRemoval(session);
 				}
 			}
 			finally
 			{
 				MarkSessionCloseCompleted(session);
+			}
+		}
+
+		private static bool IsSessionProcessStillRunning(SessionModel session)
+		{
+			var process = session?.RSProcess;
+			if (process == null)
+			{
+				return false;
+			}
+
+			try
+			{
+				return !process.HasExited;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		private void EnsureSessionRemainsVisible(SessionModel session)
+		{
+			if (session == null || !Sessions.Contains(session))
+			{
+				return;
+			}
+
+			var sessionInOrbitWorkspace = orbitLayoutState.Items
+				.OfType<SessionModel>()
+				.Any(item => ReferenceEquals(item, session));
+			if (!sessionInOrbitWorkspace && !Tabs.Contains(session))
+			{
+				Tabs.Add(session);
+			}
+
+			SelectedSession = session;
+			if (Tabs.Contains(session))
+			{
+				SelectedTab = session;
 			}
 		}
 
@@ -2434,8 +2504,8 @@ namespace Orbit.ViewModels
 			}
 		}
 
-	private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-	{
+		private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+		{
 		if (e == null)
 		{
 			UpdateFloatingMenuVisibilityForCurrentTab();
@@ -2459,16 +2529,32 @@ namespace Orbit.ViewModels
 			SelectedTab = e.NewItems?.Cast<object>().FirstOrDefault() ?? Tabs.FirstOrDefault();
 		}
 
-		if (e.OldItems != null)
-		{
-			foreach (var removedSession in e.OldItems.OfType<SessionModel>())
+			if (e.OldItems != null)
 			{
-				ScheduleOrphanedSessionValidation(removedSession);
+				foreach (var removedSession in e.OldItems.OfType<SessionModel>())
+				{
+					ScheduleOrphanedSessionValidation(removedSession);
+				}
 			}
-		}
 
-		UpdateFloatingMenuVisibilityForCurrentTab();
-	}
+			if (e.NewItems != null)
+			{
+				foreach (var added in e.NewItems.Cast<object>())
+				{
+					switch (added)
+					{
+						case SessionModel session:
+							orbitLayoutState.RemoveItem(session);
+							break;
+						case Models.ToolTabItem tool when !string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal):
+							orbitLayoutState.RemoveItem(tool);
+							break;
+					}
+				}
+			}
+
+			UpdateFloatingMenuVisibilityForCurrentTab();
+		}
 
 	private static object? ResolveClosingItem(ItemActionCallbackArgs<TabablzControl> args)
 	{

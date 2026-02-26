@@ -14,26 +14,42 @@ namespace Orbit.Views;
 public partial class ConsoleView : UserControl
 {
 	private readonly ConsoleViewModel _viewModel;
+	private readonly INotifyCollectionChanged? _entriesCollection;
 	private int _autoScrollPending;
+	private bool _entriesSubscribed;
 
 	public ConsoleView()
 	{
 		InitializeComponent();
 		_viewModel = ConsoleViewModel.Instance;
 		DataContext = _viewModel;
+		Loaded += OnLoaded;
+		Unloaded += OnUnloaded;
 
-		// Subscribe to collection changes for auto-scroll
-		// ReadOnlyObservableCollection implements INotifyCollectionChanged
-		if (ConsoleLogService.Instance.Entries is INotifyCollectionChanged notifyCollection)
+		// ReadOnlyObservableCollection implements INotifyCollectionChanged.
+		_entriesCollection = ConsoleLogService.Instance.Entries as INotifyCollectionChanged;
+	}
+
+	private void OnLoaded(object sender, RoutedEventArgs e)
+	{
+		if (_entriesSubscribed || _entriesCollection == null)
 		{
-			notifyCollection.CollectionChanged += Entries_CollectionChanged;
-
-			// Unsubscribe when unloaded to prevent memory leaks
-			Unloaded += (s, e) =>
-			{
-				notifyCollection.CollectionChanged -= Entries_CollectionChanged;
-			};
+			return;
 		}
+
+		_entriesCollection.CollectionChanged += Entries_CollectionChanged;
+		_entriesSubscribed = true;
+	}
+
+	private void OnUnloaded(object sender, RoutedEventArgs e)
+	{
+		if (!_entriesSubscribed || _entriesCollection == null)
+		{
+			return;
+		}
+
+		_entriesCollection.CollectionChanged -= Entries_CollectionChanged;
+		_entriesSubscribed = false;
 	}
 
 	private void Entries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

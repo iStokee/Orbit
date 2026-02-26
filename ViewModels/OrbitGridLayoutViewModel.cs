@@ -515,23 +515,33 @@ namespace Orbit.ViewModels
 				// and removes workspace membership only when the item has clearly moved elsewhere.
 				var workspaceItems = Items.OfType<object>().ToList();
 
-				var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-				var elsewhere = new HashSet<object>(ReferenceEqualityComparer.Instance);
-				foreach (var window in windows)
-				{
-					if (window.DataContext is not MainWindowViewModel vm)
+					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
+					var orbitTearOffWindows = new HashSet<Window>(
+						_tearOffRegistry
+							.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
+							.Select(h => h.Window));
+					var elsewhere = new HashSet<object>(ReferenceEqualityComparer.Instance);
+					var elsewhereNonOrbit = new HashSet<object>(ReferenceEqualityComparer.Instance);
+					foreach (var window in windows)
 					{
-						continue;
-					}
-
-					foreach (var t in vm.Tabs)
-					{
-						if (t != null)
+						if (window.DataContext is not MainWindowViewModel vm)
 						{
-							elsewhere.Add(t);
+							continue;
+						}
+
+						foreach (var t in vm.Tabs)
+						{
+							if (t != null)
+							{
+								elsewhere.Add(t);
+								// Any item living in a MainWindowViewModel.Tabs strip is considered
+								// outside Orbit workspace ownership, even if that window originated
+								// from an Orbit tear-off. This prevents HostControl "snap-back"
+								// where Orbit View steals focus/content back and leaves empty shells.
+								elsewhereNonOrbit.Add(t);
+							}
 						}
 					}
-				}
 
 				// Ensure workspace items exist in some Orbit control; if not, re-home them into the least-loaded cell.
 				foreach (var item in workspaceItems)
@@ -567,10 +577,31 @@ namespace Orbit.ViewModels
 					catch { /* best effort */ }
 				}
 
-				// Actual items currently hosted by Orbit View (grid + Orbit tear-offs).
-				var actual = new HashSet<object>(ReferenceEqualityComparer.Instance);
-				foreach (var item in ownerByItem.Keys)
-				{
+					// If an item is now hosted in a non-Orbit tab surface, evict it from Orbit controls.
+					// This prevents duplicate session/tool tabs when users tear out from Orbit into independent hosts.
+					foreach (var movedElsewhere in ownerByItem.Keys.Where(item => elsewhereNonOrbit.Contains(item)).ToList())
+					{
+						if (ownerByItem.TryGetValue(movedElsewhere, out var owner))
+						{
+							try
+							{
+								owner.Items.Remove(movedElsewhere);
+								CollapseIfEmpty(owner);
+							}
+							catch
+							{
+								// best effort cleanup
+							}
+						}
+
+						ownerByItem.Remove(movedElsewhere);
+						_preferredOwnerByItem.Remove(movedElsewhere);
+					}
+
+					// Actual items currently hosted by Orbit View (grid + Orbit tear-offs).
+					var actual = new HashSet<object>(ReferenceEqualityComparer.Instance);
+					foreach (var item in ownerByItem.Keys)
+					{
 					actual.Add(item);
 					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(ownerByItem[item]);
 				}
@@ -606,14 +637,14 @@ namespace Orbit.ViewModels
 					return;
 				}
 
-				// Remove any workspace entries that have moved elsewhere (main tab strip).
-				for (int i = Items.Count - 1; i >= 0; i--)
-				{
-					var item = Items[i];
-					if (!actual.Contains(item) && elsewhere.Contains(item))
+					// Remove any workspace entries that have moved to non-Orbit tab strips.
+					for (int i = Items.Count - 1; i >= 0; i--)
 					{
-						Items.RemoveAt(i);
-					}
+						var item = Items[i];
+						if (!actual.Contains(item) && elsewhereNonOrbit.Contains(item))
+						{
+							Items.RemoveAt(i);
+						}
 				}
 
 				// Add any Orbit-hosted items missing from Items (rare, but keeps things robust).
@@ -644,13 +675,8 @@ namespace Orbit.ViewModels
 				// Otherwise, you'd get an empty tab header left behind (HostControl was moved).
 				if (actual.OfType<SessionModel>().Any() || actual.OfType<ToolTabItem>().Any())
 				{
-					var orbitTearOffWindows = new HashSet<Window>(
-						_tearOffRegistry
-							.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
-							.Select(h => h.Window));
-
-					foreach (var window in windows)
-					{
+						foreach (var window in windows)
+						{
 						if (window.DataContext is not MainWindowViewModel vm)
 						{
 							continue;

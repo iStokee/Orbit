@@ -301,7 +301,7 @@ namespace Orbit {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool ShowMenuMcpControl {
             get {
                 return ((bool)(this["ShowMenuMcpControl"]));

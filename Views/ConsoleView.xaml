@@ -268,7 +268,7 @@
                                                                 Height="24"
                                                                 Stretch="Uniform"
                                                                 Data="{StaticResource Orbit.IconGeometry}"
-                                                                Fill="{DynamicResource MahApps.Brushes.AccentForeground}" />
+                                                                Fill="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                                         </Viewbox>
                                                         <iconPacks:PackIconMaterial
                                                             Width="24"
@@ -276,7 +276,7 @@
                                                             Margin="0,2,0,0"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
-                                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                                             Kind="{Binding IconKind}">
                                                             <iconPacks:PackIconMaterial.Style>
                                                                 <Style TargetType="iconPacks:PackIconMaterial">

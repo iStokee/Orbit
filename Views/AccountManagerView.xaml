@@ -17,6 +17,7 @@
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
     </UserControl.Resources>
 
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
     <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -277,7 +278,8 @@
             Grid.Row="4"
             Style="{StaticResource Orbit.ToolCard}"
             BorderBrush="{DynamicResource MahApps.Brushes.Accent}">
-            <Grid>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <Grid MinWidth="640">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
@@ -335,6 +337,8 @@
                     </Button>
                 </StackPanel>
             </Grid>
+            </ScrollViewer>
         </Border>
     </Grid>
+    </ScrollViewer>
 </UserControl>

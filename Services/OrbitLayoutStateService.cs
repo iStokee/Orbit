@@ -1,6 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
+using Orbit.Models;
+using Orbit.ViewModels;
 using Application = System.Windows.Application;
 
 namespace Orbit.Services
@@ -53,16 +56,46 @@ namespace Orbit.Services
 			ExecuteOnUi(() => Items.Remove(item));
 		}
 
-		private void AddItemInternal(object item)
+	private void AddItemInternal(object item)
+	{
+		ExecuteOnUi(() =>
 		{
-			ExecuteOnUi(() =>
+			RemoveFromWindowTabs(item);
+
+			if (!Items.Contains(item))
 			{
-				if (!Items.Contains(item))
-				{
-					Items.Add(item);
-				}
-			});
+				Items.Add(item);
+			}
+		});
+	}
+
+	private static void RemoveFromWindowTabs(object item)
+	{
+		if (item == null)
+		{
+			return;
 		}
+
+		// Orbit View is itself a shell tool; never purge it from tab strips automatically.
+		if (item is ToolTabItem orbitTool && string.Equals(orbitTool.Key, "OrbitView", StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
+		foreach (var window in windows)
+		{
+			if (window.DataContext is not MainWindowViewModel vm)
+			{
+				continue;
+			}
+
+			if (vm.Tabs.Contains(item))
+			{
+				vm.Tabs.Remove(item);
+			}
+		}
+	}
 
 		private static void ExecuteOnUi(Action action)
 		{

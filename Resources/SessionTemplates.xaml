@@ -128,7 +128,7 @@
                                         Direction="270"
                                         Opacity="0.2"
                                         ShadowDepth="1.5"
-                                        Color="{Binding Source={StaticResource MahApps.Colors.Accent}, FallbackValue=#007ACC}" />
+                                        Color="{DynamicResource MahApps.Colors.Accent}" />
                                 </Setter.Value>
                             </Setter>
                         </MultiDataTrigger>
@@ -173,7 +173,7 @@
                                         Direction="270"
                                         Opacity="0.35"
                                         ShadowDepth="3"
-                                        Color="{Binding Source={StaticResource MahApps.Colors.Accent}, FallbackValue=#007ACC}" />
+                                        Color="{DynamicResource MahApps.Colors.Accent}" />
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
@@ -348,52 +348,17 @@
                         </TextBlock>
 
                         <TextBox
-                            MinWidth="110"
-                            Margin="0"
-                            Padding="2,0"
-                            VerticalContentAlignment="Center"
-                            Background="{DynamicResource MahApps.Brushes.Gray7}"
-                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                            BorderThickness="0,0,0,1"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Styles.TextBox.InlineRename}"
                             Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="Collapsed">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                            Visibility="Collapsed" />
                     </Grid>
 
                     <Button
-                        Width="26"
-                        Height="26"
                         Margin="6,0,0,0"
-                        Padding="4"
+                        Style="{StaticResource Orbit.Styles.Button.Circle.Rename}"
+                        ToolTip="Rename session"
                         Command="{Binding DataContext.BeginSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                         CommandParameter="{Binding}">
-                        <Button.Style>
-                            <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
-                                <Setter Property="ToolTip" Value="Rename session" />
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Setter Property="Opacity" Value="0.75" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                        <Setter Property="Opacity" Value="1" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
                         <iconPacks:PackIconMaterial
                             Width="14"
                             Height="14"
@@ -417,17 +382,11 @@
                         </StackPanel.Style>
 
                         <Button
-                            Width="26"
-                            Height="26"
                             Margin="0,0,4,0"
-                            Padding="4"
+                            Style="{StaticResource Orbit.Styles.Button.Circle.Action}"
+                            ToolTip="Save name"
                             Command="{Binding DataContext.CommitSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                             CommandParameter="{Binding}">
-                            <Button.Style>
-                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
-                                    <Setter Property="ToolTip" Value="Save name" />
-                                </Style>
-                            </Button.Style>
                             <iconPacks:PackIconMaterial
                                 Width="14"
                                 Height="14"
@@ -436,16 +395,10 @@
                         </Button>
 
                         <Button
-                            Width="26"
-                            Height="26"
-                            Padding="4"
+                            Style="{StaticResource Orbit.Styles.Button.Circle.Action}"
+                            ToolTip="Cancel rename"
                             Command="{Binding DataContext.CancelSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
                             CommandParameter="{Binding}">
-                            <Button.Style>
-                                <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}" TargetType="Button">
-                                    <Setter Property="ToolTip" Value="Cancel rename" />
-                                </Style>
-                            </Button.Style>
                             <iconPacks:PackIconMaterial
                                 Width="14"
                                 Height="14"

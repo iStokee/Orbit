@@ -42,6 +42,7 @@
                 <Button Width="90" Click="RemoveRow_Click" Content="Remove" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                <Button Width="130" Margin="0,0,8,0" Click="LaunchSelected_Click" Content="Launch Selected" />
                 <Button Width="90" Margin="0,0,8,0" Click="Cancel_Click" Content="Cancel" />
                 <Button Width="90" Click="Save_Click" Content="Save" />
             </StackPanel>

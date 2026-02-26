@@ -45,6 +45,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	private string _diagnosticsStatus = "Runtime diagnostics are not loaded yet.";
 	private ScriptBrowserFilter _selectedFilter = ScriptBrowserFilter.All;
 	private ScriptBrowserLayout _selectedLayout = ScriptBrowserLayout.List;
+	private bool _isMcpToolEnabled;
 
 	/// <summary>
 	/// Convenience constructor used by XAML design-time. Creates service instances on demand.
@@ -101,6 +102,8 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 		_scriptService = scriptService ?? throw new ArgumentNullException(nameof(scriptService));
 		_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 		_mcpBridgeClient = mcpBridgeClient ?? throw new ArgumentNullException(nameof(mcpBridgeClient));
+		_isMcpToolEnabled = Settings.Default.ShowMenuMcpControl;
+		Settings.Default.PropertyChanged += OnAppSettingsPropertyChanged;
 
 		// Initialize favorites collection
 		_favorites = new ObservableCollection<ScriptProfile>(_scriptService.GetFavorites());
@@ -164,6 +167,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 	public ObservableCollection<RuntimeScriptDiagnostic> RuntimeScripts => _runtimeScripts;
 
 	public ObservableCollection<ScriptProfile> Favorites => _favorites;
+	public bool IsMcpToolEnabled => _isMcpToolEnabled;
 
 	public ObservableCollection<SessionModel> Sessions => _sessionCollectionService.Sessions;
 
@@ -610,6 +614,11 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 	private bool CanRefreshDiagnostics()
 	{
+		if (!_isMcpToolEnabled)
+		{
+			return false;
+		}
+
 		if (IsDiagnosticsBusy)
 		{
 			return false;
@@ -806,6 +815,15 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 	private async Task RefreshRuntimeDiagnosticsAsync()
 	{
+		if (!_isMcpToolEnabled)
+		{
+			_runtimeScripts.Clear();
+			OnPropertyChanged(nameof(HasRuntimeScripts));
+			OnPropertyChanged(nameof(HasNoRuntimeScripts));
+			DiagnosticsStatus = "MCP diagnostics are hidden (MCP tool disabled).";
+			return;
+		}
+
 		if (IsDiagnosticsBusy)
 		{
 			return;
@@ -1019,6 +1037,25 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			}
 			_ = RefreshRuntimeDiagnosticsAsync();
 		}
+	}
+
+	private void OnAppSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (!string.Equals(e.PropertyName, nameof(Settings.Default.ShowMenuMcpControl), StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		var enabled = Settings.Default.ShowMenuMcpControl;
+		if (_isMcpToolEnabled == enabled)
+		{
+			return;
+		}
+
+		_isMcpToolEnabled = enabled;
+		OnPropertyChanged(nameof(IsMcpToolEnabled));
+		UpdateCommandStates();
+		_ = RefreshRuntimeDiagnosticsAsync();
 	}
 
 	private void OnTargetSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1244,6 +1281,7 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 
 	public void Dispose()
 	{
+		Settings.Default.PropertyChanged -= OnAppSettingsPropertyChanged;
 		_sessionCollectionService.PropertyChanged -= OnSessionCollectionPropertyChanged;
 		_sessionCollectionService.Sessions.CollectionChanged -= OnSessionsCollectionChanged;
 		if (_targetSession != null)

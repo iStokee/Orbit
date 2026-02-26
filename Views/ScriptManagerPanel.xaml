@@ -7,8 +7,6 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
-    MinWidth="760"
-    MinHeight="520"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     Unloaded="OnUnloaded">
     <UserControl.Resources>
@@ -541,7 +539,8 @@
                         FontSize="11"
                         Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                         Text="{Binding DiagnosticsStatus}"
-                        TextTrimming="CharacterEllipsis" />
+                        TextTrimming="CharacterEllipsis"
+                        Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                     <Button
                         Grid.Column="2"
@@ -549,7 +548,8 @@
                         Height="36"
                         Margin="10,0,0,0"
                         Command="{Binding RefreshDiagnosticsCommand}"
-                        ToolTip="Pull script.list and script.get_state from MCP bridge">
+                        ToolTip="Pull script.list and script.get_state from MCP bridge"
+                        Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="16"
@@ -616,7 +616,10 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource ScriptManagerCardStyle}">
+        <Border
+            Grid.Row="2"
+            Style="{StaticResource ScriptManagerCardStyle}"
+            Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

@@ -33,6 +33,10 @@ namespace Orbit.ViewModels
 		private string? selectedColorScheme;
 	private bool useCustomForeground;
 	private MediaColor selectedCustomForeground = MediaColors.White;
+	private string selectedFontFamily = "Segoe UI";
+	private double baseFontSize = 12;
+	private string selectedFontWeight = "Normal";
+	private bool suppressTypographyApply;
 		private ThemeColorEditorMode activeColorEditor = ThemeColorEditorMode.Accent;
 		private const string UpdateBadgeBrushKey = "Orbit.UpdateBadgeBrush";
 		private const string DefaultUpdateBadgeColorHex = "#FFFFC44D";
@@ -60,12 +64,17 @@ namespace Orbit.ViewModels
 			BaseThemes = themeService.GetAvailableBaseThemes();
 			ColorSchemes = themeService.GetAvailableColorSchemes();
 			CustomThemes = themeService.LoadCustomThemes();
+			AvailableFontFamilies = themeService.GetAvailableFontFamilies();
+			AvailableFontWeights = themeService.GetAvailableFontWeights();
 
 			ApplyThemeCommand = new RelayCommand(ApplySelectedTheme, CanApplyTheme);
 			SaveCustomThemeCommand = new RelayCommand(SaveCustomTheme, CanSaveCustomTheme);
 			ApplyCustomThemeCommand = new RelayCommand(ApplyCustomTheme, () => SelectedCustomTheme != null);
 			DeleteCustomThemeCommand = new RelayCommand(DeleteCustomTheme, () => SelectedCustomTheme != null);
 			ResetActiveColorCommand = new RelayCommand(ResetActiveColor);
+			ResetTypographyCommand = new RelayCommand(ResetTypography);
+
+			InitializeTypographySettings();
 
 			// Detect current theme
 			DetectCurrentTheme();
@@ -75,6 +84,8 @@ namespace Orbit.ViewModels
 		public ObservableCollection<string> BaseThemes { get; }
 			public ObservableCollection<string> ColorSchemes { get; }
 			public ObservableCollection<CustomThemeDefinition> CustomThemes { get; }
+			public ObservableCollection<string> AvailableFontFamilies { get; }
+			public ObservableCollection<string> AvailableFontWeights { get; }
 
 			public string? SelectedBaseTheme
 			{
@@ -438,11 +449,55 @@ namespace Orbit.ViewModels
 			}
 		}
 
+		public string SelectedFontFamily
+		{
+			get => selectedFontFamily;
+			set
+			{
+				if (!SetProperty(ref selectedFontFamily, value))
+				{
+					return;
+				}
+
+				ApplyTypographyIfReady();
+			}
+		}
+
+		public double BaseFontSize
+		{
+			get => baseFontSize;
+			set
+			{
+				var clamped = Math.Clamp(value, 10.0, 22.0);
+				if (!SetProperty(ref baseFontSize, clamped))
+				{
+					return;
+				}
+
+				ApplyTypographyIfReady();
+			}
+		}
+
+		public string SelectedFontWeight
+		{
+			get => selectedFontWeight;
+			set
+			{
+				if (!SetProperty(ref selectedFontWeight, value))
+				{
+					return;
+				}
+
+				ApplyTypographyIfReady();
+			}
+		}
+
 		public IRelayCommand ApplyThemeCommand { get; }
 		public IRelayCommand SaveCustomThemeCommand { get; }
 		public IRelayCommand ApplyCustomThemeCommand { get; }
 		public IRelayCommand DeleteCustomThemeCommand { get; }
 		public IRelayCommand ResetActiveColorCommand { get; }
+		public IRelayCommand ResetTypographyCommand { get; }
 		public IRelayCommand ResetUpdateBadgeColorCommand => ResetActiveColorCommand;
 
 		private void DetectCurrentTheme()
@@ -473,6 +528,23 @@ namespace Orbit.ViewModels
 			SelectedCustomColor = themeService.GetCurrentAccentColor();
 			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
 			UseCustomForeground = false;
+		}
+
+		private void InitializeTypographySettings()
+		{
+			suppressTypographyApply = true;
+			var settings = themeService.LoadTypographySettings();
+
+			if (!AvailableFontFamilies.Contains(settings.FontFamily))
+			{
+				AvailableFontFamilies.Insert(0, settings.FontFamily);
+			}
+
+			SelectedFontFamily = settings.FontFamily;
+			BaseFontSize = settings.BaseFontSize;
+			SelectedFontWeight = settings.FontWeight;
+			suppressTypographyApply = false;
+			ApplyTypographyIfReady();
 		}
 
 		private bool CanApplyTheme()
@@ -602,6 +674,31 @@ namespace Orbit.ViewModels
 
 			OnPropertyChanged(nameof(ActiveColorSelection));
 			OnPropertyChanged(nameof(ActiveColorHex));
+		}
+
+		private void ApplyTypographyIfReady()
+		{
+			if (suppressTypographyApply)
+			{
+				return;
+			}
+
+			themeService.ApplyTypographySettings(new ThemeService.TypographySettings
+			{
+				FontFamily = SelectedFontFamily,
+				BaseFontSize = BaseFontSize,
+				FontWeight = SelectedFontWeight
+			});
+		}
+
+		private void ResetTypography()
+		{
+			suppressTypographyApply = true;
+			SelectedFontFamily = "Segoe UI";
+			BaseFontSize = 12;
+			SelectedFontWeight = "Normal";
+			suppressTypographyApply = false;
+			ApplyTypographyIfReady();
 		}
 
 		private static bool TryParseColor(string? value, out MediaColor color)

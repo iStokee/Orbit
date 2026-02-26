@@ -8,13 +8,38 @@ namespace Orbit.Views
 {
 	public partial class AccountManagerView : UserControl
 	{
+	private readonly AccountManagerViewModel _viewModel;
+	private bool _passwordResetSubscribed;
+
 	public AccountManagerView(AccountManagerViewModel viewModel)
 	{
 		InitializeComponent();
-		DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+		_viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+		DataContext = _viewModel;
+		Loaded += OnLoaded;
+		Unloaded += OnUnloaded;
+	}
 
-		viewModel.PasswordReset += OnPasswordReset;
-		Unloaded += (_, _) => viewModel.PasswordReset -= OnPasswordReset;
+	private void OnLoaded(object sender, RoutedEventArgs e)
+	{
+		if (_passwordResetSubscribed)
+		{
+			return;
+		}
+
+		_viewModel.PasswordReset += OnPasswordReset;
+		_passwordResetSubscribed = true;
+	}
+
+	private void OnUnloaded(object sender, RoutedEventArgs e)
+	{
+		if (!_passwordResetSubscribed)
+		{
+			return;
+		}
+
+		_viewModel.PasswordReset -= OnPasswordReset;
+		_passwordResetSubscribed = false;
 	}
 
 	private void NewPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

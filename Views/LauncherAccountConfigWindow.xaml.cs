@@ -1,10 +1,13 @@
 using MahApps.Metro.Controls;
 using Orbit.Models;
 using Orbit.Services;
+using Orbit.ViewModels;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Orbit.Views;
 
@@ -120,6 +123,42 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 
 	private void Save_Click(object sender, RoutedEventArgs e)
 	{
+		SaveEntries();
+
+		DialogResult = true;
+		Close();
+	}
+
+	private void LaunchSelected_Click(object sender, RoutedEventArgs e)
+	{
+		SaveEntries();
+
+		var ownerViewModel = Owner?.DataContext as MainWindowViewModel
+			?? Application.Current?.Windows
+				.OfType<Window>()
+				.Select(window => window.DataContext)
+				.OfType<MainWindowViewModel>()
+				.FirstOrDefault();
+
+		if (ownerViewModel == null)
+		{
+			MessageBox.Show("Could not find the active Orbit window to launch sessions.", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+			return;
+		}
+
+		if (!ownerViewModel.AddSessionCommand.CanExecute(null))
+		{
+			MessageBox.Show("Launch command is currently unavailable.", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+			return;
+		}
+
+		ownerViewModel.AddSessionCommand.Execute(null);
+		DialogResult = true;
+		Close();
+	}
+
+	private void SaveEntries()
+	{
 		AccountsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Cell, true);
 		AccountsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
 
@@ -142,8 +181,5 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 		LauncherAccountStore.Save(normalized);
 		Settings.Default.LauncherSelectedDisplayName = primarySelected?.DisplayName?.Trim() ?? string.Empty;
 		Settings.Default.Save();
-
-		DialogResult = true;
-		Close();
 	}
 }

@@ -81,6 +81,54 @@ private readonly List<HostEntry> _hosts = new();
 		}
 	}
 
+	public bool TryGetOrigin(TabablzControl tabControl, string partition, out HostOrigin origin)
+	{
+		origin = HostOrigin.Unknown;
+		if (tabControl == null)
+		{
+			return false;
+		}
+
+		partition ??= string.Empty;
+		lock (_sync)
+		{
+			var match = _hosts.FirstOrDefault(h =>
+				ReferenceEquals(h.TabControl, tabControl) &&
+				string.Equals(h.Partition, partition, StringComparison.Ordinal));
+			if (match == null)
+			{
+				return false;
+			}
+
+			origin = match.Origin;
+			return true;
+		}
+	}
+
+	public bool TryGetOrigin(Window window, string partition, out HostOrigin origin)
+	{
+		origin = HostOrigin.Unknown;
+		if (window == null)
+		{
+			return false;
+		}
+
+		partition ??= string.Empty;
+		lock (_sync)
+		{
+			var match = _hosts.FirstOrDefault(h =>
+				ReferenceEquals(h.Window, window) &&
+				string.Equals(h.Partition, partition, StringComparison.Ordinal));
+			if (match == null)
+			{
+				return false;
+			}
+
+			origin = match.Origin;
+			return true;
+		}
+	}
+
 	public void CloseHosts(string partition, HostOrigin origin)
 	{
 		foreach (var (window, _) in GetHosts(partition, origin))

@@ -35,6 +35,7 @@ namespace Orbit
 		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
 		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
 		private static readonly string LauncherUri = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws";
+		private static readonly SemaphoreSlim LauncherStartGate = new(1, 1);
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private uint? originalWindowStyle;
@@ -373,25 +374,41 @@ namespace Orbit
 			{
 				var launchMode = ResolveLaunchMode();
 				var launchTarget = ResolveLaunchTarget(launchMode);
-				ApplyConfiguredLauncherAccountEnvironment(launchMode);
-				pDocked = new Process
+				if (launchMode == ClientLaunchMode.Launcher)
 				{
-					StartInfo = new ProcessStartInfo
-					{
-						FileName = launchTarget,
-						UseShellExecute = true
-					}
-				};
-				pDocked.Start();
-				Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
-				await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
+					await LauncherStartGate.WaitAsync().ConfigureAwait(false);
+				}
+
 				try
 				{
-					pDocked.Refresh();
+					ApplyConfiguredLauncherAccountEnvironment(launchMode);
+					pDocked = new Process
+					{
+						StartInfo = new ProcessStartInfo
+						{
+							FileName = launchTarget,
+							UseShellExecute = true
+						}
+					};
+					pDocked.Start();
+					Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
+					await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
+					try
+					{
+						pDocked.Refresh();
+					}
+					catch (InvalidOperationException)
+					{
+						// Launcher may already have exited once the client starts.
+					}
 				}
-				catch (InvalidOperationException)
+				finally
 				{
-					// Launcher may already have exited once the client starts.
+					if (launchMode == ClientLaunchMode.Launcher)
+					{
+						ClearConfiguredLauncherAccountEnvironment();
+						LauncherStartGate.Release();
+					}
 				}
 			}
 			catch (Exception ex)
@@ -441,6 +458,15 @@ namespace Orbit
 			Console.WriteLine($"[Orbit][Launcher] Applied JX env vars for '{selected.DisplayName}' (CharacterId='{selected.CharacterId}', SessionId='{selected.SessionId}').");
 		}
 
+		private static void ClearConfiguredLauncherAccountEnvironment()
+		{
+			Environment.SetEnvironmentVariable("JX_ACCESS_TOKEN", null);
+			Environment.SetEnvironmentVariable("JX_DISPLAY_NAME", null);
+			Environment.SetEnvironmentVariable("JX_CHARACTER_ID", null);
+			Environment.SetEnvironmentVariable("JX_REFRESH_TOKEN", null);
+			Environment.SetEnvironmentVariable("JX_SESSION_ID", null);
+		}
+
 		private async Task FindAndSetRsClientAsync()
 		{
 			if (pDocked == null)
@@ -482,6 +508,11 @@ namespace Orbit
 					try
 					{
 						confirmedClient = Process.GetProcessById(launcherPid);
+						if (confirmedClient != null && IsProcessAlreadyBoundToSession(confirmedClient.Id))
+						{
+							confirmedClient.Dispose();
+							confirmedClient = null;
+						}
 					}
 					catch (Exception)
 					{
@@ -498,6 +529,11 @@ namespace Orbit
 							var candidateParent = GetParentProcess(candidate.Id);
 							if (candidateParent == launcherPid)
 							{
+								if (IsProcessAlreadyBoundToSession(candidate.Id))
+								{
+									continue;
+								}
+
 								confirmedClient = Process.GetProcessById(candidate.Id);
 								break;
 							}
@@ -508,6 +544,11 @@ namespace Orbit
 								{
 									if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
 									{
+										if (IsProcessAlreadyBoundToSession(candidate.Id))
+										{
+											continue;
+										}
+
 										confirmedClient = Process.GetProcessById(candidate.Id);
 										break;
 									}
@@ -617,6 +658,23 @@ namespace Orbit
 			throw new FileNotFoundException(
 				"[Orbit] Legacy launch mode is enabled but no RuneScape executable could be resolved. " +
 				"Switch Client Launch Mode to 'Launcher' in Settings or install a supported client path.");
+		}
+
+		private static bool IsProcessAlreadyBoundToSession(int processId)
+		{
+			try
+			{
+				var sessions = SessionCollectionService.Instance.Sessions;
+				return sessions.Any(s =>
+					s?.RSProcess != null &&
+					!s.RSProcess.HasExited &&
+					s.RSProcess.Id == processId);
+			}
+			catch
+			{
+				// Never block process detection on bookkeeping failures.
+				return false;
+			}
 		}
 
 		private static string ResolveLegacyClientPath()

@@ -31,13 +31,32 @@ namespace Orbit
 		{
 			var view = serviceProvider.GetRequiredService<MainWindow>();
 			var partitionKey = partition?.ToString() ?? string.Empty;
-			var origin = IsOrbitViewSource(source)
-				? TearOffHostRegistry.HostOrigin.OrbitView
-				: TearOffHostRegistry.HostOrigin.MainTabs;
+			var origin = ResolveOrigin(source, partitionKey);
 			OrbitInteractionLogger.Log($"[OrbitView][Drag] New tear-off host requested partition='{partitionKey}' origin={origin}.");
 
 			tearOffRegistry.Register(view, view.SessionTabControl, partitionKey, origin);
 			return new NewTabHost<Window>(view, view.SessionTabControl);
+		}
+
+		private TearOffHostRegistry.HostOrigin ResolveOrigin(TabablzControl? source, string partitionKey)
+		{
+			if (IsOrbitViewSource(source))
+			{
+				return TearOffHostRegistry.HostOrigin.OrbitView;
+			}
+
+			if (source != null && tearOffRegistry.TryGetOrigin(source, partitionKey, out var sourceOrigin))
+			{
+				return sourceOrigin;
+			}
+
+			var hostWindow = source == null ? null : Window.GetWindow(source);
+			if (hostWindow != null && tearOffRegistry.TryGetOrigin(hostWindow, partitionKey, out var windowOrigin))
+			{
+				return windowOrigin;
+			}
+
+			return TearOffHostRegistry.HostOrigin.MainTabs;
 		}
 
 		private static bool IsOrbitViewSource(TabablzControl? source)
