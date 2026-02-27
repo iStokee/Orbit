@@ -30,7 +30,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20" Orientation="Vertical">
-            <TextBlock Text="Floating Menu" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
+            <TextBlock Text="Floating Menu" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"
                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
 
             <StackPanel Orientation="Vertical" Margin="0,4,0,0">
@@ -66,14 +66,14 @@
 
             <Controls:ToggleSwitch Header="Auto direction (expand inward from nearest edge)"
                                    IsOn="{Binding FloatingMenuAutoDirection, Mode=TwoWay}"
-                                   Margin="0,12,0,0" />
+                                   Margin="0,10,0,0" />
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                            Text="Manual direction" />
                 <ComboBox Width="160"
-                          Margin="12,0,0,0"
+                          Margin="10,0,0,0"
                           IsEnabled="{Binding FloatingMenuAutoDirection, Converter={StaticResource InverseBooleanConverter}}"
                           ItemsSource="{Binding FloatingMenuDirectionOptions}"
                           SelectedItem="{Binding FloatingMenuDirection, Mode=TwoWay}" />
@@ -81,7 +81,7 @@
 
             <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
 
-            <TextBlock Text="Dock Zones" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"
+            <TextBlock Text="Dock Zones" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"
                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>
 
             <StackPanel Orientation="Vertical" Margin="0,4,0,0">
@@ -99,7 +99,7 @@
                            Text="{Binding FloatingMenuDockEdgeThreshold, StringFormat={}{0:0}px}" />
             </StackPanel>
 
-            <StackPanel Orientation="Vertical" Margin="0,12,0,0">
+            <StackPanel Orientation="Vertical" Margin="0,10,0,0">
                 <TextBlock FontWeight="SemiBold" Text="Corner snap distance" Margin="0,0,0,4"
                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <TextBlock FontSize="11" Margin="0,0,0,4"

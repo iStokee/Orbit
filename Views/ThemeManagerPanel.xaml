@@ -17,77 +17,99 @@
             <converters:ColorSchemeToColorConverter x:Key="ColorSchemeToColorConverter" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <converters:ColorToBrushConverter x:Key="ColorToBrushConverter" />
+
+            <!--  Override PixiEditor ColorPicker's baked dark editor styles with theme-aware variants.  -->
+            <Style
+                x:Key="DarkTextBoxStyle"
+                BasedOn="{StaticResource Orbit.Styles.TextBox.Default}"
+                TargetType="{x:Type TextBox}">
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            </Style>
+            <Style
+                x:Key="DarkComboBoxStyle"
+                BasedOn="{StaticResource Orbit.Styles.ComboBox.Default}"
+                TargetType="{x:Type ComboBox}">
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            </Style>
+            <Style x:Key="DarkTabControlStyle" TargetType="{x:Type TabControl}">
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+        <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <!--  Header  -->
-        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
-            <Grid>
+            <!--  Header  -->
+            <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                        <iconPacks:PackIconMaterial Kind="Palette" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                    </Border>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Theme Customization" />
+                        <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Transform Orbit's appearance with built-in themes or design your own custom palette" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--  Main Content  -->
+            <Grid
+                Grid.Row="1"
+                Margin="0,0,0,0"
+                VerticalAlignment="Top">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="2*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial Kind="Palette" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
-                </Border>
-
-                <StackPanel
-                    Grid.Column="1"
-                    Margin="12,0,0,0"
-                    VerticalAlignment="Center">
-                    <TextBlock
-                        Style="{StaticResource Orbit.ToolHeaderTitle}"
-                        Text="Theme Customization" />
-                    <TextBlock
-                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
-                        Text="Transform Orbit's appearance with built-in themes or design your own custom palette" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!--  Main Content  -->
-        <Grid Grid.Row="1" Margin="0,0,0,0" VerticalAlignment="Top">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*" />
-                <ColumnDefinition Width="2*" />
-            </Grid.ColumnDefinitions>
-
-            <!--  Left Column: Custom Theme Creator  -->
-            <Border
-                x:Name="ThemeBuilderCard"
-                Grid.Column="0"
-                Margin="0,0,10,0"
-                VerticalAlignment="Top"
-                Style="{StaticResource Orbit.ToolCard}">
-                <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
+                <!--  Left Column: Custom Theme Creator  -->
+                <Border
+                    x:Name="ThemeBuilderCard"
+                    Grid.Column="0"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Top"
+                    Style="{StaticResource Orbit.ToolCard}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
                                     Width="18"
                                     Height="18"
                                     VerticalAlignment="Center"
                                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                     Kind="Brush" />
-                            <TextBlock
+                                <TextBlock
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     FontSize="15"
                                     FontWeight="SemiBold"
                                     Text="Theme Builder" />
-                        </StackPanel>
-                        <Button
+                            </StackPanel>
+                            <Button
                                 Grid.Column="1"
                                 Width="29"
                                 Height="29"
@@ -96,663 +118,680 @@
                                 BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                                 BorderThickness="1.5"
                                 Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                ToolTipService.InitialShowDelay="120"
-                                ToolTipService.BetweenShowDelay="50">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border
+                                ToolTipService.BetweenShowDelay="50"
+                                ToolTipService.InitialShowDelay="120">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border
                                             x:Name="HelpButtonBorder"
                                             Background="{TemplateBinding Background}"
                                             BorderBrush="{TemplateBinding BorderBrush}"
                                             BorderThickness="{TemplateBinding BorderThickness}"
                                             CornerRadius="14.5">
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="HelpButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent4}" />
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="HelpButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent3}" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                            <TextBlock
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="HelpButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent4}" />
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="HelpButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     FontSize="16"
                                     FontWeight="Bold"
                                     Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                     Text="?" />
-                            <Button.ToolTip>
-                                <ToolTip
+                                <Button.ToolTip>
+                                    <ToolTip
+                                        Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
-                                        Padding="0"
-                                        Placement="Bottom"
-                                        HorizontalOffset="-140">
-                                    <Border
+                                        HorizontalOffset="-140"
+                                        Placement="Bottom">
+                                        <Border
                                             Width="330"
                                             Padding="12"
                                             Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                                             BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                                             BorderThickness="1.5"
                                             CornerRadius="10">
-                                        <StackPanel>
-                                            <TextBlock
+                                            <StackPanel>
+                                                <TextBlock
                                                     FontSize="12"
                                                     FontWeight="SemiBold"
                                                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                                     Text="Theme Builder Help" />
-                                            <TextBlock
+                                                <TextBlock
                                                     Margin="0,8,0,0"
                                                     FontSize="11"
-                                                    TextWrapping="Wrap"
-                                                    Text="1. Set Base Mode (Light/Dark). This applies globally to Presets and Custom themes." />
-                                            <TextBlock
+                                                    Text="1. Set Base Mode (Light/Dark). This applies globally to Presets and Custom themes."
+                                                    TextWrapping="Wrap" />
+                                                <TextBlock
                                                     Margin="0,4,0,0"
                                                     FontSize="11"
-                                                    TextWrapping="Wrap"
-                                                    Text="2. Pick a color source: Presets for quick palettes, or Custom for edited colors." />
-                                            <TextBlock
+                                                    Text="2. Pick a color source: Presets for quick palettes, or Custom for edited colors."
+                                                    TextWrapping="Wrap" />
+                                                <TextBlock
                                                     Margin="0,4,0,0"
                                                     FontSize="11"
-                                                    TextWrapping="Wrap"
-                                                    Text="3. Use Apply to preview now. Use Save when you want to store a Custom palette." />
-                                            <TextBlock
+                                                    Text="3. Use Apply to preview now. Use Save when you want to store a Custom palette."
+                                                    TextWrapping="Wrap" />
+                                                <TextBlock
                                                     Margin="0,8,0,0"
                                                     FontSize="11"
                                                     Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                                                    TextWrapping="Wrap"
-                                                    Text="Tip: Presets keep things simple. Custom is best when you need fine control over Accent/Foreground/Update colors." />
-                                        </StackPanel>
-                                    </Border>
-                                </ToolTip>
-                            </Button.ToolTip>
-                        </Button>
-                    </Grid>
+                                                    Text="Tip: Presets keep things simple. Custom is best when you need fine control over Accent/Foreground/Update colors."
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                    </ToolTip>
+                                </Button.ToolTip>
+                            </Button>
+                        </Grid>
 
-                    <!-- Global Base Mode Section -->
-                    <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial
+                        <!--  Global Base Mode Section  -->
+                        <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial
                                 Width="16"
                                 Height="16"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                 Kind="ThemeLightDark" />
-                        <TextBlock
+                            <TextBlock
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center"
                                 FontSize="13"
                                 FontWeight="SemiBold"
                                 Text="Base Mode (Global)" />
-                    </StackPanel>
-                    <TextBlock
+                        </StackPanel>
+                        <TextBlock
                             Margin="0,0,0,10"
                             FontSize="11"
                             Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                             Text="This sets Light/Dark globally for both Presets and Custom themes." />
 
-                    <ListBox
+                        <ListBox
                             Margin="0,0,0,16"
                             Background="Transparent"
                             BorderThickness="0"
                             ItemsSource="{Binding BaseThemes}"
                             SelectedItem="{Binding SelectedBaseTheme}">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,0,2,0" Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,2,0" Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
                                             Width="16"
                                             Height="16"
                                             Margin="0,0,8,0"
                                             VerticalAlignment="Center">
-                                        <iconPacks:PackIconMaterial.Style>
-                                            <Style TargetType="iconPacks:PackIconMaterial">
-                                                <Setter Property="Kind" Value="WeatherNight" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding}" Value="Light">
-                                                        <Setter Property="Kind" Value="WeatherSunny" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </iconPacks:PackIconMaterial.Style>
-                                    </iconPacks:PackIconMaterial>
-                                    <TextBlock
+                                            <iconPacks:PackIconMaterial.Style>
+                                                <Style TargetType="iconPacks:PackIconMaterial">
+                                                    <Setter Property="Kind" Value="WeatherNight" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="Light">
+                                                            <Setter Property="Kind" Value="WeatherSunny" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </iconPacks:PackIconMaterial.Style>
+                                        </iconPacks:PackIconMaterial>
+                                        <TextBlock
                                             Margin="0,0,0,0"
                                             VerticalAlignment="Center"
                                             FontSize="13"
                                             Text="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="22,14" />
-                                <Setter Property="Margin" Value="0,0,12,0" />
-                                <Setter Property="MinWidth" Value="132" />
-                                <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="22,14" />
+                                    <Setter Property="Margin" Value="0,0,12,0" />
+                                    <Setter Property="MinWidth" Value="132" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border
                                                     x:Name="Container"
                                                     Background="{TemplateBinding Background}"
+                                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                                    BorderThickness="1"
                                                     CornerRadius="14">
-                                                <ContentPresenter
+                                                    <ContentPresenter
                                                         Margin="6,2"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center" />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.AccentForeground}" />
-                                                </Trigger>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                    </ListBox>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.AccentForeground}" />
+                                                        <Setter TargetName="Container" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Container" Property="Background" Value="{DynamicResource MahApps.Brushes.Highlight}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
 
-                    <!-- Theme Name and Base Info -->
-                    <Grid Margin="0,4,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock
+                        <!--  Theme Name and Base Info  -->
+                        <Grid Margin="0,4,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock
                                     Margin="0,0,0,4"
                                     FontSize="12"
                                     Text="Custom Theme Name" />
-                            <TextBox
+                                <TextBox
                                     MinHeight="32"
                                     FontSize="13"
                                     Text="{Binding CustomThemeName, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
-                        <TextBlock
+                            </StackPanel>
+                            <TextBlock
                                 Grid.Column="1"
                                 Margin="16,18,0,0"
                                 FontSize="11"
                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="{Binding SelectedBaseTheme, StringFormat='Base: {0}'}" />
-                    </Grid>
+                        </Grid>
 
-                    <TextBlock
+                        <TextBlock
                             Margin="0,0,0,4"
                             FontSize="12"
                             FontWeight="SemiBold"
                             Text="Theme Colors" />
-                    <TextBlock
+                        <TextBlock
                             Margin="0,6,0,0"
                             FontSize="11"
                             Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                             Text="Use one editor for accent, foreground, and update indicators." />
 
-                    <Border
-                            Margin="0,12,0,0"
+                        <Border
+                            Margin="0,10,0,0"
                             Padding="12"
                             Background="Transparent"
                             CornerRadius="14">
-                        <StackPanel>
-                            <TextBlock
+                            <StackPanel>
+                                <TextBlock
                                     Margin="0,0,0,8"
                                     FontSize="11"
                                     Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                     Text="{Binding ActiveColorEditorDescription}" />
 
-                            <StackPanel Orientation="Horizontal">
-                                <RadioButton
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton
                                         Margin="0,0,12,0"
                                         Content="Accent"
                                         GroupName="ThemeColorEditing"
                                         IsChecked="{Binding IsAccentEditorSelected, Mode=TwoWay}" />
-                                <RadioButton
+                                    <RadioButton
                                         Margin="0,0,12,0"
                                         Content="Foreground"
                                         GroupName="ThemeColorEditing"
                                         IsChecked="{Binding IsForegroundEditorSelected, Mode=TwoWay}" />
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton
                                             Content="Update Badge"
                                             GroupName="ThemeColorEditing"
                                             IsChecked="{Binding IsUpdateBadgeEditorSelected, Mode=TwoWay}" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="6,0,0,0"
                                             VerticalAlignment="Center"
                                             FontSize="16"
                                             FontWeight="Black"
                                             Foreground="{DynamicResource Orbit.UpdateBadgeBrush}"
                                             Text="!" />
-                                </StackPanel>
-                                <Button
+                                    </StackPanel>
+                                    <Button
                                         Width="88"
                                         MinHeight="28"
-                                        Margin="12,0,0,0"
+                                        Margin="10,0,0,0"
                                         VerticalAlignment="Center"
                                         Command="{Binding ResetActiveColorCommand}">
-                                    <TextBlock Text="Reset" />
-                                </Button>
-                            </StackPanel>
+                                        <TextBlock Text="Reset" />
+                                    </Button>
+                                </StackPanel>
 
-                            <colorpicker:StandardColorPicker
-                                    Margin="0,10,0,0"
+                                <colorpicker:StandardColorPicker
                                     MinHeight="300"
+                                    Margin="0,10,0,0"
                                     HorizontalAlignment="Stretch"
+                                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                     IsEnabled="{Binding IsActiveColorEditable}"
                                     PickerType="HSV"
                                     SelectedColor="{Binding ActiveColorSelection, Mode=TwoWay}"
                                     ShowAlpha="False"
                                     Style="{StaticResource DefaultColorPickerStyle}" />
-                        </StackPanel>
-                    </Border>
+                            </StackPanel>
+                        </Border>
 
-                    <Border
-                            Margin="0,12,0,0"
+                        <Border
+                            Margin="0,10,0,0"
                             Padding="12"
-                            Background="{DynamicResource MahApps.Brushes.Gray8}"
+                            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                             BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
                             BorderThickness="1"
                             CornerRadius="12">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
                                         Width="16"
                                         Height="16"
                                         VerticalAlignment="Center"
                                         Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                         Kind="FormatFont" />
-                                <TextBlock
+                                    <TextBlock
                                         Margin="8,0,0,0"
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
                                         Text="Typography (Global)" />
-                            </StackPanel>
-                            <TextBlock
+                                </StackPanel>
+                                <TextBlock
                                     Margin="0,6,0,0"
                                     FontSize="11"
                                     Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                     Text="Applies app-wide defaults for text controls. Explicit per-control overrides still win." />
 
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="170" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="170" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Font family" VerticalAlignment="Center" />
-                                <ComboBox
+                                    <TextBlock
+                                        Grid.Row="0"
+                                        VerticalAlignment="Center"
+                                        Text="Font family" />
+                                    <ComboBox
                                         Grid.Row="0"
                                         Grid.Column="1"
                                         Margin="10,0,0,0"
                                         ItemsSource="{Binding AvailableFontFamilies}"
                                         SelectedItem="{Binding SelectedFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="Base size" VerticalAlignment="Center" />
-                                <Grid Grid.Row="1" Grid.Column="1" Margin="10,10,0,0" VerticalAlignment="Center">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="40" />
-                                    </Grid.ColumnDefinitions>
-                                    <Slider
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Margin="0,10,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="Base size" />
+                                    <Grid
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Margin="10,10,0,0"
+                                        VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="40" />
+                                        </Grid.ColumnDefinitions>
+                                        <Slider
                                             Grid.Column="0"
                                             Width="120"
-                                            Minimum="10"
-                                            Maximum="22"
-                                            TickFrequency="0.5"
                                             IsSnapToTickEnabled="True"
+                                            Maximum="22"
+                                            Minimum="10"
+                                            TickFrequency="0.5"
                                             Value="{Binding BaseFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <TextBlock
+                                        <TextBlock
                                             Grid.Column="1"
-                                            VerticalAlignment="Center"
                                             HorizontalAlignment="Right"
-                                            TextAlignment="Right"
-                                            Text="{Binding BaseFontSize, StringFormat=F1}" />
-                                </Grid>
+                                            VerticalAlignment="Center"
+                                            Text="{Binding BaseFontSize, StringFormat=F1}"
+                                            TextAlignment="Right" />
+                                    </Grid>
 
-                                <TextBlock Grid.Row="2" Margin="0,10,0,0" Text="Body weight" VerticalAlignment="Center" />
-                                <ComboBox
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Margin="0,10,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="Body weight" />
+                                    <ComboBox
                                         Grid.Row="2"
                                         Grid.Column="1"
                                         Margin="10,10,0,0"
                                         ItemsSource="{Binding AvailableFontWeights}"
                                         SelectedItem="{Binding SelectedFontWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            </Grid>
+                                </Grid>
 
-                            <Button
+                                <Button
                                     Width="120"
                                     MinHeight="30"
                                     Margin="0,10,0,0"
                                     HorizontalAlignment="Left"
                                     Command="{Binding ResetTypographyCommand}">
-                                <TextBlock Text="Reset Typography" />
-                            </Button>
-                        </StackPanel>
-                    </Border>
+                                    <TextBlock Text="Reset Typography" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
 
-                    <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                        <WrapPanel
+                            Margin="0,10,0,0"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
                             <Button
-                                    Width="120"
-                                    MinHeight="32"
-                                    Margin="0,0,10,0"
-                                    Command="{Binding DeleteCustomThemeCommand}">
+                                Width="120"
+                                MinHeight="32"
+                                Margin="0,0,10,0"
+                                Command="{Binding DeleteCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="Delete" />
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="Delete" />
                                     <TextBlock VerticalAlignment="Center" Text="Delete" />
                                 </StackPanel>
                             </Button>
                             <Button
-                                    Width="120"
-                                    MinHeight="32"
-                                    Margin="0,0,10,0"
-                                    Command="{Binding ApplyCustomThemeCommand}">
+                                Width="120"
+                                MinHeight="32"
+                                Margin="0,0,10,0"
+                                Command="{Binding ApplyCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="Check" />
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="Check" />
                                     <TextBlock VerticalAlignment="Center" Text="Apply" />
                                 </StackPanel>
                             </Button>
                             <Button
-                                    Width="130"
-                                    MinHeight="32"
-                                    Command="{Binding SaveCustomThemeCommand}"
-                                    Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                                Width="130"
+                                MinHeight="32"
+                                Command="{Binding SaveCustomThemeCommand}"
+                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,6,0"
-                                            Kind="ContentSave" />
+                                        Width="14"
+                                        Height="14"
+                                        Margin="0,0,6,0"
+                                        Kind="ContentSave" />
                                     <TextBlock VerticalAlignment="Center" Text="Save" />
                                 </StackPanel>
                             </Button>
-                    </WrapPanel>
+                        </WrapPanel>
 
-                </StackPanel>
-            </Border>
+                    </StackPanel>
+                </Border>
 
-            <Grid
-                Grid.Column="1"
-                VerticalAlignment="Top"
-                MaxHeight="{Binding ElementName=ThemeBuilderCard, Path=ActualHeight}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+                <Grid
+                    Grid.Column="1"
+                    MaxHeight="{Binding ElementName=ThemeBuilderCard, Path=ActualHeight}"
+                    VerticalAlignment="Top">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-                <!-- Live Preview -->
-                <Border
+                    <!--  Live Preview  -->
+                    <Border
                         Grid.Row="0"
                         Margin="10,0,0,0"
                         Style="{StaticResource Orbit.ToolCard}">
-                    <StackPanel>
-                        <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
+                        <StackPanel>
+                            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
                                     Width="18"
                                     Height="18"
                                     VerticalAlignment="Center"
                                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                     Kind="Eye" />
-                            <TextBlock
+                                <TextBlock
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     FontSize="15"
                                     FontWeight="SemiBold"
                                     Text="Live Preview" />
-                        </StackPanel>
+                            </StackPanel>
 
-                        <StackPanel Margin="0,0,0,6" Orientation="Horizontal">
-                            <Button
+                            <StackPanel Margin="0,0,0,6" Orientation="Horizontal">
+                                <Button
                                     Width="96"
                                     MinHeight="30"
                                     Margin="0,0,8,0"
                                     Content="Primary"
                                     Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
-                            <Button
+                                <Button
                                     Width="96"
                                     MinHeight="30"
                                     Content="Secondary" />
-                            <StackPanel Margin="16,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                                <Ellipse
+                                <StackPanel
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal">
+                                    <Ellipse
                                         Width="10"
                                         Height="10"
                                         Margin="0,0,6,0"
                                         Fill="#4CAF50" />
-                                <TextBlock
+                                    <TextBlock
                                         VerticalAlignment="Center"
                                         FontSize="11"
                                         Text="Status sample" />
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
 
-                        <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
-                            <Border
+                            <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                                <Border
                                     Width="186"
                                     Margin="0,0,10,0"
                                     Padding="10"
                                     Background="{Binding SelectedCustomColor, Converter={StaticResource ColorToBrushConverter}}"
                                     CornerRadius="10">
-                                <StackPanel>
-                                    <TextBlock
+                                    <StackPanel>
+                                        <TextBlock
                                             FontSize="12"
                                             FontWeight="SemiBold"
                                             Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                             Text="Accent preview" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="0,6,0,0"
                                             FontSize="13"
                                             Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                             Text="Buttons and highlights" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="0,8,0,0"
                                             FontSize="11"
                                             Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
                                             Text="{Binding SelectedCustomColor}" />
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                </Border>
 
-                            <Border
+                                <Border
                                     Width="186"
                                     Padding="10"
-                                    Background="{DynamicResource MahApps.Brushes.Gray8}"
+                                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
                                     BorderThickness="1"
                                     CornerRadius="10">
-                                <StackPanel>
-                                    <TextBlock
+                                    <StackPanel>
+                                        <TextBlock
                                             FontSize="12"
                                             FontWeight="SemiBold"
                                             Text="Text preview" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="0,6,0,0"
                                             FontSize="18"
                                             FontWeight="SemiBold"
                                             Foreground="{Binding SelectedCustomForeground, Converter={StaticResource ColorToBrushConverter}}"
                                             Text="Aa Bb Cc 123" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="11"
                                             Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Text="{Binding SelectedCustomForeground}" />
-                                    <TextBlock
+                                        <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="11"
                                             Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                             Text="Custom override enabled">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding UseCustomForeground}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <TextBlock
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UseCustomForeground}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock
                                             Margin="0,2,0,0"
                                             FontSize="11"
                                             Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                             Text="Uses theme default">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding UseCustomForeground}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UseCustomForeground}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <Border
+                    <Border
                         Grid.Row="1"
                         Margin="10,10,0,0"
                         Style="{StaticResource Orbit.ToolCard}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial
+                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial
                                     Width="18"
                                     Height="18"
                                     VerticalAlignment="Center"
                                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                     Kind="PaletteSwatch" />
-                            <TextBlock
+                                <TextBlock
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     FontSize="15"
                                     FontWeight="SemiBold"
                                     Text="Theme Library" />
-                        </StackPanel>
+                            </StackPanel>
 
-                        <TextBlock
+                            <TextBlock
                                 Grid.Row="1"
                                 Margin="0,6,0,10"
                                 FontSize="11"
                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 Text="{Binding SelectedBaseTheme, StringFormat='Base mode: {0} (applies globally). Choose Presets or Custom below for colors.'}" />
 
-                        <Controls:MetroTabControl Grid.Row="2" VerticalAlignment="Stretch">
-                            <Controls:MetroTabItem Header="Presets">
-                                <Grid Margin="0,10,0,0">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <ListBox
-                                            Grid.Row="0"
+                            <Controls:MetroTabControl
+                                x:Name="ThemeLibraryTabs"
+                                Grid.Row="2"
+                                VerticalAlignment="Stretch">
+                                <Controls:MetroTabControl.Resources>
+                                    <Style TargetType="{x:Type Controls:MetroTabItem}">
+                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Controls:MetroTabControl.Resources>
+                                <Controls:MetroTabItem x:Name="PresetThemesTab" Header="Presets">
+                                    <Grid Margin="0,10,0,0">
+                                        <ListBox
                                             Margin="0,0,0,10"
                                             BorderThickness="0"
                                             ItemsSource="{Binding ColorSchemes}"
                                             ScrollViewer.CanContentScroll="True"
                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                                             SelectedItem="{Binding SelectedColorScheme}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Margin="0,2" Padding="8,6">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Border
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,2" Padding="8,6">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border
                                                                 Width="24"
                                                                 Height="24"
                                                                 VerticalAlignment="Center"
                                                                 BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                                 BorderThickness="1"
                                                                 CornerRadius="4">
-                                                            <Border.Background>
-                                                                <SolidColorBrush Color="{Binding Converter={StaticResource ColorSchemeToColorConverter}}" />
-                                                            </Border.Background>
-                                                        </Border>
-                                                        <TextBlock
+                                                                <Border.Background>
+                                                                    <SolidColorBrush Color="{Binding Converter={StaticResource ColorSchemeToColorConverter}}" />
+                                                                </Border.Background>
+                                                            </Border>
+                                                            <TextBlock
                                                                 Margin="10,0,0,0"
                                                                 VerticalAlignment="Center"
                                                                 FontSize="13"
                                                                 Text="{Binding}" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Controls:MetroTabItem>
 
-                                    <Button
-                                            Grid.Row="1"
-                                            Width="150"
-                                            MinHeight="34"
-                                            HorizontalAlignment="Left"
-                                            Command="{Binding ApplyThemeCommand}"
-                                            Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                    Width="16"
-                                                    Height="16"
-                                                    Margin="0,0,6,0"
-                                                    Kind="Check" />
-                                            <TextBlock VerticalAlignment="Center" Text="Apply preset" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                            </Controls:MetroTabItem>
-
-                            <Controls:MetroTabItem Header="Custom">
-                                <ListBox
+                                <Controls:MetroTabItem x:Name="CustomThemesTab" Header="Custom">
+                                    <ListBox
                                         Margin="0,10,0,0"
                                         BorderThickness="0"
                                         ItemsSource="{Binding CustomThemes}"
                                         ScrollViewer.CanContentScroll="True"
                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
                                         SelectedItem="{Binding SelectedCustomTheme}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="0,2" Padding="8,6">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Border
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,2" Padding="8,6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border
                                                             Width="24"
                                                             Height="24"
                                                             VerticalAlignment="Center"
                                                             Background="{Binding AccentHex, Converter={StaticResource ColorToBrushConverter}}"
                                                             BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                             BorderThickness="1"
-                                                            CornerRadius="3">
-                                                    </Border>
-                                                    <Border
+                                                            CornerRadius="3" />
+                                                        <Border
                                                             Width="20"
                                                             Height="20"
                                                             Margin="6,0,0,0"
@@ -762,27 +801,53 @@
                                                             BorderThickness="1"
                                                             CornerRadius="3"
                                                             Visibility="{Binding OverrideForeground, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                                                        <TextBlock
+                                                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock
                                                                 FontSize="13"
                                                                 FontWeight="SemiBold"
                                                                 Text="{Binding Name}" />
-                                                        <TextBlock
+                                                            <TextBlock
                                                                 FontSize="11"
                                                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                                                 Text="{Binding BaseTheme, StringFormat='Base: {0}'}" />
+                                                        </StackPanel>
                                                     </StackPanel>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Controls:MetroTabItem>
-                        </Controls:MetroTabControl>
-                    </Grid>
-                </Border>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Controls:MetroTabItem>
+                            </Controls:MetroTabControl>
+
+                            <Button
+                                Grid.Row="3"
+                                Width="160"
+                                MinHeight="34"
+                                Margin="0,10,0,0"
+                                HorizontalAlignment="Right">
+                                <Button.Style>
+                                    <Style BasedOn="{StaticResource MahApps.Styles.Button.Square.Accent}" TargetType="Button">
+                                        <Setter Property="Command" Value="{Binding ApplyThemeCommand}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, ElementName=CustomThemesTab}" Value="True">
+                                                <Setter Property="Command" Value="{Binding ApplyCustomThemeCommand}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,6,0"
+                                        Kind="Check" />
+                                    <TextBlock VerticalAlignment="Center" Text="Apply Selected" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
-    </Grid>
     </ScrollViewer>
 </UserControl>

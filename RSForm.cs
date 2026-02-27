@@ -34,6 +34,7 @@ namespace Orbit
 		private static readonly TimeSpan WindowHandleTimeout = TimeSpan.FromSeconds(25);
 		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
 		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
+		private static readonly TimeSpan LaunchRetryDelay = TimeSpan.FromSeconds(1);
 		private static readonly string LauncherUri = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws";
 		private static readonly SemaphoreSlim LauncherStartGate = new(1, 1);
 		private IntPtr hWndOriginalParent;
@@ -343,26 +344,104 @@ namespace Orbit
 				return;
 			}
 
+			var launchMode = ResolveLaunchMode();
+			var maxAttempts = launchMode == ClientLaunchMode.Launcher ? 2 : 1;
+			Exception? lastFailure = null;
+
+			for (var attempt = 1; attempt <= maxAttempts; attempt++)
+			{
+				try
+				{
+					Console.WriteLine($"[Orbit] Launch attempt {attempt}/{maxAttempts} ({launchMode}).");
+
+					Console.WriteLine("Starting RS process");
+					await StartAndRefreshRSProcessAsync();
+
+					Console.WriteLine("Finding RS client");
+					await FindAndSetRsClientAsync();
+
+					Console.WriteLine("Waiting for RS client to be ready");
+					await WaitForAndSetDockingWindowAsync();
+
+					Console.WriteLine("Docking RS client");
+					await DockWindowToPanelAsync();
+					return;
+				}
+				catch (Exception ex) when (attempt < maxAttempts && IsRetryableLaunchFailure(ex))
+				{
+					lastFailure = ex;
+					Console.WriteLine($"[Orbit] Launch stalled on attempt {attempt}: {ex.Message}");
+					CleanupStalledLaunchProcessesForRetry();
+					await Task.Delay(LaunchRetryDelay).ConfigureAwait(false);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex.Message);
+					processReadyTcs.TrySetException(ex);
+					throw;
+				}
+			}
+
+			if (lastFailure != null)
+			{
+				processReadyTcs.TrySetException(lastFailure);
+				throw lastFailure;
+			}
+		}
+
+		private static bool IsRetryableLaunchFailure(Exception ex)
+		{
+			return ex is TimeoutException;
+		}
+
+		private void CleanupStalledLaunchProcessesForRetry()
+		{
 			try
 			{
-				Console.WriteLine("Starting RS process");
-				await StartAndRefreshRSProcessAsync();
+				var candidateIds = new[]
+				{
+					pDocked?.Id ?? 0,
+					ParentProcessId ?? 0,
+					rs2ClientID,
+					runescapeProcessID,
+					ClientSettings.rs2cPID,
+					ClientSettings.runescapePID
+				}
+				.Where(id => id > 0)
+				.Distinct()
+				.ToArray();
 
-				Console.WriteLine("Finding RS client");
-				await FindAndSetRsClientAsync();
-
-				Console.WriteLine("Waiting for RS client to be ready");
-				await WaitForAndSetDockingWindowAsync();
-
-				Console.WriteLine("Docking RS client");
-				await DockWindowToPanelAsync();
+				foreach (var pid in candidateIds)
+				{
+					try
+					{
+						using var process = Process.GetProcessById(pid);
+						if (!process.HasExited)
+						{
+							process.Kill(true);
+							process.WaitForExit(1500);
+						}
+					}
+					catch
+					{
+						// Best effort cleanup only.
+					}
+				}
 			}
-			catch (Exception ex)
+			finally
 			{
-				// Log or handle the exception
-				Console.WriteLine(ex.Message);
-				processReadyTcs.TrySetException(ex);
-				throw;
+				pDocked = null!;
+				ParentProcessId = null;
+				_dockedHandle = IntPtr.Zero;
+				DockedRSHwnd = IntPtr.Zero;
+				dockedHandleCache = IntPtr.Zero;
+				rs2ClientID = 0;
+				runescapeProcessID = 0;
+				ClientSettings.rs2cPID = 0;
+				ClientSettings.runescapePID = 0;
+				ClientSettings.rs2client = null!;
+				ClientSettings.gameHandle = IntPtr.Zero;
+				ClientSettings.jagOpenGL = IntPtr.Zero;
 			}
 		}
 
@@ -414,7 +493,6 @@ namespace Orbit
 			catch (Exception ex)
 			{
 				Console.WriteLine($"An exception occurred: {ex}");
-				processReadyTcs.TrySetException(ex);
 				throw;
 			}
 		}
@@ -627,7 +705,6 @@ namespace Orbit
 			var message = "[Orbit] RuneScape client process could not be located within the allotted timeout.";
 			Console.WriteLine(message);
 			var timeoutException = new TimeoutException(message);
-			processReadyTcs.TrySetException(timeoutException);
 			throw timeoutException;
 		}
 
@@ -746,7 +823,6 @@ namespace Orbit
 				var message = $"[Orbit] Timed out waiting for RuneScape window handle after {WindowHandleTimeout.TotalSeconds:N1}s.";
 				Console.WriteLine(message);
 				var timeoutException = new TimeoutException(message);
-				processReadyTcs.TrySetException(timeoutException);
 				throw timeoutException;
 			}
 
@@ -795,13 +871,14 @@ namespace Orbit
 					dockedStylesApplied = true;
 					isCurrentlyDocked = true;
 
-					const int SWP_NOSIZE = 0x0001;
-					const int SWP_NOMOVE = 0x0002;
-					const int SWP_NOACTIVATE = 0x0010;
-					const int SWP_FRAMECHANGED = 0x0020;
-					SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-				});
-			}
+						const int SWP_NOSIZE = 0x0001;
+						const int SWP_NOMOVE = 0x0002;
+						const int SWP_NOACTIVATE = 0x0010;
+						const int SWP_FRAMECHANGED = 0x0020;
+						const int SWP_SHOWWINDOW = 0x0040;
+						SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+					});
+				}
 			catch (ObjectDisposedException)
 			{
 				Console.WriteLine("[Orbit] Dock panel disposed before docking could complete.");

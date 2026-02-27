@@ -24,7 +24,7 @@
                             <iconPacks:PackIconMaterial Kind="ViewDashboard" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Tools Management"
                                       Style="{StaticResource Orbit.ToolHeaderTitle}" />
                             <TextBlock Text="Manage Orbit tools and their visibility in the floating menu"
@@ -53,7 +53,7 @@
                         <ItemsControl ItemsSource="{Binding Tools}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,0,0,12"
+                                    <Border Margin="0,0,0,10"
                                            Padding="20"
                                            Background="{DynamicResource MahApps.Brushes.Gray9}"
                                            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"

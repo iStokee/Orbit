@@ -74,6 +74,8 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 		InitializeComponent();
 		AccountsGrid.ItemsSource = _accounts;
 		LoadAccounts();
+		LaunchDelaySlider.Value = ClampLaunchDelaySeconds(Settings.Default.LauncherBatchLaunchDelaySeconds);
+		FullWaitCheckBox.IsChecked = Settings.Default.LauncherBatchWaitForDockBeforeNext;
 	}
 
 	private void LoadAccounts()
@@ -180,6 +182,14 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 
 		LauncherAccountStore.Save(normalized);
 		Settings.Default.LauncherSelectedDisplayName = primarySelected?.DisplayName?.Trim() ?? string.Empty;
+		Settings.Default.LauncherBatchLaunchDelaySeconds = ClampLaunchDelaySeconds(LaunchDelaySlider.Value);
+		Settings.Default.LauncherBatchWaitForDockBeforeNext = FullWaitCheckBox.IsChecked == true;
 		Settings.Default.Save();
+	}
+
+	private static int ClampLaunchDelaySeconds(double candidate)
+	{
+		var rounded = (int)System.Math.Round(candidate);
+		return System.Math.Clamp(rounded, 5, 30);
 	}
 }

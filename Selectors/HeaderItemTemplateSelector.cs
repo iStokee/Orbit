@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using Orbit.Models;
+using System.Reflection;
 
 namespace Orbit.Selectors
 {
@@ -21,12 +22,48 @@ namespace Orbit.Selectors
 
 		public override DataTemplate? SelectTemplate(object item, DependencyObject container)
 		{
-			return item switch
+			var resolvedItem = ResolveItem(item) ?? ResolveItem((container as FrameworkElement)?.DataContext);
+
+			return resolvedItem switch
 			{
 				SessionModel => SessionHeaderTemplate,
 				ToolTabItem => ToolHeaderTemplate,
 				_ => base.SelectTemplate(item, container)
 			};
+		}
+
+		private static object? ResolveItem(object? item)
+		{
+			var current = item;
+			for (var depth = 0; depth < 8 && current != null; depth++)
+			{
+				if (current is SessionModel or ToolTabItem)
+				{
+					return current;
+				}
+
+				var next = TryGet(current, "Content")
+					?? TryGet(current, "Item")
+					?? TryGet(current, "DataContext")
+					?? TryGet(current, "DataItem")
+					?? TryGet(current, "Model")
+					?? TryGet(current, "Value");
+
+				if (next == null || ReferenceEquals(next, current))
+				{
+					break;
+				}
+
+				current = next;
+			}
+
+			return current;
+		}
+
+		private static object? TryGet(object instance, string propertyName)
+		{
+			var property = instance.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
+			return property?.GetValue(instance);
 		}
 	}
 }

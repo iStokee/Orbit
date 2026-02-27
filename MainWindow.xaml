@@ -262,8 +262,9 @@
                         <dragablz:TabablzControl
                             Padding="5"
                             ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
-                            ItemTemplateSelector="{StaticResource TabHeaderTemplateSelector}"
                             Loaded="MainShellBranchTabControl_Loaded"
+                            SelectionChanged="MainShellTabControl_SelectionChanged"
+                            Style="{StaticResource Orbit.TabablzControlStyle}"
                             ShowDefaultCloseButton="True">
                             <dragablz:TabablzControl.InterTabController>
                                 <dragablz:InterTabController
@@ -280,486 +281,24 @@
                     Padding="5"
                     ItemsSource="{Binding Tabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
+                    SelectionChanged="MainShellTabControl_SelectionChanged"
                     ShowDefaultCloseButton="True"
+                    Style="{StaticResource Orbit.TabablzControlStyle}"
                     ContentTemplateSelector="{StaticResource TabContentTemplateSelector}">
 
                 <!--  InterTabController with binding to InterTabClient  -->
                     <dragablz:TabablzControl.InterTabController>
                         <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" Partition="OrbitMainShell" />
                     </dragablz:TabablzControl.InterTabController>
-
-                <dragablz:TabablzControl.CustomHeaderItemTemplate>
-                    <DataTemplate>
-                        <Border
-                            Margin="4,4,4,0"
-                            Padding="12,8,12,10"
-                            CornerRadius="8,8,0,0">
-                            <Border.ContextMenu>
-                                <ContextMenu DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}">
-                                    <MenuItem
-                                        Header="Dock in Orbit View"
-                                        Command="{Binding MoveTabToOrbitCommand}"
-                                        CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                                </ContextMenu>
-                            </Border.ContextMenu>
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <!--  Default inactive tab state  -->
-                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                                    <Setter Property="Opacity" Value="0.5" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                                    <Setter Property="BorderThickness" Value="1,1,1,0" />
-                                    <Setter Property="Effect">
-                                        <Setter.Value>
-                                                <DropShadowEffect
-                                                BlurRadius="3"
-                                                Direction="270"
-                                                Opacity="0.1"
-                                                ShadowDepth="1"
-                                                Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <!--  Hover state for inactive tabs with smooth transition  -->
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="False" />
-                                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                            </MultiDataTrigger.Conditions>
-                                            <MultiDataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="0.8"
-                                                            Duration="0:0:0.2">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.EnterActions>
-                                            <MultiDataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="0.5"
-                                                            Duration="0:0:0.2">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.ExitActions>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
-                                            <Setter Property="BorderThickness" Value="1.5,1.5,1.5,0" />
-                                            <Setter Property="Effect">
-                                                <Setter.Value>
-                                                    <DropShadowEffect
-                                                        BlurRadius="6"
-                                                        Direction="270"
-                                                        Opacity="0.2"
-                                                        ShadowDepth="1.5"
-                                                        Color="{DynamicResource MahApps.Colors.Accent}" />
-                                                </Setter.Value>
-                                            </Setter>
-                                        </MultiDataTrigger>
-                                        <!--  Selected state with smooth transition  -->
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="1.0"
-                                                            Duration="0:0:0.25">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="0.5"
-                                                            Duration="0:0:0.2">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseIn" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                            <Setter Property="BorderThickness" Value="2,2,2,0" />
-                                            <Setter Property="Padding" Value="12,8,12,10" />
-                                            <Setter Property="Effect">
-                                                <Setter.Value>
-                                                    <DropShadowEffect
-                                                        BlurRadius="10"
-                                                        Direction="270"
-                                                        Opacity="0.35"
-                                                        ShadowDepth="3"
-                                                        Color="{DynamicResource MahApps.Colors.Accent}" />
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <Grid>
-                                <!--  Accent underline for selected tab with smooth fade-in  -->
-                                <Rectangle
-                                    Height="3"
-                                    Margin="0,0,0,0"
-                                    VerticalAlignment="Bottom"
-                                    Fill="{DynamicResource MahApps.Brushes.Accent2}"
-                                    Opacity="0"
-                                    RadiusX="1.5"
-                                    RadiusY="1.5">
-                                    <Rectangle.Style>
-                                        <Style TargetType="Rectangle">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="Opacity"
-                                                                    To="1.0"
-                                                                    Duration="0:0:0.3">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation
-                                                                    Storyboard.TargetProperty="Opacity"
-                                                                    To="0.0"
-                                                                    Duration="0:0:0.2">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <QuadraticEase EasingMode="EaseIn" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Rectangle.Style>
-                                </Rectangle>
-
-                                <!--  Session header  -->
-                                <StackPanel
-                                    x:Name="SessionHeader"
-                                    VerticalAlignment="Center"
-                                    Orientation="Horizontal">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Value="True">
-                                                    <DataTrigger.Binding>
-                                                        <Binding
-                                                            Converter="{StaticResource IsOfTypeConverter}"
-                                                            ConverterParameter="Orbit.Models.SessionModel"
-                                                            Path="." />
-                                                    </DataTrigger.Binding>
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-
-                                    <!--  Icon indicator for external scripts  -->
-                                    <iconPacks:PackIconMaterial
-                                        Width="14"
-                                        Height="14"
-                                        Margin="0,0,6,0"
-                                        VerticalAlignment="Center"
-                                        Kind="CodeBraces"
-                                        ToolTip="External Script Window">
-                                        <iconPacks:PackIconMaterial.Style>
-                                            <Style TargetType="iconPacks:PackIconMaterial">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </iconPacks:PackIconMaterial.Style>
-                                    </iconPacks:PackIconMaterial>
-
-                                    <!--  Status indicator for RS3 sessions (hidden for scripts)  -->
-                                    <Ellipse
-                                        Width="10"
-                                        Height="10"
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center"
-                                        Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
-                                        Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
-                                        StrokeThickness="2"
-                                        ToolTip="{Binding StatusSummary}">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                                <Style.Triggers>
-                                                    <!--  Hide for external scripts  -->
-                                                    <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                    <!--  Pulse animation on injecting state  -->
-                                                    <DataTrigger Binding="{Binding State}" Value="{x:Static models:SessionState.Injecting}">
-                                                        <DataTrigger.EnterActions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard RepeatBehavior="Forever">
-                                                                    <DoubleAnimation
-                                                                        AutoReverse="True"
-                                                                        Storyboard.TargetProperty="Opacity"
-                                                                        From="1.0"
-                                                                        To="0.3"
-                                                                        Duration="0:0:0.8" />
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.EnterActions>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <Grid Margin="0,0,4,0" VerticalAlignment="Center">
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="{Binding DisplayName}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Opacity" Value="0.7" />
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                        <!--  Brighter text on selected tab with smooth transition  -->
-                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                            <DataTrigger.EnterActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation
-                                                                            Storyboard.TargetProperty="Opacity"
-                                                                            To="1.0"
-                                                                            Duration="0:0:0.2">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <QuadraticEase EasingMode="EaseOut" />
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </DataTrigger.EnterActions>
-                                                            <DataTrigger.ExitActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation
-                                                                            Storyboard.TargetProperty="Opacity"
-                                                                            To="0.7"
-                                                                            Duration="0:0:0.15">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <QuadraticEase EasingMode="EaseIn" />
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                        </DataTrigger.ExitActions>
-                                                        <Setter Property="FontWeight" Value="Bold" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                        </TextBlock>
-
-                                        <TextBox
-                                            Style="{StaticResource Orbit.Styles.TextBox.InlineRename}"
-                                            IsVisibleChanged="SessionRenameTextBox_IsVisibleChanged"
-                                            KeyDown="SessionRenameTextBox_KeyDown"
-                                            LostKeyboardFocus="SessionRenameTextBox_LostKeyboardFocus"
-                                            Text="{Binding EditableName, UpdateSourceTrigger=PropertyChanged}"
-                                            Visibility="Collapsed" />
-                                    </Grid>
-
-                                    <Button
-                                        Margin="6,0,0,0"
-                                        Style="{StaticResource Orbit.Styles.Button.Circle.Rename}"
-                                        ToolTip="Rename session"
-                                        Command="{Binding DataContext.BeginSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
-                                        CommandParameter="{Binding}">
-                                        <iconPacks:PackIconMaterial
-                                            Width="14"
-                                            Height="14"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Kind="Pencil" />
-                                    </Button>
-
-                                    <StackPanel
-                                        Margin="4,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal">
-                                        <StackPanel.Style>
-                                            <Style TargetType="StackPanel">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </StackPanel.Style>
-
-                                        <Button
-                                            Margin="0,0,4,0"
-                                            Style="{StaticResource Orbit.Styles.Button.Circle.Action}"
-                                            ToolTip="Save name"
-                                            Command="{Binding DataContext.CommitSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
-                                            CommandParameter="{Binding}">
-                                            <iconPacks:PackIconMaterial
-                                                Width="14"
-                                                Height="14"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Kind="Check" />
-                                        </Button>
-
-                                        <Button
-                                            Style="{StaticResource Orbit.Styles.Button.Circle.Action}"
-                                            ToolTip="Cancel rename"
-                                            Command="{Binding DataContext.CancelSessionRenameCommand, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}"
-                                            CommandParameter="{Binding}">
-                                            <iconPacks:PackIconMaterial
-                                                Width="14"
-                                                Height="14"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Kind="Close" />
-                                        </Button>
-                                    </StackPanel>
-                                </StackPanel>
-                                <!--  Tool header  -->
-                                <StackPanel
-                                    x:Name="ToolHeader"
-                                    VerticalAlignment="Center"
-                                    Orientation="Horizontal">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Value="True">
-                                                    <DataTrigger.Binding>
-                                                        <Binding
-                                                            Converter="{StaticResource IsOfTypeConverter}"
-                                                            ConverterParameter="Orbit.Models.ToolTabItem"
-                                                            Path="." />
-                                                    </DataTrigger.Binding>
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <iconPacks:PackIconMaterial
-                                        Width="14"
-                                        Height="14"
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center"
-                                        Kind="{Binding Icon}">
-                                        <iconPacks:PackIconMaterial.Style>
-                                            <Style TargetType="iconPacks:PackIconMaterial">
-                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
-                                                <Setter Property="Opacity" Value="0.8" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                                                        <Setter Property="Opacity" Value="1" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </iconPacks:PackIconMaterial.Style>
-                                    </iconPacks:PackIconMaterial>
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                        Text="{Binding Name}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Opacity" Value="0.7" />
-                                                <Style.Triggers>
-                                                    <!--  Brighter text on selected tab with smooth transition  -->
-                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                                        <DataTrigger.EnterActions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation
-                                                                        Storyboard.TargetProperty="Opacity"
-                                                                        To="1.0"
-                                                                        Duration="0:0:0.2">
-                                                                        <DoubleAnimation.EasingFunction>
-                                                                            <QuadraticEase EasingMode="EaseOut" />
-                                                                        </DoubleAnimation.EasingFunction>
-                                                                    </DoubleAnimation>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.EnterActions>
-                                                        <DataTrigger.ExitActions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation
-                                                                        Storyboard.TargetProperty="Opacity"
-                                                                        To="0.7"
-                                                                        Duration="0:0:0.15">
-                                                                        <DoubleAnimation.EasingFunction>
-                                                                            <QuadraticEase EasingMode="EaseIn" />
-                                                                        </DoubleAnimation.EasingFunction>
-                                                                    </DoubleAnimation>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.ExitActions>
-                                                        <Setter Property="FontWeight" Value="Bold" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                    </dragablz:TabablzControl.CustomHeaderItemTemplate>
-
                 </dragablz:TabablzControl>
             </dockablz:Layout>
 
         </DockPanel>
 
         <!--  Empty State Background - Branded Orbit Logo (Overlay)  -->
-        <Grid IsHitTestVisible="False">
+        <Grid
+            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+            IsHitTestVisible="False">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Visibility" Value="Collapsed" />
@@ -793,8 +332,8 @@
                             Color="{DynamicResource MahApps.Colors.Accent2}" />
                         <SolidColorBrush
                             x:Key="OrbitHome.TextBrush"
-                            Opacity="0.8"
-                            Color="{DynamicResource MahApps.Colors.AccentForeground}" />
+                            Opacity="0.72"
+                            Color="{DynamicResource MahApps.Colors.Accent}" />
                     </Grid.Resources>
 
                     <!--  Orbit Icon with theme-aware coloring using Canvas  -->
@@ -884,6 +423,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Left}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -907,6 +448,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Right}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -930,6 +473,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Top}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -953,6 +498,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.Bottom}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -971,6 +518,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.TopLeft}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -988,6 +537,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.TopRight}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -1005,6 +556,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.BottomLeft}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -1022,6 +575,8 @@
                         <Binding Source="{x:Static models:FloatingMenuDockRegion.BottomRight}" />
                         <Binding Path="ShowAllSnapZonesOnClip" />
                         <Binding Path="IsFloatingMenuClipping" />
+                        <Binding Path="ShowAllSnapZonesOnDrag" />
+                        <Binding Path="IsFloatingMenuDragging" />
                     </MultiBinding>
                 </Border.Visibility>
             </Border>
@@ -1117,7 +672,7 @@
                             <iconPacks:PackIconGameIcons
                                 Width="32"
                                 Height="32"
-                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                                 Kind="Orbital" />
                             <ToggleButton.ContextMenu>
                                 <ContextMenu>

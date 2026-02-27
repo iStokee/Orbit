@@ -1010,6 +1010,20 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowAllSnapZonesOnDrag
+	{
+		get => Settings.Default.FloatingMenuShowAllSnapZonesOnDrag;
+		set
+		{
+			ApplyAndPersist(
+				Settings.Default.FloatingMenuShowAllSnapZonesOnDrag,
+				value,
+				v => Settings.Default.FloatingMenuShowAllSnapZonesOnDrag = v,
+				nameof(ShowAllSnapZonesOnDrag),
+				(vm, v) => vm.ShowAllSnapZonesOnDrag = v);
+		}
+	}
+
 	public CornerRadius FloatingMenuDockCornerRadius
 	{
 		get
@@ -1544,6 +1558,19 @@ namespace Orbit.ViewModels
 						value,
 						v => Settings.Default.ClientLaunchMode = v,
 						nameof(ClientLaunchMode));
+				}
+			}
+
+			public bool AutoRelaunchOnUnexpectedExit
+			{
+				get => Settings.Default.AutoRelaunchOnUnexpectedExit;
+				set
+				{
+					ApplyAndPersist(
+						Settings.Default.AutoRelaunchOnUnexpectedExit,
+						value,
+						v => Settings.Default.AutoRelaunchOnUnexpectedExit = v,
+						nameof(AutoRelaunchOnUnexpectedExit));
 				}
 			}
 

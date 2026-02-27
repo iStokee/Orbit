@@ -58,7 +58,7 @@
 
                 <StackPanel
                     Grid.Column="1"
-                    Margin="12,0,0,0"
+                    Margin="10,0,0,0"
                     VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Settings" />
                     <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Configure Orbit's behavior, appearance, and functionality" />
@@ -146,6 +146,37 @@
                                             Command="{Binding ConfigureLauncherAccountsCommand}"
                                             Content="Config" />
                                     </StackPanel>
+
+                                    <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                    <TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                        Text="Session Launch Behavior" />
+                                    <TextBlock
+                                        Margin="0,4,0,8"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                        Opacity="0.7"
+                                        Text="Where should new sessions dock when launched?" />
+                                    <ComboBox
+                                        Width="200"
+                                        HorizontalAlignment="Left"
+                                        SelectedValue="{Binding SessionLaunchBehavior, Mode=TwoWay}"
+                                        SelectedValuePath="Tag">
+                                        <ComboBoxItem Content="Individual Tabs" Tag="IndividualTabs" />
+                                        <ComboBoxItem Content="Orbit View" Tag="OrbitView" />
+                                        <ComboBoxItem Content="Ask Each Time" Tag="Ask" />
+                                    </ComboBox>
+
+                                    <CheckBox
+                                        Margin="0,10,0,0"
+                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                        IsChecked="{Binding AutoRelaunchOnUnexpectedExit, Mode=TwoWay}">
+                                        <TextBlock
+                                            FontSize="12"
+                                            Text="Auto relaunch session on unexpected client exit" />
+                                    </CheckBox>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -360,7 +391,7 @@
                                 </Border>
 
                                 <!--  Download Progress  -->
-                                <StackPanel Margin="0,12,0,0" Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <TextBlock
                                         Margin="0,0,0,4"
                                         FontSize="12"
@@ -408,7 +439,7 @@
                                     </Button>
 
                                     <!--  Install Update Button  -->
-                                    <Grid Grid.Column="1" Margin="12,0,0,0" Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid Grid.Column="1" Margin="10,0,0,0" Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <Button
                                             Padding="16,8"
                                             Command="{Binding InstallUpdateCommand}"
@@ -429,7 +460,7 @@
 
                                 <!--  Error Message  -->
                                 <Border
-                                    Margin="0,12,0,0"
+                                    Margin="0,10,0,0"
                                     Padding="12"
                                     Background="{DynamicResource MahApps.Brushes.Validation5}"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Validation3}"
@@ -501,7 +532,7 @@
                                     Text="Welcome messages" />
 
                                 <Controls:ToggleSwitch
-                                    Margin="0,12,0,0"
+                                    Margin="0,10,0,0"
                                     Header="Show floating menu welcome hint"
                                     IsOn="{Binding ShowThemeManagerWelcomeMessage, Mode=TwoWay}" />
                             </StackPanel>
@@ -759,12 +790,25 @@
                                                 Value="{Binding FloatingMenuDockCornerRoundness, Mode=TwoWay}" />
                                         </StackPanel>
 
-                                        <Controls:ToggleSwitch
+                                        <Grid
                                             Grid.Row="1"
                                             Grid.ColumnSpan="2"
-                                            Margin="0,20,0,0"
-                                            Header="Show all zones when clipping"
-                                            IsOn="{Binding ShowAllSnapZonesOnClip, Mode=TwoWay}" />
+                                            Margin="0,20,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Controls:ToggleSwitch
+                                                Header="Show all zones when clipping"
+                                                IsOn="{Binding ShowAllSnapZonesOnClip, Mode=TwoWay}" />
+
+                                            <Controls:ToggleSwitch
+                                                Grid.Column="1"
+                                                Margin="16,0,0,0"
+                                                Header="Show all zones when dragging"
+                                                IsOn="{Binding ShowAllSnapZonesOnDrag, Mode=TwoWay}" />
+                                        </Grid>
                                     </Grid>
                                 </Grid>
                             </StackPanel>
@@ -940,7 +984,7 @@
                                     Header="Auto direction (Orbit picks the cleanest expansion)"
                                     IsOn="{Binding FloatingMenuAutoDirection, Mode=TwoWay}" />
 
-                                <Grid Margin="0,12,0,0" IsEnabled="{Binding FloatingMenuAutoDirection, Converter={StaticResource InverseBooleanConverter}}">
+                                <Grid Margin="0,10,0,0" IsEnabled="{Binding FloatingMenuAutoDirection, Converter={StaticResource InverseBooleanConverter}}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
@@ -953,7 +997,7 @@
                                     <ComboBox
                                         Grid.Column="1"
                                         Height="30"
-                                        Margin="12,0,0,0"
+                                        Margin="10,0,0,0"
                                         ItemsSource="{Binding FloatingMenuDirectionOptions}"
                                         SelectedItem="{Binding FloatingMenuDirection, Mode=TwoWay}" />
                                 </Grid>
@@ -971,7 +1015,7 @@
                                     <ComboBox
                                         Grid.Column="1"
                                         Height="30"
-                                        Margin="12,0,0,0"
+                                        Margin="10,0,0,0"
                                         ItemsSource="{Binding FloatingMenuQuickToggleModes}"
                                         SelectedItem="{Binding FloatingMenuQuickToggleMode, Mode=TwoWay}">
                                         <ComboBox.ItemTemplate>
@@ -1086,31 +1130,6 @@
                                             Opacity="0.7"
                                             Text="Customize session grid layout and UI density" />
                                     </StackPanel>
-                                </StackPanel>
-
-                                <!--  Session Launch Behavior  -->
-                                <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
-                                <StackPanel>
-                                    <TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                        Text="Session Launch Behavior" />
-                                    <TextBlock
-                                        Margin="0,4,0,8"
-                                        FontSize="11"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                        Opacity="0.7"
-                                        Text="Where should new sessions dock when launched?" />
-                                    <ComboBox
-                                        Width="200"
-                                        HorizontalAlignment="Left"
-                                        SelectedValue="{Binding SessionLaunchBehavior, Mode=TwoWay}"
-                                        SelectedValuePath="Tag">
-                                        <ComboBoxItem Content="Individual Tabs" Tag="IndividualTabs" />
-                                        <ComboBoxItem Content="Orbit View" Tag="OrbitView" />
-                                        <ComboBoxItem Content="Ask Each Time" Tag="Ask" />
-                                    </ComboBox>
                                 </StackPanel>
 
                                 <!--  Grid Density  -->
@@ -1373,7 +1392,7 @@
                                 </StackPanel>
 
                                 <Border
-                                    Margin="0,12,0,0"
+                                    Margin="0,10,0,0"
                                     Padding="12"
                                     Background="{DynamicResource MahApps.Brushes.Gray9}"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
@@ -1461,7 +1480,7 @@
                                     IsOn="{Binding IsMesharpIntegrationEnabled, Mode=TwoWay}" />
 
                                 <StackPanel
-                                    Margin="0,12,0,0"
+                                    Margin="0,10,0,0"
                                     Orientation="Vertical"
                                     Visibility="{Binding IsThemeLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Border
@@ -1480,7 +1499,7 @@
                                                 Text="{Binding ThemeLogFilePath, Mode=OneWay}" />
                                         </TextBlock>
                                     </Border>
-                                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                                    <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                                         <Button
                                             Width="130"
                                             Margin="0,0,8,0"
@@ -1495,7 +1514,7 @@
                                 </StackPanel>
 
                                 <StackPanel
-                                    Margin="0,12,0,0"
+                                    Margin="0,10,0,0"
                                     Orientation="Vertical"
                                     Visibility="{Binding IsOrbitInteractionLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Border
@@ -1514,7 +1533,7 @@
                                                 Text="{Binding OrbitInteractionLogFilePath, Mode=OneWay}" />
                                         </TextBlock>
                                     </Border>
-                                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                                    <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                                         <Button
                                             Width="130"
                                             Margin="0,0,8,0"

@@ -22,23 +22,48 @@
                 <ResourceDictionary Source="Resources/SessionTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <Style BasedOn="{StaticResource MahAppsTabablzControlStyle}" TargetType="{x:Type dragablz:TabablzControl}">
-                <Setter Property="ShowDefaultAddButton" Value="False" />
-                <Setter Property="ShowDefaultCloseButton" Value="True" />
-            </Style>
+            <!-- Dragablz MahApps theme compatibility keys expected by Dragablz/Themes/MahApps.xaml -->
+            <SolidColorBrush x:Key="BlackBrush" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+            <SolidColorBrush x:Key="BlackColorBrush" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+            <SolidColorBrush x:Key="WhiteBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" />
+            <SolidColorBrush x:Key="WhiteColorBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" />
+            <SolidColorBrush x:Key="TransparentWhiteBrush" Color="#00FFFFFF" />
+            <SolidColorBrush x:Key="SemiTransparentWhiteBrush" Color="#55FFFFFF" />
+            <SolidColorBrush x:Key="HighlightBrush" Color="{DynamicResource MahApps.Colors.Highlight}" />
+            <SolidColorBrush x:Key="AccentColorBrush" Color="{DynamicResource MahApps.Colors.Accent}" />
+            <SolidColorBrush x:Key="AccentColorBrush2" Color="{DynamicResource MahApps.Colors.Accent2}" />
+            <SolidColorBrush x:Key="AccentColorBrush3" Color="{DynamicResource MahApps.Colors.Accent3}" />
+            <Color x:Key="AccentColor2">{StaticResource MahApps.Colors.Accent2}</Color>
 
             <!-- Shared outer margin for tool pages (tighter than the original 16px). -->
-            <Thickness x:Key="Orbit.ToolPageMargin">12</Thickness>
+            <Thickness x:Key="Orbit.ToolPageMargin">10</Thickness>
             <SolidColorBrush x:Key="Orbit.UpdateBadgeBrush" Color="#FFFFC44D" />
             <FontFamily x:Key="Orbit.Fonts.Family">Segoe UI</FontFamily>
             <sys:Double x:Key="Orbit.Fonts.Size.Base">12</sys:Double>
             <FontWeight x:Key="Orbit.Fonts.Weight.Body">Normal</FontWeight>
-
-            <Style TargetType="{x:Type Control}">
-                <Setter Property="FontFamily" Value="{DynamicResource Orbit.Fonts.Family}" />
-                <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
-                <Setter Property="FontWeight" Value="{DynamicResource Orbit.Fonts.Weight.Body}" />
+            <Style
+                x:Key="Orbit.TrapezoidTabItemStyle"
+                BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}"
+                TargetType="{x:Type dragablz:DragablzItem}">
+                <Setter Property="Background" Value="{DynamicResource AccentColorBrush2}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentColorBrush3}" />
+                <Setter Property="Foreground" Value="{DynamicResource WhiteBrush}" />
             </Style>
+
+            <Style
+                x:Key="Orbit.TabablzControlStyle"
+                BasedOn="{StaticResource MahAppsTabablzControlStyle}"
+                TargetType="{x:Type dragablz:TabablzControl}">
+                <Setter Property="ShowDefaultAddButton" Value="False" />
+                <Setter Property="ShowDefaultCloseButton" Value="True" />
+                <Setter Property="ItemContainerStyle" Value="{StaticResource Orbit.TrapezoidTabItemStyle}" />
+            </Style>
+
+            <Style
+                BasedOn="{StaticResource Orbit.TabablzControlStyle}"
+                TargetType="{x:Type dragablz:TabablzControl}">
+            </Style>
+
             <Style TargetType="{x:Type TextBlock}">
                 <Setter Property="FontFamily" Value="{DynamicResource Orbit.Fonts.Family}" />
                 <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
@@ -162,10 +187,8 @@
             <!--  Orbit Grid Cell Style - for TabablzControls in Orbit View grid layout  -->
             <Style
                 x:Key="OrbitGridCellStyle"
-                BasedOn="{StaticResource MahAppsTabablzControlStyle}"
+                BasedOn="{StaticResource Orbit.TabablzControlStyle}"
                 TargetType="{x:Type dragablz:TabablzControl}">
-                <Setter Property="ShowDefaultAddButton" Value="False" />
-                <Setter Property="ShowDefaultCloseButton" Value="True" />
                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
@@ -249,9 +272,9 @@
 
             <!--  Shared tool header visuals  -->
             <Style x:Key="Orbit.ToolHeader" TargetType="Border">
-                <Setter Property="Margin" Value="0,0,0,16" />
-                <Setter Property="Padding" Value="18,16" />
-                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Margin" Value="0,0,0,10" />
+                <Setter Property="Padding" Value="14,12" />
+                <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="Background">
                     <Setter.Value>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -264,20 +287,20 @@
                 <Setter Property="Effect">
                     <Setter.Value>
                         <DropShadowEffect
-                            BlurRadius="18"
+                            BlurRadius="14"
                             Direction="310"
-                            Opacity="0.28"
-                            ShadowDepth="3"
+                            Opacity="0.22"
+                            ShadowDepth="2"
                             Color="#66000000" />
                     </Setter.Value>
                 </Setter>
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderIcon" TargetType="Border">
-                <Setter Property="Width" Value="52" />
-                <Setter Property="Height" Value="52" />
-                <Setter Property="Margin" Value="0,0,14,0" />
-                <Setter Property="CornerRadius" Value="26" />
+                <Setter Property="Width" Value="46" />
+                <Setter Property="Height" Value="46" />
+                <Setter Property="Margin" Value="0,0,10,0" />
+                <Setter Property="CornerRadius" Value="23" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Background" Value="#33FFFFFF" />
@@ -296,24 +319,24 @@
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderIconGlyph" TargetType="iconPacks:PackIconMaterial">
-                <Setter Property="Width" Value="26" />
-                <Setter Property="Height" Value="26" />
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderGameIcon" TargetType="iconPacks:PackIconGameIcons">
-                <Setter Property="Width" Value="26" />
-                <Setter Property="Height" Value="26" />
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderIconPath" TargetType="Path">
-                <Setter Property="Width" Value="26" />
-                <Setter Property="Height" Value="26" />
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
                 <Setter Property="Stretch" Value="Uniform" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
@@ -321,14 +344,14 @@
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="22" />
+                <Setter Property="FontSize" Value="20" />
                 <Setter Property="FontWeight" Value="Bold" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
 
             <Style x:Key="Orbit.ToolHeaderSubtitle" TargetType="TextBlock">
-                <Setter Property="Margin" Value="0,6,0,0" />
+                <Setter Property="Margin" Value="0,4,0,0" />
                 <Setter Property="FontSize" Value="12" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
                 <Setter Property="Opacity" Value="0.85" />
@@ -342,18 +365,18 @@
             </Style>
 
             <Style x:Key="Orbit.ToolCard" TargetType="Border">
-                <Setter Property="Margin" Value="0,14,0,0" />
-                <Setter Property="Padding" Value="14" />
-                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Margin" Value="0,10,0,0" />
+                <Setter Property="Padding" Value="12" />
+                <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Effect">
                     <Setter.Value>
                         <DropShadowEffect
-                            BlurRadius="14"
-                            Opacity="0.12"
-                            ShadowDepth="2"
+                            BlurRadius="12"
+                            Opacity="0.1"
+                            ShadowDepth="1.5"
                             Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
                     </Setter.Value>
                 </Setter>

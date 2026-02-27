@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
@@ -26,6 +27,7 @@ using MahApps.Metro.IconPacks;
 using MahApps.Metro.Controls.Dialogs;
 using MahApps.Metro.Controls;
 using FlowDirection = System.Windows.FlowDirection;
+using System.Collections.Concurrent;
 
 namespace Orbit.ViewModels
 {
@@ -83,11 +85,17 @@ namespace Orbit.ViewModels
 	private bool autoInjectOnReady;
 	private bool isFloatingMenuClipping;
 	private readonly object sessionCloseSync = new();
+	private static readonly object sessionNameSync = new();
 	private readonly HashSet<Guid> closingSessionIds = new();
 	private readonly HashSet<Guid> pendingOrphanValidationSessionIds = new();
-	private static readonly TimeSpan LauncherBatchSpacing = TimeSpan.FromMilliseconds(120);
+	private static readonly ConcurrentDictionary<Guid, byte> relaunchingSessionIds = new();
+	private static int nextSessionOrdinal = 1;
+	private readonly DispatcherTimer sessionCrashWatchTimer;
 	private bool isLauncherBatchLaunchInProgress;
+	private bool isApplicationShuttingDown;
+	private bool sessionCrashCheckRunning;
 	private bool hasUpdateNotification;
+	private bool isFloatingMenuDragging;
 
 	/// <summary>
 	/// Creates the main window view model. Most dependencies are long-lived services shared via DI;
@@ -192,6 +200,13 @@ namespace Orbit.ViewModels
 			UpdateFloatingMenuWelcomeHint(Settings.Default.ShowThemeManagerWelcomeMessage);
 			hasUpdateNotification = this.settingsViewModel.HasUpdate;
 			this.settingsViewModel.PropertyChanged += OnSettingsViewModelPropertyChanged;
+
+			sessionCrashWatchTimer = new DispatcherTimer(DispatcherPriority.Background)
+			{
+				Interval = TimeSpan.FromSeconds(2)
+			};
+			sessionCrashWatchTimer.Tick += SessionCrashWatchTimer_Tick;
+			sessionCrashWatchTimer.Start();
 		}
 
 	public ObservableCollection<SessionModel> Sessions { get; }
@@ -291,6 +306,7 @@ namespace Orbit.ViewModels
                     SelectedSession = sm;
                     try
                     {
+						sm.HostControl?.EnsureActiveAfterLayout();
                         // Focus the embedded client when switching to a session tab
                         Application.Current.Dispatcher.InvokeAsync(() => sm.HostControl?.FocusEmbeddedClient());
                     }
@@ -439,17 +455,35 @@ namespace Orbit.ViewModels
 			{
 				Console.WriteLine($"[Orbit][Launcher] Batch launch requested for {batchCount} selected account(s).");
 				LauncherAccountStore.BeginSelectedLaunchBatch();
-				var launches = new List<Task>(batchCount);
-				for (var i = 0; i < batchCount; i++)
+				var fullWaitForDock = Settings.Default.LauncherBatchWaitForDockBeforeNext;
+				var launchDelaySeconds = Math.Clamp(Settings.Default.LauncherBatchLaunchDelaySeconds, 5, 30);
+
+				if (fullWaitForDock)
 				{
-					launches.Add(AddSingleSessionAsync());
-					if (i < batchCount - 1)
+					for (var i = 0; i < batchCount; i++)
 					{
-						await Task.Delay(LauncherBatchSpacing);
+						var docked = await AddSingleSessionAsync();
+						if (!docked)
+						{
+							Console.WriteLine($"[Orbit][Launcher] Batch launch stopped after slot {i + 1}: session did not dock successfully.");
+							break;
+						}
 					}
 				}
+				else
+				{
+					var launches = new List<Task>(batchCount);
+					for (var i = 0; i < batchCount; i++)
+					{
+						launches.Add(AddSingleSessionAsync());
+						if (i < batchCount - 1)
+						{
+							await Task.Delay(TimeSpan.FromSeconds(launchDelaySeconds));
+						}
+					}
 
-				await Task.WhenAll(launches);
+					await Task.WhenAll(launches);
+				}
 			}
 			finally
 			{
@@ -476,14 +510,16 @@ namespace Orbit.ViewModels
 			return true;
 		}
 
-		private async Task AddSingleSessionAsync()
+		private async Task<bool> AddSingleSessionAsync(string? preferredName = null)
 		{
 			var hostControl = new ChildClientView();
+			var initialized = false;
 
+			var resolvedName = ResolveSessionName(preferredName);
 			var session = new SessionModel
 			{
 				Id = Guid.NewGuid(),
-				Name = $"RuneScape Session {Sessions.Count + 1}",
+				Name = resolvedName,
 				CreatedAt = DateTime.Now,
 				HostControl = hostControl,
 				RequireInjectionBeforeDock = AutoInjectOnReady
@@ -526,6 +562,7 @@ namespace Orbit.ViewModels
 		try
 		{
 			await sessionManager.InitializeSessionAsync(session);
+			initialized = true;
 
 			// Auto-inject as soon as the session is ready (if enabled)
 			if (AutoInjectOnReady && session.InjectionState == InjectionState.Ready)
@@ -543,6 +580,56 @@ namespace Orbit.ViewModels
 			{
 				CommandManager.InvalidateRequerySuggested();
 			}
+
+			return initialized;
+		}
+
+		private string ResolveSessionName(string? preferredName)
+		{
+			if (!string.IsNullOrWhiteSpace(preferredName))
+			{
+				var requested = preferredName.Trim();
+				if (!Sessions.Any(s => string.Equals(s?.Name, requested, StringComparison.OrdinalIgnoreCase)))
+				{
+					return requested;
+				}
+			}
+
+			lock (sessionNameSync)
+			{
+				var maxObserved = Sessions
+					.Select(s => TryParseDefaultSessionOrdinal(s?.Name))
+					.Where(v => v.HasValue)
+					.Select(v => v!.Value)
+					.DefaultIfEmpty(0)
+					.Max();
+
+				if (nextSessionOrdinal <= maxObserved)
+				{
+					nextSessionOrdinal = maxObserved + 1;
+				}
+
+				while (true)
+				{
+					var candidate = $"RuneScape Session {nextSessionOrdinal++}";
+					if (!Sessions.Any(s => string.Equals(s?.Name, candidate, StringComparison.OrdinalIgnoreCase)))
+					{
+						return candidate;
+					}
+				}
+			}
+		}
+
+		private static int? TryParseDefaultSessionOrdinal(string? name)
+		{
+			const string prefix = "RuneScape Session ";
+			if (string.IsNullOrWhiteSpace(name) || !name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+			{
+				return null;
+			}
+
+			var suffix = name.Substring(prefix.Length).Trim();
+			return int.TryParse(suffix, out var parsed) && parsed > 0 ? parsed : null;
 		}
 
 		private static string NormalizeSessionLaunchBehavior(string? launchBehavior)
@@ -1443,6 +1530,31 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool ShowAllSnapZonesOnDrag
+	{
+		get => Settings.Default.FloatingMenuShowAllSnapZonesOnDrag;
+		set
+		{
+			if (Settings.Default.FloatingMenuShowAllSnapZonesOnDrag == value)
+				return;
+			Settings.Default.FloatingMenuShowAllSnapZonesOnDrag = value;
+			Settings.Default.Save();
+			OnPropertyChanged(nameof(ShowAllSnapZonesOnDrag));
+		}
+	}
+
+	public bool IsFloatingMenuDragging
+	{
+		get => isFloatingMenuDragging;
+		set
+		{
+			if (isFloatingMenuDragging == value)
+				return;
+			isFloatingMenuDragging = value;
+			OnPropertyChanged(nameof(IsFloatingMenuDragging));
+		}
+	}
+
 	public bool IsFloatingMenuClipping
 	{
 		get => isFloatingMenuClipping;
@@ -2294,10 +2406,10 @@ namespace Orbit.ViewModels
 		public async Task CloseAllSessionsAsync(bool skipConfirmation, bool forceKillOnTimeout = false)
 		{
 			var sessionsSnapshot = Sessions.OfType<SessionModel>().ToList();
-			foreach (var session in sessionsSnapshot)
-			{
-				await CloseSessionInternalAsync(session, skipConfirmation, forceKillOnTimeout).ConfigureAwait(true);
-			}
+			var closeTasks = sessionsSnapshot
+				.Select(session => CloseSessionInternalAsync(session, skipConfirmation, forceKillOnTimeout))
+				.ToList();
+			await Task.WhenAll(closeTasks).ConfigureAwait(true);
 		}
 
 		public Task ShutdownTrackedProcessesAsync(bool forceKillOnTimeout = false, CancellationToken cancellationToken = default)
@@ -2327,6 +2439,7 @@ namespace Orbit.ViewModels
 				}
 
 				var removeFromUiCollections = false;
+				var removedFromTabShell = false;
 				try
 				{
 					var pid = session.RSProcess?.Id;
@@ -2334,6 +2447,10 @@ namespace Orbit.ViewModels
 						$"[Orbit] Requesting shutdown for session '{session.Name}'{(pid.HasValue ? $" (PID {pid.Value})" : string.Empty)}.",
 						ConsoleLogSource.Orbit,
 						ConsoleLogLevel.Info);
+
+					// Remove the visible tab/workspace shell immediately so close feels instant,
+					// while the process shutdown continues in the background.
+					removedFromTabShell = RemoveSessionFromTabShell(session);
 
 					await sessionManager.ShutdownSessionAsync(session, forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
 					removeFromUiCollections = true;
@@ -2362,20 +2479,15 @@ namespace Orbit.ViewModels
 				{
 					if (removeFromUiCollections)
 					{
-						// Ensure the session is removed from any Orbit View workspace state (no-op if not present).
-						orbitLayoutState.RemoveItem(session);
-
 						if (Sessions.Contains(session))
 						{
 							Sessions.Remove(session);
 						}
 
-						if (Tabs.Contains(session))
+						if (!removedFromTabShell)
 						{
-							Tabs.Remove(session);
+							RemoveSessionFromTabShell(session);
 						}
-
-						HandleTabRemoval(session);
 					}
 					else
 					{
@@ -2387,6 +2499,26 @@ namespace Orbit.ViewModels
 			{
 				MarkSessionCloseCompleted(session);
 			}
+		}
+
+		private bool RemoveSessionFromTabShell(SessionModel session)
+		{
+			var removedAny = false;
+
+			orbitLayoutState.RemoveItem(session);
+
+			if (Tabs.Contains(session))
+			{
+				Tabs.Remove(session);
+				removedAny = true;
+			}
+
+			if (removedAny)
+			{
+				HandleTabRemoval(session);
+			}
+
+			return removedAny;
 		}
 
 		private static bool IsSessionProcessStillRunning(SessionModel session)
@@ -2640,19 +2772,139 @@ namespace Orbit.ViewModels
 		}
 	}
 
-	private static bool IsSessionInAnyOpenWindowTabs(SessionModel session)
-	{
-		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-		foreach (var window in windows)
+		private static bool IsSessionInAnyOpenWindowTabs(SessionModel session)
 		{
-			if (window.DataContext is MainWindowViewModel vm && vm.Tabs.Contains(session))
+			var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
+			foreach (var window in windows)
 			{
-				return true;
+				if (window.DataContext is MainWindowViewModel vm && vm.Tabs.Contains(session))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private async void SessionCrashWatchTimer_Tick(object? sender, EventArgs e)
+		{
+			if (_disposed || isApplicationShuttingDown || sessionCrashCheckRunning)
+			{
+				return;
+			}
+
+			if (!ReferenceEquals(Application.Current?.MainWindow?.DataContext, this))
+			{
+				return;
+			}
+
+			if (!Settings.Default.AutoRelaunchOnUnexpectedExit)
+			{
+				return;
+			}
+
+			sessionCrashCheckRunning = true;
+			try
+			{
+				var snapshot = Sessions.OfType<SessionModel>().ToList();
+				foreach (var session in snapshot)
+				{
+					if (!IsUnexpectedSessionExit(session))
+					{
+						continue;
+					}
+
+					await TryAutoRelaunchSessionAsync(session).ConfigureAwait(true);
+				}
+			}
+			finally
+			{
+				sessionCrashCheckRunning = false;
 			}
 		}
 
-		return false;
-	}
+		private bool IsUnexpectedSessionExit(SessionModel session)
+		{
+			if (session == null || !session.IsRuneScapeClient)
+			{
+				return false;
+			}
+
+			if (session.State == SessionState.Closed || session.State == SessionState.ShuttingDown)
+			{
+				return false;
+			}
+
+			if (IsSessionCloseInProgress(session))
+			{
+				return false;
+			}
+
+			var process = session.RSProcess;
+			if (process == null)
+			{
+				return false;
+			}
+
+			try
+			{
+				return process.HasExited;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		private async Task TryAutoRelaunchSessionAsync(SessionModel session)
+		{
+			if (!relaunchingSessionIds.TryAdd(session.Id, 0))
+			{
+				return;
+			}
+
+			var originalName = session.Name;
+			try
+			{
+				ConsoleLog.Append(
+					$"[Orbit] Session '{session.Name}' exited unexpectedly. Auto-relaunching.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+
+				await CloseSessionInternalAsync(session, skipConfirmation: true, forceKillOnTimeout: false).ConfigureAwait(true);
+
+				if (_disposed || isApplicationShuttingDown || !Settings.Default.AutoRelaunchOnUnexpectedExit)
+				{
+					return;
+				}
+
+				var relaunched = await AddSingleSessionAsync(originalName).ConfigureAwait(true);
+				if (!relaunched)
+				{
+					ConsoleLog.Append(
+						$"[Orbit] Auto-relaunch failed for session '{originalName}'.",
+						ConsoleLogSource.Orbit,
+						ConsoleLogLevel.Warning);
+				}
+			}
+			catch (Exception ex)
+			{
+				ConsoleLog.Append(
+					$"[Orbit] Auto-relaunch error for session '{originalName}': {ex.Message}",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Error);
+			}
+			finally
+			{
+				relaunchingSessionIds.TryRemove(session.Id, out _);
+			}
+		}
+
+		public void MarkApplicationShuttingDown()
+		{
+			isApplicationShuttingDown = true;
+			sessionCrashWatchTimer?.Stop();
+		}
 
 		private void HandleTabRemoval(object removedItem)
 		{
@@ -2805,6 +3057,8 @@ namespace Orbit.ViewModels
 				{
 					pendingOrphanValidationSessionIds.Clear();
 				}
+				sessionCrashWatchTimer.Stop();
+				sessionCrashWatchTimer.Tick -= SessionCrashWatchTimer_Tick;
 			}
 			catch
 			{

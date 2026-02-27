@@ -125,6 +125,9 @@
   <Setting Name="FloatingMenuShowAllSnapZonesOnClip" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">False</Value>
   </Setting>
+  <Setting Name="FloatingMenuShowAllSnapZonesOnDrag" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
   <Setting Name="ShowFloatingMenuAutoShow" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
@@ -143,8 +146,17 @@
   <Setting Name="ClientLaunchMode" Type="System.String" Scope="User">
     <Value Profile="(Default)">Legacy</Value>
   </Setting>
+  <Setting Name="AutoRelaunchOnUnexpectedExit" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
   <Setting Name="LauncherSelectedDisplayName" Type="System.String" Scope="User">
     <Value Profile="(Default)" />
+  </Setting>
+  <Setting Name="LauncherBatchLaunchDelaySeconds" Type="System.Int32" Scope="User">
+    <Value Profile="(Default)">5</Value>
+  </Setting>
+  <Setting Name="LauncherBatchWaitForDockBeforeNext" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
   </Setting>
   <Setting Name="InjectorDllPath" Type="System.String" Scope="User">
     <Value Profile="(Default)" />

@@ -28,14 +28,14 @@
                     <iconPacks:PackIconMaterial Kind="LanConnect" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="MCP Control Center" Style="{StaticResource Orbit.ToolHeaderTitle}" />
                     <TextBlock Text="Manage MCP runtime behavior, probe per-session bridges, and inspect responses without relying on console output."
                                Style="{StaticResource Orbit.ToolHeaderSubtitle}" />
                 </StackPanel>
 
                 <Border Grid.Column="2"
-                        Margin="12,0,0,0"
+                        Margin="10,0,0,0"
                         Padding="10,6"
                         CornerRadius="8"
                         VerticalAlignment="Center"
@@ -66,7 +66,7 @@
 
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,10,0">
                 <StackPanel>
-                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,12">
+                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -85,7 +85,7 @@
                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                        Text="When enabled, Orbit sends START_RUNTIME after successful injection. Disable for manual runtime lifecycle control." />
 
-                            <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                            <StackPanel Grid.Row="3" Margin="0,10,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -101,14 +101,14 @@
                                                         Value="{Binding AutoProbeSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="seconds"
                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                                    <Controls:ToggleSwitch Grid.Column="4" Margin="12,0,0,0" Header="Enabled"
+                                    <Controls:ToggleSwitch Grid.Column="4" Margin="10,0,0,0" Header="Enabled"
                                                            IsOn="{Binding AutoProbeEnabled, Mode=TwoWay}" />
                                 </Grid>
                             </StackPanel>
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,12">
+                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -218,7 +218,7 @@
                                        Opacity="0.82"
                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
 
-                            <WrapPanel Grid.Row="3" Margin="0,12,0,0">
+                            <WrapPanel Grid.Row="3" Margin="0,10,0,0">
                                 <Button Command="{Binding StartRuntimeCommand}" Content="Start Runtime" Margin="0,0,8,8" MinWidth="154" />
                                 <Button Command="{Binding ProbeStatusCommand}" Content="Probe Status" Margin="0,0,8,8" MinWidth="154" />
                                 <Button Command="{Binding ProbeCapabilitiesCommand}" Content="Capabilities" Margin="0,0,8,8" MinWidth="154" />

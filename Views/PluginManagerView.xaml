@@ -40,7 +40,7 @@
 
                 <StackPanel
                     Grid.Column="1"
-                    Margin="12,0,0,0"
+                    Margin="10,0,0,0"
                     VerticalAlignment="Center">
                     <TextBlock
                         Style="{StaticResource Orbit.ToolHeaderTitle}"
@@ -130,7 +130,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border
-                                    Margin="0,0,0,12"
+                                    Margin="0,0,0,10"
                                     Padding="20"
                                     Background="{DynamicResource MahApps.Brushes.Gray9}"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"

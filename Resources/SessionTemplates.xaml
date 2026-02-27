@@ -12,6 +12,60 @@
     <converters:InjectionStateToColorConverter x:Key="InjectionStateToColorConverter" />
     <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
 
+    <Style x:Key="OrbitTabHeaderBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+        <Setter Property="Opacity" Value="0.96" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect
+                    BlurRadius="3"
+                    Direction="270"
+                    Opacity="0.1"
+                    ShadowDepth="1"
+                    Color="{Binding Source={StaticResource MahApps.Colors.ThemeForeground}, FallbackValue=Black}" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="False" />
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Opacity" Value="1.0" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+                <Setter Property="BorderThickness" Value="1.5,1.5,1.5,0" />
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect
+                            BlurRadius="6"
+                            Direction="270"
+                            Opacity="0.2"
+                            ShadowDepth="1.5"
+                            Color="{DynamicResource MahApps.Colors.Accent}" />
+                    </Setter.Value>
+                </Setter>
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                <Setter Property="Opacity" Value="1.0" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderThickness" Value="2,2,2,0" />
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect
+                            BlurRadius="10"
+                            Direction="270"
+                            Opacity="0.35"
+                            ShadowDepth="3"
+                            Color="{DynamicResource MahApps.Colors.Accent}" />
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!--  Session Content Template - Shows the embedded RS window  -->
     <DataTemplate x:Key="SessionContentTemplate">
         <ContentControl
@@ -66,127 +120,15 @@
         <Border
             Margin="4,4,4,0"
             Padding="12,8,12,10"
-            CornerRadius="8,8,0,0">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <!--  Default inactive tab state  -->
-                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                    <Setter Property="Opacity" Value="0.5" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                    <Setter Property="BorderThickness" Value="1,1,1,0" />
-                    <Setter Property="Effect">
-                        <Setter.Value>
-                            <DropShadowEffect
-                                BlurRadius="3"
-                                Direction="270"
-                                Opacity="0.1"
-                                ShadowDepth="1"
-                                Color="{Binding Source={StaticResource MahApps.Colors.ThemeForeground}, FallbackValue=Black}" />
-                        </Setter.Value>
-                    </Setter>
-                    <Style.Triggers>
-                        <!--  Hover state for inactive tabs with smooth transition  -->
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="False" />
-                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                            </MultiDataTrigger.Conditions>
-                            <MultiDataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="0.8"
-                                            Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <CubicEase EasingMode="EaseOut" />
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.EnterActions>
-                            <MultiDataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="0.5"
-                                            Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <CubicEase EasingMode="EaseOut" />
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.ExitActions>
-                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
-                            <Setter Property="BorderThickness" Value="1.5,1.5,1.5,0" />
-                            <Setter Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect
-                                        BlurRadius="6"
-                                        Direction="270"
-                                        Opacity="0.2"
-                                        ShadowDepth="1.5"
-                                        Color="{DynamicResource MahApps.Colors.Accent}" />
-                                </Setter.Value>
-                            </Setter>
-                        </MultiDataTrigger>
-                        <!--  Selected state with smooth transition  -->
-                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="1.0"
-                                            Duration="0:0:0.25">
-                                            <DoubleAnimation.EasingFunction>
-                                                <CubicEase EasingMode="EaseOut" />
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="0.5"
-                                            Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <CubicEase EasingMode="EaseIn" />
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                            <Setter Property="BorderThickness" Value="2,2,2,0" />
-                            <Setter Property="Padding" Value="12,8,12,10" />
-                            <Setter Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect
-                                        BlurRadius="10"
-                                        Direction="270"
-                                        Opacity="0.35"
-                                        ShadowDepth="3"
-                                        Color="{DynamicResource MahApps.Colors.Accent}" />
-                                </Setter.Value>
-                            </Setter>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
+            CornerRadius="8,8,0,0"
+            Style="{StaticResource OrbitTabHeaderBorderStyle}">
             <Grid>
                 <!--  Accent underline for selected tab with smooth fade-in  -->
                 <Rectangle
                     Height="3"
                     Margin="0,0,0,0"
                     VerticalAlignment="Bottom"
-                    Fill="{DynamicResource MahApps.Brushes.Accent2}"
+                    Fill="{DynamicResource MahApps.Brushes.Accent3}"
                     Opacity="0"
                     RadiusX="1.5"
                     RadiusY="1.5">
@@ -245,13 +187,10 @@
                         <iconPacks:PackIconMaterial.Style>
                             <Style TargetType="iconPacks:PackIconMaterial">
                                 <Setter Property="Visibility" Value="Collapsed" />
-                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsExternalScript}" Value="True">
                                         <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -299,7 +238,7 @@
                             <TextBlock
                                 VerticalAlignment="Center"
                                 FontWeight="SemiBold"
-                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
                                 Text="{Binding DisplayName}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -340,7 +279,6 @@
                                                 </BeginStoryboard>
                                             </DataTrigger.ExitActions>
                                             <Setter Property="FontWeight" Value="Bold" />
-                                            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -413,76 +351,79 @@
 
     <!--  Tool Header Template (for non-session tabs)  -->
     <DataTemplate x:Key="ToolHeaderItemTemplate">
-        <StackPanel
-            x:Name="ToolHeader"
-            VerticalAlignment="Center"
-            Orientation="Horizontal">
-            <iconPacks:PackIconMaterial
-                Width="14"
-                Height="14"
-                Margin="0,0,8,0"
+        <Border
+            Margin="4,4,4,0"
+            Padding="12,8,12,10"
+            CornerRadius="8,8,0,0"
+            Style="{StaticResource OrbitTabHeaderBorderStyle}">
+            <StackPanel
+                x:Name="ToolHeader"
                 VerticalAlignment="Center"
-                Kind="{Binding Icon}">
-                <iconPacks:PackIconMaterial.Style>
-                    <Style TargetType="iconPacks:PackIconMaterial">
-                        <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
-                        <Setter Property="Opacity" Value="0.8" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                                <Setter Property="Opacity" Value="1" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </iconPacks:PackIconMaterial.Style>
-            </iconPacks:PackIconMaterial>
-            <TextBlock
-                VerticalAlignment="Center"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                Text="{Binding Name}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Opacity" Value="0.7" />
-                        <Style.Triggers>
-                            <!--  Brighter text on selected tab with smooth transition  -->
-                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="1.0"
-                                                Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <QuadraticEase EasingMode="EaseOut" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="0.7"
-                                                Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <QuadraticEase EasingMode="EaseIn" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.ExitActions>
-                                <Setter Property="FontWeight" Value="Bold" />
-                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </StackPanel>
+                Orientation="Horizontal">
+                <iconPacks:PackIconMaterial
+                    Width="14"
+                    Height="14"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Kind="{Binding Icon}">
+                    <iconPacks:PackIconMaterial.Style>
+                        <Style TargetType="iconPacks:PackIconMaterial">
+                            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                            <Setter Property="Opacity" Value="0.8" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                                    <Setter Property="Opacity" Value="1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </iconPacks:PackIconMaterial.Style>
+                </iconPacks:PackIconMaterial>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                    Text="{Binding Name}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Opacity" Value="0.7" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=dragablz:DragablzItem}}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="1.0"
+                                                    Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="0.7"
+                                                    Duration="0:0:0.15">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseIn" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                    <Setter Property="FontWeight" Value="Bold" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </Border>
     </DataTemplate>
 
     <!--  HeaderItemTemplateSelector - Chooses between Session and Tool headers  -->
@@ -491,11 +432,23 @@
         SessionHeaderTemplate="{StaticResource SessionHeaderItemTemplate}"
         ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
 
+    <DataTemplate x:Key="TabHeaderTemplate">
+        <ContentPresenter
+            Content="{Binding}"
+            ContentTemplateSelector="{StaticResource TabHeaderTemplateSelector}" />
+    </DataTemplate>
+
     <!-- Orbit View: compact session header + tool header, used by programmatic grid shells -->
     <selectors:HeaderItemTemplateSelector
         x:Key="OrbitCompactTabHeaderTemplateSelector"
         SessionHeaderTemplate="{StaticResource OrbitSessionHeaderTemplate}"
         ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
+
+    <DataTemplate x:Key="OrbitCompactTabHeaderTemplate">
+        <ContentPresenter
+            Content="{Binding}"
+            ContentTemplateSelector="{StaticResource OrbitCompactTabHeaderTemplateSelector}" />
+    </DataTemplate>
 
     <!--  Content selector: session host vs tool host  -->
     <selectors:TabContentTemplateSelector

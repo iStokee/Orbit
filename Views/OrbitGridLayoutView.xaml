@@ -9,55 +9,12 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
-    xmlns:selectors="clr-namespace:Orbit.Selectors"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
 
     <UserControl.Resources>
-        <converters:OrbitViewCompactnessToMarginConverter x:Key="CompactnessToMarginConverter" />
-        <converters:OrbitViewCompactnessToCellMarginConverter x:Key="CellMarginConverter" />
         <converters:OrbitViewBorderThicknessConverter x:Key="BorderThicknessConverter" />
         <converters:OrbitViewTabHeaderSizeToHeightConverter x:Key="TabHeaderSizeConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
-
-        <DataTemplate x:Key="OrbitSessionHeaderWithMenuTemplate" xmlns:local="clr-namespace:Orbit">
-            <Border Padding="8,4">
-                <Border.ContextMenu>
-                    <ContextMenu DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=dragablz:TabablzControl}}">
-                        <MenuItem
-                            Header="Undock to Individual Tabs"
-                            Command="{Binding DataContext.MoveToIndividualTabsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                    </ContextMenu>
-                </Border.ContextMenu>
-                <StackPanel
-                    Margin="8,4"
-                    Orientation="Horizontal"
-                    MinHeight="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewTabHeaderSize, Converter={StaticResource TabHeaderSizeConverter}}">
-                    <Ellipse
-                        Width="10"
-                        Height="10"
-                        Margin="0,0,8,0"
-                        VerticalAlignment="Center"
-                        Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
-                        Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
-                        StrokeThickness="2"
-                        ToolTip="{Binding StatusSummary}" />
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                        Text="{Binding DisplayName}" />
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-
-        <!-- Make tab headers type-aware so tools dock into Orbit View cleanly. -->
-        <selectors:HeaderItemTemplateSelector
-            x:Key="OrbitTabHeaderTemplateSelector"
-            SessionHeaderTemplate="{StaticResource OrbitSessionHeaderWithMenuTemplate}"
-            ToolHeaderTemplate="{StaticResource ToolHeaderItemTemplate}" />
-
         <Style
             x:Key="SessionToolbarButtonStyle"
             BasedOn="{StaticResource MahApps.Styles.Button}"
@@ -96,15 +53,7 @@
         </Style>
 
         <Style x:Key="OrbitRootGridStyle" TargetType="Grid">
-            <Setter Property="Margin" Value="16" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
-                    <Setter Property="Margin" Value="12" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
-                    <Setter Property="Margin" Value="8" />
-                </DataTrigger>
-            </Style.Triggers>
+            <Setter Property="Margin" Value="{StaticResource Orbit.ToolPageMargin}" />
         </Style>
 
         <Style x:Key="OrbitToolbarRowStyle" TargetType="Grid">
@@ -182,12 +131,15 @@
         <Border Grid.Row="0" HorizontalAlignment="Stretch">
             <Border.Style>
                 <Style BasedOn="{StaticResource Orbit.ToolHeader}" TargetType="Border">
+                    <Setter Property="Margin" Value="0,0,0,10" />
                     <Setter Property="Padding" Value="12" />
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
+                            <Setter Property="Margin" Value="0,0,0,8" />
                             <Setter Property="Padding" Value="8,6,8,6" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                            <Setter Property="Margin" Value="0,0,0,6" />
                             <Setter Property="Padding" Value="6,4,6,4" />
                         </DataTrigger>
                     </Style.Triggers>
@@ -230,7 +182,7 @@
 
                     <StackPanel
                         Grid.Column="1"
-                        Margin="12,0,0,0"
+                        Margin="10,0,0,0"
                         VerticalAlignment="Center">
                         <TextBlock
                             Style="{StaticResource Orbit.ToolHeaderTitle}"
@@ -571,15 +523,11 @@
         </Border>
 
         <!--  Main Layout Area using Dragablz Layout  -->
-        <Border
+        <Grid
             Grid.Row="1"
             Margin="0"
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            Background="{DynamicResource MahApps.Brushes.Gray9}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-            BorderThickness="1"
-            CornerRadius="6">
+            VerticalAlignment="Stretch">
 
             <!--  Dragablz Layout Control - Native branching/splitting  -->
             <dockablz:Layout x:Name="SessionLayout" Partition="OrbitMainShell">
@@ -589,8 +537,8 @@
                 <dockablz:Layout.BranchTemplate>
                     <DataTemplate>
                         <dragablz:TabablzControl
-                            Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
-                            Padding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CellMarginConverter}}"
+                            Margin="0"
+                            Padding="0"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
                             Background="Transparent"
@@ -598,7 +546,7 @@
                             BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                             ClosingItemCallback="{Binding DataContext.TabClosingHandler, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
-                            ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
+                            Style="{StaticResource Orbit.TabablzControlStyle}"
                             SelectionChanged="OrbitTabControl_SelectionChanged"
                             ShowDefaultAddButton="False"
                             ShowDefaultCloseButton="True">
@@ -612,8 +560,8 @@
 
                 <!--  Initial content: Single TabablzControl showing all sessions  -->
                 <dragablz:TabablzControl
-                    Margin="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CompactnessToMarginConverter}}"
-                    Padding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewCompactness, Converter={StaticResource CellMarginConverter}}"
+                    Margin="0"
+                    Padding="0"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Background="Transparent"
@@ -621,7 +569,7 @@
                     BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                     ClosingItemCallback="{Binding TabClosingHandler}"
                     ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
-                    ItemTemplateSelector="{StaticResource OrbitTabHeaderTemplateSelector}"
+                    Style="{StaticResource Orbit.TabablzControlStyle}"
                     SelectionChanged="OrbitTabControl_SelectionChanged"
                     ShowDefaultAddButton="False"
                     ShowDefaultCloseButton="True">
@@ -633,6 +581,6 @@
 
             </dockablz:Layout>
 
-        </Border>
+        </Grid>
     </Grid>
 </UserControl>

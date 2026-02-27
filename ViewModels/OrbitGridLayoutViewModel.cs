@@ -1228,9 +1228,18 @@ namespace Orbit.ViewModels
 			{
 				targetControl.Items.Add(item);
 				_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(targetControl);
-				if (targetControl.SelectedItem == null)
+				// Always select newly added item so the tab content is realized immediately
+				// instead of waiting for first manual activation.
+				targetControl.SelectedItem = item;
+
+				if (item is SessionModel session && session.HostControl != null)
 				{
-					targetControl.SelectedItem = item;
+					var host = session.HostControl;
+					var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
+					dispatcher?.InvokeAsync(() =>
+					{
+						host.EnsureActiveAfterLayout();
+					}, DispatcherPriority.Loaded);
 				}
 			}
 			RefreshCommandStates();

@@ -118,7 +118,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource Orbit.ToolCard}">
+        <Border Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource Orbit.ToolCard}">
             <ListBox
                 BorderThickness="0"
                 Background="Transparent"

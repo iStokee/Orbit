@@ -18,6 +18,7 @@ namespace Orbit.Services
 		private const string DefaultInjectorDll = "XInput1_4_inject.dll";
 		private const uint WM_CLOSE = 0x0010;
 		private const int SW_HIDE = 0;
+		private const int SW_MINIMIZE = 6;
 		private const uint SWP_NOSIZE = 0x0001;
 		private const uint SWP_NOMOVE = 0x0002;
 		private const uint SWP_NOZORDER = 0x0004;
@@ -72,7 +73,11 @@ namespace Orbit.Services
 					{
 						UpdateProcessFallbackHandle(session.RSProcess.Id, session.ExternalHandle);
 					}
-					try { clientView.FocusEmbeddedClient(); } catch { }
+					try
+					{
+						clientView.RefreshDockedContentActivation(requestFocus: true);
+					}
+					catch { }
 
 					// IMPROVED: Always try to re-apply commands if injected, even if injection completed earlier
 					// Window re-parenting (SetParent) can reset hooks, so we re-apply to restore state
@@ -130,11 +135,11 @@ namespace Orbit.Services
 					var parentInfo = session.ParentProcessId.HasValue ? session.ParentProcessId.Value.ToString() : "n/a";
 					Console.WriteLine($"[Orbit] Session '{session.Name}' attached to PID {session.RSProcess.Id} (Parent {parentInfo}) (MainWindow 0x{session.RSProcess.MainWindowHandle.ToInt64():X}) DockedHWND=0x{session.ExternalHandle:X}");
 				}
-                session.UpdateState(SessionState.ClientReady);
-                session.UpdateInjectionState(InjectionState.Ready);
+				session.UpdateState(SessionState.ClientReady);
+				session.UpdateInjectionState(InjectionState.Ready);
 
-				// Give input focus to the embedded client once ready
-				clientView.FocusEmbeddedClient();
+				// Ensure host content is measured/activated even if tab selection didn't change.
+				clientView.RefreshDockedContentActivation(requestFocus: true);
 
 				if (!session.RequireInjectionBeforeDock)
 				{
@@ -349,17 +354,19 @@ namespace Orbit.Services
 			{
 				HideWindowSilently(mainHandle);
 			}
+			HideOrMinimizeProcessWindowSilently(process);
 
-			// Detach embedded host to release Win32 parenting
+			// Detach embedded host and restore original top-level parent/styles first.
+			// This improves CloseMainWindow/WM_CLOSE behavior versus signalling a hidden child window.
 			if (session.HostControl is ChildClientView childHost)
 			{
-				childHost.DetachSession(restoreParent: false);
+				childHost.DetachSession(restoreParent: true);
 			}
 			else if (session.RSForm is RSForm standaloneForm)
 			{
 				try
 				{
-					standaloneForm.Undock(restoreParent: false, restoreStyles: false);
+					standaloneForm.Undock(restoreParent: true, restoreStyles: true);
 					if (standaloneForm.InvokeRequired)
 					{
 						standaloneForm.Invoke(new Action(() =>
@@ -392,6 +399,9 @@ namespace Orbit.Services
 					// WinForms teardown can fail if the form is already closing; ignore.
 				}
 			}
+
+			// After unparent/undock, force the client window invisible so shutdown appears seamless to users.
+			HideOrMinimizeProcessWindowSilently(process);
 
 			Process parentProcess = null;
 			if (session.ParentProcessId is int parentPid)
@@ -547,6 +557,9 @@ namespace Orbit.Services
 					// Parent process may have already exited; nothing to track.
 				}
 			}
+
+			// Keep tracked labels in sync with the latest session name.
+			RefreshTrackedSessionNames(session);
 		}
 
 		private void RegisterManagedProcess(Process process, ProcessRole role, string sessionName, nint fallbackHandle, int? parentProcessId)
@@ -583,6 +596,28 @@ namespace Orbit.Services
 			}
 		}
 
+		private void RefreshTrackedSessionNames(SessionModel session)
+		{
+			if (session == null)
+			{
+				return;
+			}
+
+			var sessionName = session.Name ?? $"Session {session.Id}";
+			var candidateIds = new[] { session.RSProcess?.Id ?? 0, session.ParentProcessId ?? 0 }
+				.Where(id => id > 0)
+				.Distinct()
+				.ToArray();
+
+			foreach (var pid in candidateIds)
+			{
+				if (_managedProcesses.TryGetValue(pid, out var record))
+				{
+					_managedProcesses[pid] = record with { SessionName = sessionName };
+				}
+			}
+		}
+
 		private void TryUnregisterProcess(int processId)
 		{
 			if (processId <= 0)
@@ -615,6 +650,8 @@ namespace Orbit.Services
 			{
 				if (process.HasExited)
 					return true;
+
+				HideOrMinimizeProcessWindowSilently(process);
 
 				var closeSignalled = TrySignalProcessWindow(process);
 
@@ -674,6 +711,41 @@ namespace Orbit.Services
 			catch
 			{
 				// Window may already be closing; ignore failures.
+			}
+		}
+
+		private static void HideOrMinimizeProcessWindowSilently(Process process)
+		{
+			if (process == null)
+			{
+				return;
+			}
+
+			try
+			{
+				if (process.HasExited)
+				{
+					return;
+				}
+
+				process.Refresh();
+				var handle = process.MainWindowHandle;
+				if (handle == nint.Zero)
+				{
+					return;
+				}
+
+				var hidden = ShowWindow(handle, SW_HIDE);
+				SetWindowPos(handle, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+				if (!hidden)
+				{
+					// Some windows ignore hide while changing parent/style; minimize as fallback.
+					ShowWindow(handle, SW_MINIMIZE);
+				}
+			}
+			catch
+			{
+				// best effort
 			}
 		}
 

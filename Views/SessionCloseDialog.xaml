@@ -120,13 +120,13 @@
                 <!-- Left Column -->
                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
                     <!-- Process ID -->
-                    <StackPanel Margin="0,0,0,12">
+                    <StackPanel Margin="0,0,0,10">
                         <TextBlock Style="{StaticResource InfoLabelStyle}" Text="PROCESS ID" />
                         <TextBlock Style="{StaticResource InfoValueStyle}" Text="{Binding ProcessId}" />
                     </StackPanel>
 
                     <!-- Session Type -->
-                    <StackPanel Margin="0,0,0,12">
+                    <StackPanel Margin="0,0,0,10">
                         <TextBlock Style="{StaticResource InfoLabelStyle}" Text="TYPE" />
                         <TextBlock Style="{StaticResource InfoValueStyle}" Text="{Binding SessionType}" />
                     </StackPanel>
@@ -139,15 +139,15 @@
                 </StackPanel>
 
                 <!-- Right Column -->
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="12,0,0,0">
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,0">
                     <!-- Time Running -->
-                    <StackPanel Margin="0,0,0,12">
+                    <StackPanel Margin="0,0,0,10">
                         <TextBlock Style="{StaticResource InfoLabelStyle}" Text="RUNNING FOR" />
                         <TextBlock Style="{StaticResource InfoValueStyle}" Text="{Binding TimeRunning}" />
                     </StackPanel>
 
                     <!-- Created At -->
-                    <StackPanel Margin="0,0,0,12">
+                    <StackPanel Margin="0,0,0,10">
                         <TextBlock Style="{StaticResource InfoLabelStyle}" Text="STARTED AT" />
                         <TextBlock Style="{StaticResource InfoValueStyle}" Text="{Binding CreatedAt, StringFormat='{}{0:HH:mm:ss}'}" />
                     </StackPanel>

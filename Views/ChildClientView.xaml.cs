@@ -515,6 +515,8 @@ namespace Orbit.Views
 
             try
             {
+				Task beginLoadTask = Task.CompletedTask;
+
                 // Initialize the WinForms host on the dispatcher thread.
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -524,28 +526,33 @@ namespace Orbit.Views
                     // Add the form to the panel
                     RSPanel.Child = rsForm;
 
-                    // Start loading the form (fire-and-forget; readiness is tracked via ProcessReadyTask).
+                    // Start loading the form and keep the task so we can await full dock completion.
                     Console.WriteLine("BeginLoad");
-                    _ = rsForm.BeginLoad();
+					beginLoadTask = rsForm.BeginLoad();
                 });
 
-                // Wait until the RS process handle is available before signaling session readiness.
+                // Match Olympus behavior: wait for full BeginLoad (launch + detect + dock + initial resize).
+                await beginLoadTask.ConfigureAwait(true);
+
+				// ProcessReadyTask is completed during BeginLoad; keep this as an explicit readiness guard.
                 await rsForm.ProcessReadyTask.ConfigureAwait(true);
 
 				// Mark the session as started
 				hasStarted = true;
-				RestoreSessionFromParking();
-				var viewportSnapshot = lastMeasuredViewportSize;
-				if (viewportSnapshot.Width <= 0 || viewportSnapshot.Height <= 0)
-				{
-					viewportSnapshot = GetHostViewportSize();
-				}
-				if (viewportSnapshot.Width > 0 && viewportSnapshot.Height > 0)
-				{
+					RestoreSessionFromParking();
+					var viewportSnapshot = lastMeasuredViewportSize;
+					if (viewportSnapshot.Width <= 0 || viewportSnapshot.Height <= 0)
+					{
+						viewportSnapshot = GetHostViewportSize();
+					}
+					if (viewportSnapshot.Width <= 0 || viewportSnapshot.Height <= 0)
+					{
+						// Ensure the first dock pass doesn't depend on the tab being activated/measured yet.
+						viewportSnapshot = new Size(800, 600);
+					}
 					_ = ResizeWindowAsync((int)Math.Round(viewportSnapshot.Width), (int)Math.Round(viewportSnapshot.Height));
-				}
-				sessionReadyTcs.TrySetResult(rsForm);
-            }
+					sessionReadyTcs.TrySetResult(rsForm);
+	            }
             catch (Exception ex)
             {
                 // Log the full exception details
@@ -617,8 +624,17 @@ namespace Orbit.Views
 
 		internal void EnsureActiveAfterLayout()
 		{
+			EnsureSessionLoading();
+
 			if (!IsLoaded)
 			{
+				_ = Dispatcher.BeginInvoke(new Action(() =>
+				{
+					if (IsLoaded)
+					{
+						EnsureActiveAfterLayout();
+					}
+				}), DispatcherPriority.Loaded);
 				return;
 			}
 
@@ -629,6 +645,51 @@ namespace Orbit.Views
 			{
 				lastMeasuredViewportSize = viewport;
 				_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
+			}
+		}
+
+		internal void RefreshDockedContentActivation(bool requestFocus)
+		{
+			if (!IsLoaded)
+			{
+				_ = Dispatcher.BeginInvoke(new Action(() => RefreshDockedContentActivation(requestFocus)), DispatcherPriority.Loaded);
+				return;
+			}
+
+			void Activate()
+			{
+				try
+				{
+					EnsureActiveAfterLayout();
+
+					RSPanel?.InvalidateMeasure();
+					RSPanel?.InvalidateArrange();
+					RSPanel?.InvalidateVisual();
+					UpdateLayout();
+
+					attachedTabControl?.InvalidateMeasure();
+					attachedTabControl?.InvalidateArrange();
+					attachedTabControl?.UpdateLayout();
+
+					if (requestFocus)
+					{
+						FocusEmbeddedClient();
+						_ = Dispatcher.BeginInvoke(new Action(FocusEmbeddedClient), DispatcherPriority.ContextIdle);
+					}
+				}
+				catch
+				{
+					// Best effort.
+				}
+			}
+
+			if (Dispatcher.CheckAccess())
+			{
+				Activate();
+			}
+			else
+			{
+				_ = Dispatcher.BeginInvoke(new Action(Activate), DispatcherPriority.Loaded);
 			}
 		}
 

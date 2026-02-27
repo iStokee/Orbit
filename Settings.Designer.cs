@@ -517,6 +517,18 @@ namespace Orbit {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FloatingMenuShowAllSnapZonesOnDrag {
+            get {
+                return ((bool)(this["FloatingMenuShowAllSnapZonesOnDrag"]));
+            }
+            set {
+                this["FloatingMenuShowAllSnapZonesOnDrag"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShowFloatingMenuAutoShow {
             get {
@@ -586,6 +598,18 @@ namespace Orbit {
                 this["ClientLaunchMode"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AutoRelaunchOnUnexpectedExit {
+            get {
+                return ((bool)(this["AutoRelaunchOnUnexpectedExit"]));
+            }
+            set {
+                this["AutoRelaunchOnUnexpectedExit"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -596,6 +620,30 @@ namespace Orbit {
             }
             set {
                 this["LauncherSelectedDisplayName"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int LauncherBatchLaunchDelaySeconds {
+            get {
+                return ((int)(this["LauncherBatchLaunchDelaySeconds"]));
+            }
+            set {
+                this["LauncherBatchLaunchDelaySeconds"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LauncherBatchWaitForDockBeforeNext {
+            get {
+                return ((bool)(this["LauncherBatchWaitForDockBeforeNext"]));
+            }
+            set {
+                this["LauncherBatchWaitForDockBeforeNext"] = value;
             }
         }
 

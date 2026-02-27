@@ -175,7 +175,7 @@ namespace Orbit
 
 			try
 			{
-				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: true);
+				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: false);
 			}
 			catch (Exception ex)
 			{
@@ -183,7 +183,7 @@ namespace Orbit
 			}
 			try
 			{
-				await viewModel.ShutdownTrackedProcessesAsync(forceKillOnTimeout: true);
+				await viewModel.ShutdownTrackedProcessesAsync(forceKillOnTimeout: false);
 			}
 			catch (Exception ex)
 			{
@@ -318,6 +318,47 @@ namespace Orbit
 			tabControl.InterTabController ??= new InterTabController();
 			tabControl.InterTabController.InterTabClient = viewModel.InterTabClient;
 			tabControl.InterTabController.Partition = "OrbitMainShell";
+		}
+
+		private void MainShellTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			if (Mouse.LeftButton == MouseButtonState.Pressed)
+			{
+				return;
+			}
+
+			if (!ReferenceEquals(sender, e.OriginalSource))
+			{
+				return;
+			}
+
+			if (sender is not TabablzControl tabControl)
+			{
+				return;
+			}
+
+			if (tabControl.SelectedItem is not SessionModel session || session.HostControl == null)
+			{
+				return;
+			}
+
+			var host = session.HostControl;
+			host.RefreshDockedContentActivation(requestFocus: IsActive);
+
+			if (IsActive)
+			{
+				_ = Dispatcher.BeginInvoke(new Action(() =>
+				{
+					try
+					{
+						host.FocusEmbeddedClient();
+					}
+					catch
+					{
+						// Best effort only.
+					}
+				}), DispatcherPriority.Input);
+			}
 		}
 
 		private void SaveWindowPlacementToSettings()
@@ -666,6 +707,7 @@ namespace Orbit
 				}
 
 				floatingMenuDragging = true;
+				viewModel.IsFloatingMenuDragging = true;
 				((UIElement)sender).CaptureMouse();
 			}
 
@@ -681,7 +723,10 @@ namespace Orbit
 			var detection = DetectSnapZone(newLeft, newTop, FloatingMenuHandle.ActualWidth, FloatingMenuHandle.ActualHeight, overlayWidth, overlayHeight);
 			viewModel.FloatingMenuDockCandidate = detection.region;
 			viewModel.SetFloatingMenuClipping(detection.clipped);
-			viewModel.IsFloatingMenuDockOverlayVisible = detection.region != FloatingMenuDockRegion.None || detection.clipped;
+			viewModel.IsFloatingMenuDockOverlayVisible =
+				detection.region != FloatingMenuDockRegion.None ||
+				detection.clipped ||
+				(viewModel.ShowAllSnapZonesOnDrag && viewModel.IsFloatingMenuDragging);
 
 			viewModel.UpdateFloatingMenuPosition(newLeft, newTop, ActualWidth, ActualHeight);
 			e.Handled = true;
@@ -693,6 +738,7 @@ namespace Orbit
 			{
 				((UIElement)sender).ReleaseMouseCapture();
 				floatingMenuDragging = false;
+				viewModel.IsFloatingMenuDragging = false;
 
 				// Apply snap if over a dock zone
 				if (viewModel != null && viewModel.FloatingMenuDockCandidate != FloatingMenuDockRegion.None)
@@ -821,6 +867,17 @@ namespace Orbit
 				return;
 			}
 
+			// Never wake or show floating menu popups while this window is inactive.
+			if (!IsActive)
+			{
+				if (viewModel.IsFloatingMenuVisible)
+				{
+					viewModel.HideFloatingMenu();
+				}
+
+				return;
+			}
+
 			if (!GetCursorPos(out var current))
 			{
 				return;
@@ -852,6 +909,12 @@ namespace Orbit
 		{
 			if (viewModel == null)
 			{
+				return;
+			}
+
+			if (!IsActive)
+			{
+				floatingMenuInactivityTimer.Stop();
 				return;
 			}
 
@@ -1157,11 +1220,18 @@ namespace Orbit
 
 		private void OnWindowActivated(object? sender, EventArgs e)
 		{
+			hasCursorBaseline = false;
 			_ = this.viewModel.ReassertInputPassthroughAsync(orbitActive: true);
 		}
 
 		private void OnWindowDeactivated(object? sender, EventArgs e)
 		{
+			floatingMenuDragCandidate = false;
+			floatingMenuDragging = false;
+			this.viewModel.IsFloatingMenuDragging = false;
+			this.viewModel.IsFloatingMenuDockOverlayVisible = false;
+			this.viewModel.SetFloatingMenuClipping(false);
+			this.viewModel.HideFloatingMenu();
 			_ = this.viewModel.ReassertInputPassthroughAsync(orbitActive: false);
 		}
 	}

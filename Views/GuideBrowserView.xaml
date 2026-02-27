@@ -70,7 +70,7 @@
                     <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                         <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                     </Border>
-                    <StackPanel Margin="12,0,0,0">
+                    <StackPanel Margin="10,0,0,0">
                         <TextBlock
                             Style="{StaticResource Orbit.ToolHeaderTitle}"
                             Text="Orbit Documentation" />
@@ -94,7 +94,7 @@
                         </StackPanel>
                     </Button>
                     <Button
-                        Margin="12,0,0,0"
+                        Margin="10,0,0,0"
                         Padding="16,8"
                         Command="{Binding OpenDocsFolderCommand}"
                         Style="{StaticResource MahApps.Styles.Button}"
@@ -133,7 +133,7 @@
                         Header="Guides">
                         <StackPanel Margin="0,10,0,0">
                             <TextBlock
-                                Margin="0,0,0,12"
+                                Margin="0,0,0,10"
                                 Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                                 FontWeight="Normal"
                                 Text="Select a guide section to load." />
@@ -171,7 +171,7 @@
                                                         Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                                         Kind="{Binding Icon}" />
                                                 </Border>
-                                                <StackPanel Margin="12,0,0,0">
+                                                <StackPanel Margin="10,0,0,0">
                                                     <TextBlock
                                                         FontSize="15"
                                                         FontWeight="SemiBold"
@@ -191,7 +191,7 @@
                         </StackPanel>
                     </Expander>
                     <Expander
-                        Margin="0,12,0,0"
+                        Margin="0,10,0,0"
                         IsExpanded="False"
                         Background="Transparent"
                         BorderThickness="0"
@@ -238,7 +238,7 @@
                                 Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                 IsActive="True" />
                             <TextBlock
-                                Margin="0,12,0,0"
+                                Margin="0,10,0,0"
                                 Foreground="{DynamicResource Orbit.Brushes.Text.OnOverlay}"
                                 Text="{Binding StatusMessage}"
                                 TextAlignment="Center" />
@@ -263,7 +263,7 @@
                     Foreground="{DynamicResource MahApps.Brushes.Accent}"
                     Kind="HelpCircleOutline" />
                 <TextBlock
-                    Margin="12,0,0,0"
+                    Margin="10,0,0,0"
                     VerticalAlignment="Center"
                     Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
                     Text="{Binding StatusMessage}" />

@@ -39,7 +39,7 @@
                     <iconPacks:PackIconMaterial Kind="AccountMultiple" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
 
-                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                     <TextBlock
                         Style="{StaticResource Orbit.ToolHeaderTitle}"
                         Text="Account Manager" />
@@ -174,7 +174,7 @@
 
                 <DataGrid
                     Grid.Row="1"
-                    Margin="0,12,0,0"
+                    Margin="0,10,0,0"
                     ItemsSource="{Binding FilteredAccounts}"
                     SelectedItem="{Binding SelectedAccount}"
                     AutoGenerateColumns="False"
@@ -235,7 +235,7 @@
                 <!--  Empty State  -->
                 <Border
                     Grid.Row="1"
-                    Margin="0,12,0,0"
+                    Margin="0,10,0,0"
                     Padding="48,32"
                     Background="{DynamicResource MahApps.Brushes.Gray9}"
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"

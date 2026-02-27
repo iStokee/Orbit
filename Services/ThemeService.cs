@@ -282,11 +282,11 @@ namespace Orbit.Services
 			return oldThemeName;
 		}
 
-		public void ApplyBuiltInTheme(string baseTheme, string colorScheme)
-		{
-			ThemeLogger.LogThemeChange("Built-in", baseTheme, colorScheme);
-			RemoveCustomForegroundOverrides();
-			RemoveCustomAccentOverrides();
+			public void ApplyBuiltInTheme(string baseTheme, string colorScheme)
+			{
+				ThemeLogger.LogThemeChange("Built-in", baseTheme, colorScheme);
+				RemoveCustomForegroundOverrides();
+				RemoveCustomAccentOverrides();
 
 			// v2 format: "Dark.Cyan", "Light.Blue", etc.
 			var themeName = $"{baseTheme}.{colorScheme}";
@@ -296,7 +296,9 @@ namespace Orbit.Services
 			{
 				ThemeLogger.Log($"Applying theme: {themeName}");
 				ThemeManager.Current.ChangeTheme(Application.Current, theme);
+				EnsureRequiredResourceDictionaries();
 				ApplyOrbitSemanticTextResources();
+				EnsureDragablzMahAppsCompatResources();
 				SaveCurrentTheme(baseTheme, colorScheme);
 				ThemeLogger.Log($"Theme applied successfully");
 			}
@@ -305,10 +307,12 @@ namespace Orbit.Services
 				// Fallback to Dark.Steel
 				ThemeLogger.Log($"Theme {themeName} not found, falling back to Dark.Steel");
 				var fallback = ThemeManager.Current.GetTheme("Dark.Steel");
-				if (fallback != null)
-				{
+					if (fallback != null)
+					{
 					ThemeManager.Current.ChangeTheme(Application.Current, fallback);
+					EnsureRequiredResourceDictionaries();
 					ApplyOrbitSemanticTextResources();
+					EnsureDragablzMahAppsCompatResources();
 					SaveCurrentTheme("Dark", "Steel");
 				}
 			}
@@ -384,9 +388,10 @@ namespace Orbit.Services
 				return;
 			}
 
-			// Apply the base theme
-			ThemeLogger.Log($"Applying base theme: {baseTheme}.Steel");
-			ThemeManager.Current.ChangeTheme(Application.Current, baseThemeObj);
+				// Apply the base theme
+				ThemeLogger.Log($"Applying base theme: {baseTheme}.Steel");
+				ThemeManager.Current.ChangeTheme(Application.Current, baseThemeObj);
+				EnsureRequiredResourceDictionaries();
 
 			// IMPORTANT: After ChangeTheme, MahApps adds dictionaries to the collection.
 			// We need to apply our custom accents AFTER to ensure they override Steel colors
@@ -411,8 +416,9 @@ namespace Orbit.Services
 				RemoveCustomForegroundOverrides();
 			}
 
-			ApplyOrbitSemanticTextResources();
-			ThemeLogger.Log("<<< Custom theme applied successfully");
+				ApplyOrbitSemanticTextResources();
+				EnsureDragablzMahAppsCompatResources();
+				ThemeLogger.Log("<<< Custom theme applied successfully");
 
 			// Save the custom theme reference
 			SaveCurrentTheme(baseTheme, $"{CustomAccentPrefix}{customTheme.Name}");
@@ -621,6 +627,36 @@ namespace Orbit.Services
 			SetBrushResource(OrbitTextOnOverlayKey, themeForeground);
 		}
 
+		private static void EnsureDragablzMahAppsCompatResources()
+		{
+			var resources = Application.Current.Resources;
+			var accent1 = ResolveResourceColor(resources, "MahApps.Brushes.Accent", Colors.SteelBlue);
+			var accent2 = ResolveResourceColor(resources, "MahApps.Brushes.Accent2", ChangeColorBrightness(accent1, 0.15));
+			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent1, -0.15));
+			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent1, -0.3));
+			var highlight = ResolveResourceColor(resources, "MahApps.Brushes.Highlight", ChangeColorBrightness(accent1, 0.3));
+
+			resources["AccentColor"] = accent1;
+			resources["AccentColor2"] = accent2;
+			resources["AccentColor3"] = accent3;
+			resources["AccentColor4"] = accent4;
+			resources["HighlightColor"] = highlight;
+
+			SetBrushResource("AccentColorBrush", accent1);
+			SetBrushResource("AccentColorBrush2", accent2);
+			SetBrushResource("AccentColorBrush3", accent3);
+			SetBrushResource("AccentColorBrush4", accent4);
+			SetBrushResource("HighlightBrush", highlight);
+
+			// Dragablz MahApps templates still reference these legacy names.
+			SetBrushResource("WhiteBrush", Colors.White);
+			SetBrushResource("BlackBrush", Colors.Black);
+			SetBrushResource("WhiteColorBrush", Colors.White);
+			SetBrushResource("BlackColorBrush", Colors.Black);
+			SetBrushResource("TransparentWhiteBrush", Color.FromArgb(32, 255, 255, 255));
+			SetBrushResource("SemiTransparentWhiteBrush", Color.FromArgb(72, 255, 255, 255));
+		}
+
 		private static Color ResolveResourceColor(ResourceDictionary resources, object key, Color fallback)
 		{
 			if (!resources.Contains(key))
@@ -808,7 +844,7 @@ namespace Orbit.Services
 			return luma > 0.5 ? Colors.Black : Colors.White;
 		}
 
-		private static Color GetSharedAccentForeground(params Color[] accentSurfaces)
+			private static Color GetSharedAccentForeground(params Color[] accentSurfaces)
 		{
 			if (accentSurfaces == null || accentSurfaces.Length == 0)
 			{
@@ -827,7 +863,34 @@ namespace Orbit.Services
 			}
 
 			// Pick the color with the strongest worst-case contrast across all accent variants.
-			return minBlackContrast >= minWhiteContrast ? black : white;
+				return minBlackContrast >= minWhiteContrast ? black : white;
+			}
+
+			private static void EnsureRequiredResourceDictionaries()
+			{
+				if (Application.Current is not { } app)
+				{
+					return;
+				}
+
+				var merged = app.Resources.MergedDictionaries;
+				EnsureDictionary(merged, "pack://application:,,,/Dragablz;component/Themes/mahapps.xaml");
+				EnsureDictionary(merged, "Resources/SessionTemplates.xaml");
+			}
+
+			private static void EnsureDictionary(ICollection<ResourceDictionary> mergedDictionaries, string source)
+			{
+				var alreadyPresent = mergedDictionaries
+					.Any(d => d.Source != null &&
+						string.Equals(d.Source.OriginalString, source, StringComparison.OrdinalIgnoreCase));
+
+				if (alreadyPresent)
+				{
+					return;
+				}
+
+				mergedDictionaries.Add(new ResourceDictionary { Source = new Uri(source, UriKind.RelativeOrAbsolute) });
+				ThemeLogger.Log($"Re-added required resource dictionary: {source}");
+			}
 		}
 	}
-}

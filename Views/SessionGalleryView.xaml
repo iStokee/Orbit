@@ -153,7 +153,7 @@
                     </Border>
                     <StackPanel
                         Grid.Column="1"
-                        Margin="12,0,0,0"
+                        Margin="10,0,0,0"
                         VerticalAlignment="Center">
                         <TextBlock
                             Style="{StaticResource Orbit.ToolHeaderTitle}"
@@ -251,7 +251,7 @@
                             ToolTip="Adjust the shared refresh cadence for sessions following the global policy."
                             Value="{Binding GlobalRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock
-                            Margin="12,0,0,0"
+                            Margin="10,0,0,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                             Text="{Binding GlobalRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />

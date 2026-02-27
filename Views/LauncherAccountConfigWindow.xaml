@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
     Title="Launcher Account Config"
-    Width="860"
+    Width="980"
     Height="520"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
@@ -18,7 +18,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock
-            Margin="0,0,0,12"
+            Margin="0,0,0,10"
             Text="Manage Jagex launcher account entries used by Orbit (stored in %USERPROFILE%\MemoryError\env_vars.json)." />
 
         <DataGrid
@@ -36,11 +36,60 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+        <DockPanel Grid.Row="2" Margin="0,10,0,0">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                 <Button Width="90" Margin="0,0,8,0" Click="AddRow_Click" Content="Add" />
                 <Button Width="90" Click="RemoveRow_Click" Content="Remove" />
             </StackPanel>
+            <Border
+                Margin="12,0"
+                Padding="12,8"
+                Background="{DynamicResource MahApps.Brushes.Gray8}"
+                BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox
+                        x:Name="FullWaitCheckBox"
+                        VerticalAlignment="Center"
+                        Content="Full wait for dock"
+                        Margin="0,0,12,0" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Margin="0,0,8,0"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                        Text="Delay" />
+                    <Slider
+                        x:Name="LaunchDelaySlider"
+                        Width="150"
+                        Minimum="5"
+                        Maximum="30"
+                        TickFrequency="1"
+                        IsSnapToTickEnabled="True"
+                        VerticalAlignment="Center">
+                        <Slider.Style>
+                            <Style TargetType="Slider">
+                                <Setter Property="IsEnabled" Value="True" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=FullWaitCheckBox}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Slider.Style>
+                    </Slider>
+                    <Border
+                        Margin="8,0,0,0"
+                        Padding="8,2"
+                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        CornerRadius="10">
+                        <TextBlock
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
+                            Text="{Binding ElementName=LaunchDelaySlider, Path=Value, StringFormat={}{0:0}s}" />
+                    </Border>
+                </StackPanel>
+            </Border>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                 <Button Width="130" Margin="0,0,8,0" Click="LaunchSelected_Click" Content="Launch Selected" />
                 <Button Width="90" Margin="0,0,8,0" Click="Cancel_Click" Content="Cancel" />

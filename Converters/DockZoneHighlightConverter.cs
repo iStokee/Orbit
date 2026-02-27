@@ -17,10 +17,12 @@ namespace Orbit.Converters
 
 			var candidate = values[0];
 			var zone = values[1];
-			var showAll = values[2] is bool show && show;
+			var showAllOnClip = values[2] is bool showOnClip && showOnClip;
 			var isClipping = values[3] is bool clipping && clipping;
+			var showAllOnDrag = values.Length > 4 && values[4] is bool showOnDrag && showOnDrag;
+			var isDragging = values.Length > 5 && values[5] is bool dragging && dragging;
 
-			if (showAll && isClipping)
+			if ((showAllOnClip && isClipping) || (showAllOnDrag && isDragging))
 			{
 				return Visibility.Visible;
 			}
