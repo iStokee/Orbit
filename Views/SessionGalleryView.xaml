@@ -405,7 +405,7 @@
                                                         FontSize="14"
                                                         FontWeight="SemiBold"
                                                         Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                        Text="{Binding Name}"
+                                                        Text="{Binding DisplayName}"
                                                         TextTrimming="CharacterEllipsis" />
 
                                                     <StackPanel
@@ -425,7 +425,7 @@
                                                             FontSize="10"
                                                             Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                             Opacity="0.8"
-                                                            Text="{Binding State, FallbackValue='Unknown'}" />
+                                                            Text="{Binding StatusSummary, FallbackValue='Unknown'}" />
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>

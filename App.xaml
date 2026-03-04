@@ -48,6 +48,12 @@
                 <Setter Property="Background" Value="{DynamicResource AccentColorBrush2}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentColorBrush3}" />
                 <Setter Property="Foreground" Value="{DynamicResource WhiteBrush}" />
+                <Setter Property="Opacity" Value="0.85" />
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Opacity" Value="1.0" />
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
             <Style
