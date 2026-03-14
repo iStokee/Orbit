@@ -116,6 +116,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="bin\**" />
+    <EmbeddedResource Remove="bin\**" />
+    <None Remove="bin\**" />
+    <Page Remove="bin\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\C#\csharp_interop\csharp_interop.csproj" />
   </ItemGroup>
 

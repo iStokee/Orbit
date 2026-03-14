@@ -37,7 +37,17 @@ namespace Orbit.Views
 				viewModel.SetLayoutControl(SessionLayout);
 				if (!_defaultDensityApplied)
 				{
-					viewModel.ApplyDefaultGridDensity();
+					_ = Dispatcher.BeginInvoke(new System.Action(() =>
+					{
+						try
+						{
+							viewModel.ApplyDefaultGridDensity();
+						}
+						catch
+						{
+							// Best effort during initial layout realization.
+						}
+					}), DispatcherPriority.ContextIdle);
 					_defaultDensityApplied = true;
 				}
 			}

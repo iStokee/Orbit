@@ -64,6 +64,7 @@ namespace Orbit.ViewModels
 		private readonly Dictionary<object, WeakReference<TabablzControl>> _preferredOwnerByItem = new(ReferenceEqualityComparer.Instance);
 		private readonly Dictionary<string, DateTime> _diagnosticLogTimestamps = new();
 		private bool _dragOperationActive;
+		private bool _isReconcilingWorkspace;
 		private string _lastReconcileReason = "startup";
 		private bool _disposed;
 
@@ -450,70 +451,78 @@ namespace Orbit.ViewModels
 				return;
 			}
 
+			if (_isReconcilingWorkspace)
+			{
+				return;
+			}
+
 			if (_dragOperationActive || Mouse.LeftButton == MouseButtonState.Pressed)
 			{
 				ScheduleReconcile("drag-active-deferred", intervalMs: 220);
 				return;
 			}
 
-			RefreshObservedTabControls();
-			var allControls = _observedTabControls
-				.Where(c => c != null && c.ItemsSource == null)
-				.ToList();
-			if (allControls.Count == 0 && _sessionLayout != null)
+			_isReconcilingWorkspace = true;
+			try
 			{
-				allControls = GetAllTabControls(_sessionLayout)
-					.Where(c => c.ItemsSource == null)
+				RefreshObservedTabControls();
+				var allControls = _observedTabControls
+					.Where(c => c != null && c.ItemsSource == null)
 					.ToList();
-			}
-
-				// Deduplicate: drag-to-split can temporarily leave the same item in two controls.
-				// Keep one owner control per item.
-				var ownerByItem = new Dictionary<object, TabablzControl>(ReferenceEqualityComparer.Instance);
-				var removals = new List<(TabablzControl control, object item)>();
-				foreach (var control in allControls)
+				if (allControls.Count == 0 && _sessionLayout != null)
 				{
-					foreach (var item in control.Items.Cast<object>().ToList())
-					{
-						if (!ownerByItem.TryGetValue(item, out var existing))
-						{
-							ownerByItem[item] = control;
-							continue;
-						}
-
-						if (ReferenceEquals(existing, control))
-						{
-							continue;
-						}
-
-						var existingSelected = ReferenceEquals(existing.SelectedItem, item);
-						var currentSelected = ReferenceEquals(control.SelectedItem, item);
-						if (currentSelected && !existingSelected)
-						{
-							removals.Add((existing, item));
-							ownerByItem[item] = control;
-						}
-						else
-						{
-							removals.Add((control, item));
-						}
-					}
+					allControls = GetAllTabControls(_sessionLayout)
+						.Where(c => c.ItemsSource == null)
+						.ToList();
 				}
 
-				foreach (var (control, item) in removals)
-				{
-					try
+					// Deduplicate: drag-to-split can temporarily leave the same item in two controls.
+					// Keep one owner control per item.
+					var ownerByItem = new Dictionary<object, TabablzControl>(ReferenceEqualityComparer.Instance);
+					var removals = new List<(TabablzControl control, object item)>();
+					foreach (var control in allControls)
 					{
-						control.Items.Remove(item);
-						CollapseIfEmpty(control);
-					}
-					catch { /* best effort */ }
-				}
+						foreach (var item in control.Items.Cast<object>().ToList())
+						{
+							if (!ownerByItem.TryGetValue(item, out var existing))
+							{
+								ownerByItem[item] = control;
+								continue;
+							}
 
-				// Items is the source-of-truth for Orbit workspace membership.
-				// Reconcile ensures each workspace item is present in exactly one Orbit surface,
-				// and removes workspace membership only when the item has clearly moved elsewhere.
-				var workspaceItems = Items.OfType<object>().ToList();
+							if (ReferenceEquals(existing, control))
+							{
+								continue;
+							}
+
+							var existingSelected = ReferenceEquals(existing.SelectedItem, item);
+							var currentSelected = ReferenceEquals(control.SelectedItem, item);
+							if (currentSelected && !existingSelected)
+							{
+								removals.Add((existing, item));
+								ownerByItem[item] = control;
+							}
+							else
+							{
+								removals.Add((control, item));
+							}
+						}
+					}
+
+					foreach (var (control, item) in removals)
+					{
+						try
+						{
+							control.Items.Remove(item);
+							CollapseIfEmpty(control);
+						}
+						catch { /* best effort */ }
+					}
+
+					// Items is the source-of-truth for Orbit workspace membership.
+					// Reconcile ensures each workspace item is present in exactly one Orbit surface,
+					// and removes workspace membership only when the item has clearly moved elsewhere.
+					var workspaceItems = Items.OfType<object>().ToList();
 
 					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
 					var orbitTearOffWindows = new HashSet<Window>(
@@ -699,8 +708,13 @@ namespace Orbit.ViewModels
 					}
 				}
 
-				RunPostReconcileActivation(allControls);
+					RunPostReconcileActivation(allControls);
 			}
+			finally
+			{
+				_isReconcilingWorkspace = false;
+			}
+		}
 
 		/// <summary>
 		/// Creates an NxN grid by programmatically branching the layout using Dragablz's native Layout.Branch() API
@@ -1054,11 +1068,23 @@ namespace Orbit.ViewModels
 					continue;
 				}
 
-				var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
-				dispatcher?.InvokeAsync(() =>
+				var viewport = host.GetHostViewportSize();
+				var lastApplied = host.LastAppliedViewportSize;
+				var needsActivation =
+					!host.IsLoaded ||
+					lastApplied.Width <= 0 ||
+					lastApplied.Height <= 0 ||
+					Math.Abs(lastApplied.Width - viewport.Width) > 2.0 ||
+					Math.Abs(lastApplied.Height - viewport.Height) > 2.0;
+
+				if (needsActivation)
 				{
-					host.EnsureActiveAfterLayout();
-				}, DispatcherPriority.Background);
+					var dispatcher = host.Dispatcher ?? Application.Current?.Dispatcher;
+					dispatcher?.InvokeAsync(() =>
+					{
+						host.EnsureActiveAfterLayout();
+					}, DispatcherPriority.Background);
+				}
 
 				if (focusTarget == null && (control.IsKeyboardFocusWithin || control.IsMouseOver))
 				{
@@ -1149,6 +1175,13 @@ namespace Orbit.ViewModels
 
 			private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
 			{
+				if (_isReconcilingWorkspace)
+				{
+					RefreshCommandStates();
+					UpdateSuggestedGridLabel();
+					return;
+				}
+
 				if (_sessionLayout != null && e != null)
 				{
 					RefreshObservedTabControls();
@@ -1182,7 +1215,16 @@ namespace Orbit.ViewModels
 
 				RefreshCommandStates();
 				UpdateSuggestedGridLabel();
-				ScheduleReconcile($"workspace-{e.Action}", intervalMs: 70);
+
+				var reconcileDelay = e.Action switch
+				{
+					NotifyCollectionChangedAction.Add => 180,
+					NotifyCollectionChangedAction.Replace => 180,
+					NotifyCollectionChangedAction.Reset => 120,
+					_ => 70
+				};
+
+				ScheduleReconcile($"workspace-{e.Action}", intervalMs: reconcileDelay);
 			}
 
 			private static void DisposeToolItem(object item)

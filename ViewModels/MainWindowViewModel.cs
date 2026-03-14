@@ -7,6 +7,7 @@ using Orbit.Services;
 using Orbit.Tooling;
 using Orbit.Views;
 using Orbit;
+using Orbit.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -96,6 +97,7 @@ namespace Orbit.ViewModels
 	private bool sessionCrashCheckRunning;
 	private bool hasUpdateNotification;
 	private bool isFloatingMenuDragging;
+	private bool nativeDebugMenuVisible;
 
 	/// <summary>
 	/// Creates the main window view model. Most dependencies are long-lived services shared via DI;
@@ -188,6 +190,7 @@ namespace Orbit.ViewModels
 		FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
 		FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
 		autoInjectOnReady = Settings.Default.AutoInjectOnReady;
+		nativeDebugMenuVisible = false;
 
 		// initialize auto side from current position
 		ComputeAutoActiveSide();
@@ -2347,6 +2350,8 @@ namespace Orbit.ViewModels
 		}
 
 		var focusSpoofEnabled = false;
+		var allowUserDebugMenuToggle = Settings.Default.MesharpDebugMenuHotkeyEnabled;
+		var targetDebugMenuVisible = allowUserDebugMenuToggle && nativeDebugMenuVisible;
 
 		return Task.Run(async () =>
 		{
@@ -2360,12 +2365,15 @@ namespace Orbit.ViewModels
 						continue;
 					}
 
-					await OrbitCommandClient
-						.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-						.ConfigureAwait(false);
+					if (!targetDebugMenuVisible)
+					{
+						await OrbitCommandClient
+							.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+							.ConfigureAwait(false);
+					}
 
 					await OrbitCommandClient
-						.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+						.SendDebugMenuVisibleWithRetryAsync(targetDebugMenuVisible, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
 						.ConfigureAwait(false);
 
 					await OrbitCommandClient
@@ -2378,6 +2386,58 @@ namespace Orbit.ViewModels
 				}
 			}
 		});
+	}
+
+	public bool IsMesharpDebugMenuHotkeyEnabled
+		=> Settings.Default.MesharpIntegrationEnabled && Settings.Default.MesharpDebugMenuHotkeyEnabled;
+
+	public bool MatchesMesharpDebugMenuHotkey(Key key, ModifierKeys modifiers)
+	{
+		if (!IsMesharpDebugMenuHotkeyEnabled)
+		{
+			return false;
+		}
+
+		if (!HotkeySerializer.TryParse(Settings.Default.MesharpDebugMenuHotkey, out var configuredKey, out var configuredModifiers))
+		{
+			HotkeySerializer.TryParse(HotkeySerializer.DefaultMesharpDebugMenuHotkey, out configuredKey, out configuredModifiers);
+		}
+
+		var normalized = HotkeySerializer.NormalizeKey(key);
+		return normalized == configuredKey && modifiers == configuredModifiers;
+	}
+
+	public Task ToggleNativeDebugMenuAsync()
+		=> SetNativeDebugMenuVisibleAsync(!nativeDebugMenuVisible);
+
+	public async Task SetNativeDebugMenuVisibleAsync(bool visible)
+	{
+		nativeDebugMenuVisible = visible;
+
+		var targets = Sessions
+			.OfType<SessionModel>()
+			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
+			.ToList();
+
+		foreach (var session in targets)
+		{
+			var process = session.RSProcess;
+			if (process == null || process.HasExited)
+			{
+				continue;
+			}
+
+			try
+			{
+				await OrbitCommandClient
+					.SendDebugMenuVisibleWithRetryAsync(visible, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
+			}
+			catch
+			{
+				// Best effort.
+			}
+		}
 	}
 
 	public void FocusSession(SessionModel session)

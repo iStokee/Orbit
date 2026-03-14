@@ -38,7 +38,9 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+    <Grid
+        Margin="{StaticResource Orbit.ToolPageMargin}"
+        PreviewKeyDown="SettingsRoot_PreviewKeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -1478,6 +1480,71 @@
                                     Margin="0,8,0,0"
                                     Header="Enable MESharp integration (runtime/script commands)"
                                     IsOn="{Binding IsMesharpIntegrationEnabled, Mode=TwoWay}" />
+
+                                <Border
+                                    Margin="0,12,0,0"
+                                    Padding="12"
+                                    Background="{DynamicResource MahApps.Brushes.Gray9}"
+                                    BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                    <StackPanel>
+                                        <TextBlock
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                            Text="Native ME Debug Menu Hotkey" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                            Opacity="0.75"
+                                            Text="Toggle the native ImGui menu on demand for Lua workflows. When visible, the menu may capture input." />
+
+                                        <Controls:ToggleSwitch
+                                            Margin="0,10,0,0"
+                                            Header="Enable debug menu hotkey"
+                                            IsOn="{Binding IsMesharpDebugMenuHotkeyEnabled, Mode=TwoWay}" />
+
+                                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                                            <Border
+                                                MinWidth="120"
+                                                Padding="10,6"
+                                                Background="{DynamicResource MahApps.Brushes.Gray7}"
+                                                BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                                <TextBlock
+                                                    FontFamily="Consolas"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                    Text="{Binding MesharpDebugMenuHotkeyDisplay}" />
+                                            </Border>
+
+                                            <Button
+                                                Width="120"
+                                                Margin="8,0,0,0"
+                                                Command="{Binding CaptureMesharpDebugMenuHotkeyCommand}"
+                                                Content="{Binding MesharpDebugMenuHotkeyCaptureButtonText}"
+                                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
+
+                                            <Button
+                                                Width="72"
+                                                Margin="8,0,0,0"
+                                                Command="{Binding ResetMesharpDebugMenuHotkeyCommand}"
+                                                Content="Reset" />
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                            Opacity="0.85"
+                                            Text="Press a key combination now. Press Esc to cancel."
+                                            Visibility="{Binding MesharpDebugMenuHotkeyCaptureHintVisible, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </Border>
 
                                 <StackPanel
                                     Margin="0,10,0,0"

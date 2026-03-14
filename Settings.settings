@@ -194,6 +194,12 @@
   <Setting Name="MesharpIntegrationEnabled" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="MesharpDebugMenuHotkeyEnabled" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">False</Value>
+  </Setting>
+  <Setting Name="MesharpDebugMenuHotkey" Type="System.String" Scope="User">
+    <Value Profile="(Default)">F10</Value>
+  </Setting>
   <Setting Name="MainWindowWidth" Type="System.Double" Scope="User">
     <Value Profile="(Default)">1400</Value>
   </Setting>

@@ -564,9 +564,25 @@ namespace Orbit.ViewModels
 			if (session == null)
 				return IntPtr.Zero;
 
-			// PERFORMANCE: Don't use Dispatcher.Invoke - it blocks the background thread
-			// Instead, access handles directly since they're thread-safe IntPtrs
-			return ResolveHandleDirectly(session);
+			var dispatcher = session.HostControl?.Dispatcher ?? Application.Current?.Dispatcher;
+			if (dispatcher == null)
+			{
+				return ResolveHandleDirectly(session);
+			}
+
+			if (dispatcher.CheckAccess())
+			{
+				return ResolveHandleOnUIThread(session);
+			}
+
+			try
+			{
+				return dispatcher.Invoke(() => ResolveHandleOnUIThread(session), DispatcherPriority.Send);
+			}
+			catch
+			{
+				return ResolveHandleDirectly(session);
+			}
 		}
 
 		private IntPtr ResolveHandleDirectly(SessionModel session)

@@ -790,6 +790,30 @@ namespace Orbit {
                 this["MesharpIntegrationEnabled"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MesharpDebugMenuHotkeyEnabled {
+            get {
+                return ((bool)(this["MesharpDebugMenuHotkeyEnabled"]));
+            }
+            set {
+                this["MesharpDebugMenuHotkeyEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("F10")]
+        public string MesharpDebugMenuHotkey {
+            get {
+                return ((string)(this["MesharpDebugMenuHotkey"]));
+            }
+            set {
+                this["MesharpDebugMenuHotkey"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

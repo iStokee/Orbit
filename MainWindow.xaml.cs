@@ -515,19 +515,6 @@ namespace Orbit
 					continue;
 				}
 
-				var lastApplied = clientView.LastAppliedViewportSize;
-				var hasAppliedSize = lastApplied.Width > 0 && lastApplied.Height > 0;
-				var viewportMatchesApplied = hasAppliedSize &&
-					Math.Abs(lastApplied.Width - width) < 1 &&
-					Math.Abs(lastApplied.Height - height) < 1;
-
-				if (session.ExternalHandle != 0 && !viewportMatchesApplied)
-				{
-					var adjustedWidth = width + 16;
-					var adjustedHeight = height + 40;
-					MoveWindow((IntPtr)session.ExternalHandle, -8, -32, adjustedWidth, adjustedHeight, true);
-				}
-
 				_ = clientView.ResizeWindowAsync(width, height);
 			}
 		}
@@ -1023,6 +1010,11 @@ namespace Orbit
 				return;
 			}
 
+			if (TryHandleMesharpDebugMenuHotkey(e))
+			{
+				return;
+			}
+
 			var mode = viewModel.FloatingMenuQuickToggleMode;
 			if (mode == FloatingMenuQuickToggleMode.MiddleMouse)
 			{
@@ -1044,6 +1036,29 @@ namespace Orbit
 				e.Handled = true;
 				ToggleFloatingMenuQuickAccess();
 			}
+		}
+
+		private bool TryHandleMesharpDebugMenuHotkey(KeyEventArgs e)
+		{
+			if (e.Handled || viewModel == null || !viewModel.IsMesharpDebugMenuHotkeyEnabled)
+			{
+				return false;
+			}
+
+			if (IsTextInputContext(e.OriginalSource))
+			{
+				return false;
+			}
+
+			var key = e.Key == Key.System ? e.SystemKey : e.Key;
+			if (!viewModel.MatchesMesharpDebugMenuHotkey(key, Keyboard.Modifiers))
+			{
+				return false;
+			}
+
+			e.Handled = true;
+			_ = viewModel.ToggleNativeDebugMenuAsync();
+			return true;
 		}
 
 		private bool CanProcessQuickToggleFromKeyboard(KeyEventArgs e)

@@ -2,8 +2,10 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Orbit.Tooling;
 using Orbit.ViewModels;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace Orbit.Views;
@@ -45,5 +47,17 @@ public partial class SettingsView : UserControl
 	{
 		// Unloaded can fire during tab reparenting/tear-off; do not dispose view model here.
 		Unloaded -= OnUnloaded;
+	}
+
+	private void SettingsRoot_PreviewKeyDown(object sender, KeyEventArgs e)
+	{
+		if (DataContext is not SettingsViewModel vm || !vm.IsCapturingMesharpDebugMenuHotkey)
+		{
+			return;
+		}
+
+		var key = e.Key == Key.System ? e.SystemKey : e.Key;
+		vm.CaptureMesharpDebugMenuHotkey(key, Keyboard.Modifiers);
+		e.Handled = true;
 	}
 }

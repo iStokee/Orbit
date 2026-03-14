@@ -28,6 +28,9 @@ namespace Orbit.Utilities
 		[DllImport("user32.dll")]
 		private static extern bool IsWindowVisible(IntPtr hWnd);
 
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
 		[DllImport("user32.dll")]
 		private static extern IntPtr WindowFromPoint(POINT pt);
 
@@ -43,6 +46,8 @@ namespace Orbit.Utilities
 
 		private const uint GA_ROOT = 2;
 		private const int DWMWA_CLOAKED = 14;
+		private const int GWL_STYLE = -16;
+		private const int WS_CHILD = 0x40000000;
 
 		[StructLayout(LayoutKind.Sequential)]
 		private struct RECT
@@ -105,8 +110,11 @@ namespace Orbit.Utilities
 
 				if (!captured)
 				{
-					// Fallback to a CopyFromScreen capture if PrintWindow fails (often happens with GPU surfaces)
-					using var fallback = TryCaptureFallback(hWnd, width, height);
+					// Do not CopyFromScreen docked child windows. In Orbit those children live inside a shared
+					// shell surface, so screen-copy fallback can capture whichever tab is currently visible.
+					using var fallback = ShouldUseScreenFallback(hWnd)
+						? TryCaptureFallback(hWnd, width, height)
+						: null;
 					if (fallback == null)
 					{
 						return null;
@@ -179,6 +187,22 @@ namespace Orbit.Utilities
 			{
 				System.Diagnostics.Debug.WriteLine($"Fallback thumbnail capture failed: {ex.Message}");
 				return null;
+			}
+		}
+
+		private static bool ShouldUseScreenFallback(IntPtr hWnd)
+		{
+			if (hWnd == IntPtr.Zero)
+				return false;
+
+			try
+			{
+				var style = GetWindowLong(hWnd, GWL_STYLE);
+				return (style & WS_CHILD) == 0;
+			}
+			catch
+			{
+				return false;
 			}
 		}
 

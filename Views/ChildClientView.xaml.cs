@@ -665,11 +665,21 @@ namespace Orbit.Views
 					RSPanel?.InvalidateMeasure();
 					RSPanel?.InvalidateArrange();
 					RSPanel?.InvalidateVisual();
-					UpdateLayout();
 
 					attachedTabControl?.InvalidateMeasure();
 					attachedTabControl?.InvalidateArrange();
-					attachedTabControl?.UpdateLayout();
+					_ = Dispatcher.BeginInvoke(new Action(() =>
+					{
+						try
+						{
+							UpdateLayout();
+							attachedTabControl?.UpdateLayout();
+						}
+						catch
+						{
+							// Best effort.
+						}
+					}), DispatcherPriority.Render);
 
 					if (requestFocus)
 					{

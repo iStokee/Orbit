@@ -62,6 +62,7 @@ namespace Orbit.ViewModels
 		private bool _selectedInjectorDllExists;
 		private bool _selectedInjectorLooksLikeMesharp;
 		private string _updateBadgeColorHex = "#FFFFC44D";
+		private bool _isCapturingMesharpDebugMenuHotkey;
 
 		private const string ExpectedGitHubAuthor = UpdateConfig.ExpectedAuthor;
 		private const string DefaultInjectorDllName = "XInput1_4_inject.dll";
@@ -90,6 +91,8 @@ namespace Orbit.ViewModels
 			UseDefaultInjectorDllCommand = new RelayCommand(UseDefaultInjectorDll);
 			ClearInjectorHistoryCommand = new RelayCommand(ClearInjectorHistory);
 			ResetUpdateBadgeColorCommand = new RelayCommand(ResetUpdateBadgeColor);
+			CaptureMesharpDebugMenuHotkeyCommand = new RelayCommand(ToggleMesharpDebugMenuHotkeyCapture);
+			ResetMesharpDebugMenuHotkeyCommand = new RelayCommand(ResetMesharpDebugMenuHotkey);
 
 			InitializeInjectorDllSelection();
 			InitializeUpdateBadgeColor();
@@ -278,6 +281,8 @@ namespace Orbit.ViewModels
 		public IRelayCommand UseDefaultInjectorDllCommand { get; }
 		public IRelayCommand ClearInjectorHistoryCommand { get; }
 		public IRelayCommand ResetUpdateBadgeColorCommand { get; }
+		public IRelayCommand CaptureMesharpDebugMenuHotkeyCommand { get; }
+		public IRelayCommand ResetMesharpDebugMenuHotkeyCommand { get; }
 
 		#endregion
 
@@ -1090,6 +1095,52 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool IsMesharpDebugMenuHotkeyEnabled
+	{
+		get => Settings.Default.MesharpDebugMenuHotkeyEnabled;
+		set
+		{
+			if (Settings.Default.MesharpDebugMenuHotkeyEnabled == value)
+			{
+				return;
+			}
+
+			Settings.Default.MesharpDebugMenuHotkeyEnabled = value;
+			Settings.Default.Save();
+			OnPropertyChanged();
+
+			if (!value)
+			{
+				TryApplyToMain(vm => _ = vm.SetNativeDebugMenuVisibleAsync(false));
+			}
+		}
+	}
+
+	public bool IsCapturingMesharpDebugMenuHotkey
+	{
+		get => _isCapturingMesharpDebugMenuHotkey;
+		private set
+		{
+			if (_isCapturingMesharpDebugMenuHotkey == value)
+			{
+				return;
+			}
+
+			_isCapturingMesharpDebugMenuHotkey = value;
+			OnPropertyChanged();
+			OnPropertyChanged(nameof(MesharpDebugMenuHotkeyCaptureButtonText));
+			OnPropertyChanged(nameof(MesharpDebugMenuHotkeyCaptureHintVisible));
+		}
+	}
+
+	public string MesharpDebugMenuHotkeyDisplay
+		=> HotkeySerializer.ToDisplayString(Settings.Default.MesharpDebugMenuHotkey, HotkeySerializer.DefaultMesharpDebugMenuHotkey);
+
+	public string MesharpDebugMenuHotkeyCaptureButtonText
+		=> IsCapturingMesharpDebugMenuHotkey ? "Cancel Capture" : "Set Hotkey";
+
+	public bool MesharpDebugMenuHotkeyCaptureHintVisible => IsCapturingMesharpDebugMenuHotkey;
+
 	public bool ShowThemeManagerWelcomeMessage
 	{
 		get => Settings.Default.ShowThemeManagerWelcomeMessage;
@@ -1150,6 +1201,45 @@ namespace Orbit.ViewModels
 		}
 
 		return false;
+	}
+
+	private void ToggleMesharpDebugMenuHotkeyCapture()
+	{
+		IsCapturingMesharpDebugMenuHotkey = !IsCapturingMesharpDebugMenuHotkey;
+	}
+
+	private void ResetMesharpDebugMenuHotkey()
+	{
+		Settings.Default.MesharpDebugMenuHotkey = HotkeySerializer.DefaultMesharpDebugMenuHotkey;
+		Settings.Default.Save();
+		IsCapturingMesharpDebugMenuHotkey = false;
+		OnPropertyChanged(nameof(MesharpDebugMenuHotkeyDisplay));
+	}
+
+	public void CaptureMesharpDebugMenuHotkey(Key key, ModifierKeys modifiers)
+	{
+		if (!IsCapturingMesharpDebugMenuHotkey)
+		{
+			return;
+		}
+
+		if (key == Key.Escape)
+		{
+			IsCapturingMesharpDebugMenuHotkey = false;
+			return;
+		}
+
+		key = HotkeySerializer.NormalizeKey(key);
+		if (key == Key.None || HotkeySerializer.IsModifierKey(key))
+		{
+			return;
+		}
+
+		Settings.Default.MesharpDebugMenuHotkey = HotkeySerializer.Serialize(key, modifiers);
+		Settings.Default.Save();
+
+		IsCapturingMesharpDebugMenuHotkey = false;
+		OnPropertyChanged(nameof(MesharpDebugMenuHotkeyDisplay));
 	}
 
 	private static void ApplyUpdateBadgeBrush(MediaColor color)
