@@ -52,7 +52,8 @@ namespace Orbit.Tooling
 				mainVm.InterTabClient,
 				_tearOffRegistry,
 				mainVm.CloseSessionFromTab,
-				session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session));
+				session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session),
+				mainVm.AdoptSessionsIntoOrbitWorkspace);
 
 			return new OrbitGridLayoutView { DataContext = viewModel };
 		}

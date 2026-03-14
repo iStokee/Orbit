@@ -48,6 +48,7 @@ namespace Orbit.ViewModels
 		private readonly TearOffHostRegistry _tearOffRegistry;
 		private readonly Action<SessionModel> _closeSession;
 		private readonly Action<SessionModel> _moveToIndividualTabs;
+		private readonly Action _adoptSessionsIntoOrbit;
 		private Layout? _sessionLayout;
 		private readonly OrbitViewCompactnessToMarginConverter _marginConverter = new();
 		private int _customRows = 2;
@@ -74,7 +75,8 @@ namespace Orbit.ViewModels
 		IInterTabClient interTabClient,
 		TearOffHostRegistry tearOffRegistry,
 		Action<SessionModel> closeSession,
-		Action<SessionModel> moveToIndividualTabs)
+		Action<SessionModel> moveToIndividualTabs,
+		Action adoptSessionsIntoOrbit)
 	{
 		_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 		_layoutStateService = layoutStateService ?? throw new ArgumentNullException(nameof(layoutStateService));
@@ -82,6 +84,7 @@ namespace Orbit.ViewModels
 		_tearOffRegistry = tearOffRegistry ?? throw new ArgumentNullException(nameof(tearOffRegistry));
 		_closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
 		_moveToIndividualTabs = moveToIndividualTabs ?? throw new ArgumentNullException(nameof(moveToIndividualTabs));
+		_adoptSessionsIntoOrbit = adoptSessionsIntoOrbit ?? throw new ArgumentNullException(nameof(adoptSessionsIntoOrbit));
 
 			CollectionChangedEventManager.AddHandler(Items, OnWorkspaceItemsChanged);
 
@@ -92,6 +95,10 @@ namespace Orbit.ViewModels
 					_moveToIndividualTabs(sm);
 				}
 			}, o => o is SessionModel);
+
+			AdoptSessionsIntoOrbitCommand = new RelayCommand(
+				() => _adoptSessionsIntoOrbit(),
+				() => Sessions.Any() && Sessions.Any(session => !Items.Contains(session)));
 
 			TabClosingHandler = HandleTabClosing;
 			UpdateSuggestedGridLabel();
@@ -212,6 +219,8 @@ namespace Orbit.ViewModels
 	public ItemActionCallback TabClosingHandler { get; }
 
 	public IRelayCommand<object?> MoveToIndividualTabsCommand { get; }
+
+	public IRelayCommand AdoptSessionsIntoOrbitCommand { get; }
 
 		/// <summary>
 		/// Sets the Layout control reference from the view (set via code-behind after Loaded)
@@ -1434,6 +1443,7 @@ namespace Orbit.ViewModels
 			_autoFitGridCommand?.NotifyCanExecuteChanged();
 			_balanceRowsCommand?.NotifyCanExecuteChanged();
 			_balanceColumnsCommand?.NotifyCanExecuteChanged();
+			(AdoptSessionsIntoOrbitCommand as RelayCommand)?.NotifyCanExecuteChanged();
 		}
 
 		protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)

@@ -54,6 +54,11 @@
 
         <Style x:Key="OrbitRootGridStyle" TargetType="Grid">
             <Setter Property="Margin" Value="{StaticResource Orbit.ToolPageMargin}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                    <Setter Property="Margin" Value="6" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="OrbitToolbarRowStyle" TargetType="Grid">
@@ -139,8 +144,8 @@
                             <Setter Property="Padding" Value="8,6,8,6" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
-                            <Setter Property="Margin" Value="0,0,0,6" />
-                            <Setter Property="Padding" Value="6,4,6,4" />
+                            <Setter Property="Margin" Value="0,0,0,3" />
+                            <Setter Property="Padding" Value="4,2,4,2" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
@@ -411,6 +416,17 @@
                         <Border Style="{StaticResource OrbitToolbarGroupStyle}">
                             <WrapPanel VerticalAlignment="Center">
                                 <Button
+                                    Command="{Binding AdoptSessionsIntoOrbitCommand}"
+                                    Style="{StaticResource SessionToolbarButtonStyle}"
+                                    ToolTip="Move current session tabs into the Orbit workspace">
+                                    <TextBlock FontWeight="SemiBold" Text="Adopt Sessions" />
+                                </Button>
+                            </WrapPanel>
+                        </Border>
+                        <Border Style="{StaticResource OrbitToolbarDividerStyle}" />
+                        <Border Style="{StaticResource OrbitToolbarGroupStyle}">
+                            <WrapPanel VerticalAlignment="Center">
+                                <Button
                                     Command="{Binding CreateGrid2x2Command}"
                                     Style="{StaticResource SessionToolbarButtonStyle}"
                                     ToolTip="Create 2x2 Grid (Ctrl+Shift+2)">
@@ -465,8 +481,27 @@
                                 </Button>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource OrbitToolbarDividerStyle}" />
-                        <Border Style="{StaticResource OrbitToolbarGroupStyle}">
+                        <Border>
+                            <Border.Style>
+                                <Style BasedOn="{StaticResource OrbitToolbarDividerStyle}" TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <Border>
+                            <Border.Style>
+                                <Style BasedOn="{StaticResource OrbitToolbarGroupStyle}" TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                                            <Setter Property="Padding" Value="2,1" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <WrapPanel VerticalAlignment="Center">
                                 <Button
                                     Command="{Binding ResetLayoutCommand}"
@@ -494,6 +529,15 @@
                         Grid.Column="1"
                         VerticalAlignment="Center"
                         Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"

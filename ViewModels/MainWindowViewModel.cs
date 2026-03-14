@@ -153,7 +153,7 @@ namespace Orbit.ViewModels
 		InjectCommand = new AsyncRelayCommand(InjectAsync, CanInject);
 		ShowSessionsCommand = new RelayCommand(ShowSessions, () => Sessions.Count > 0);
 		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey("SessionGallery"));
-	OpenOrbitViewCommand = new RelayCommand(() => TryOpenToolByKey("OrbitView"));
+	OpenOrbitViewCommand = new RelayCommand(OpenOrbitViewWorkspace);
 	MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
 	MoveSessionToIndividualTabsCommand = new RelayCommand<object?>(MoveSessionToIndividualTabs, CanMoveSessionToIndividualTabs);
 	OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
@@ -996,6 +996,12 @@ namespace Orbit.ViewModels
 		return true;
 	}
 
+	private void OpenOrbitViewWorkspace()
+	{
+		TryOpenToolByKey("OrbitView");
+		AdoptSessionsIntoOrbitWorkspace();
+	}
+
 	private static T ResolveRequiredService<T>() where T : class
 	{
 		var app = Application.Current as App;
@@ -1157,6 +1163,42 @@ namespace Orbit.ViewModels
 		}
 
 		TryOpenToolByKey("OrbitView");
+		var orbitTab = Tabs.OfType<Models.ToolTabItem>()
+			.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
+		if (orbitTab != null)
+		{
+			SelectedTab = orbitTab;
+		}
+
+		CommandManager.InvalidateRequerySuggested();
+	}
+
+	public void AdoptSessionsIntoOrbitWorkspace()
+	{
+		var sessionTabs = Tabs.OfType<SessionModel>().ToList();
+		if (sessionTabs.Count == 0)
+		{
+			return;
+		}
+
+		SessionModel? firstMoved = null;
+		foreach (var session in sessionTabs)
+		{
+			if (Tabs.Contains(session))
+			{
+				Tabs.Remove(session);
+				HandleTabRemoval(session);
+			}
+
+			orbitLayoutState.AddItem(session);
+			firstMoved ??= session;
+		}
+
+		if (firstMoved != null)
+		{
+			SelectedSession = firstMoved;
+		}
+
 		var orbitTab = Tabs.OfType<Models.ToolTabItem>()
 			.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
 		if (orbitTab != null)

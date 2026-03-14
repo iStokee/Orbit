@@ -93,25 +93,67 @@
     <!--  Compact header used by Orbit Grid layout tabs  -->
     <DataTemplate x:Key="OrbitSessionHeaderTemplate" xmlns:local="clr-namespace:Orbit">
         <StackPanel
-            Margin="8,4"
             Orientation="Horizontal"
             MinHeight="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewTabHeaderSize, Converter={StaticResource TabHeaderSizeConverter}}">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Margin" Value="8,4" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
+                            <Setter Property="Margin" Value="6,3" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                            <Setter Property="Margin" Value="4,1" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
             <Ellipse
-                Width="10"
-                Height="10"
-                Margin="0,0,8,0"
                 VerticalAlignment="Center"
                 Fill="{Binding State, Converter={StaticResource SessionStateToColorConverter}}"
                 Stroke="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}"
                 StrokeThickness="2"
-                ToolTip="{Binding StatusSummary}" />
+                ToolTip="{Binding StatusSummary}">
+                <Ellipse.Style>
+                    <Style TargetType="Ellipse">
+                        <Setter Property="Width" Value="10" />
+                        <Setter Property="Height" Value="10" />
+                        <Setter Property="Margin" Value="0,0,8,0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
+                                <Setter Property="Width" Value="8" />
+                                <Setter Property="Height" Value="8" />
+                                <Setter Property="Margin" Value="0,0,6,0" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                                <Setter Property="Width" Value="7" />
+                                <Setter Property="Height" Value="7" />
+                                <Setter Property="Margin" Value="0,0,4,0" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Ellipse.Style>
+            </Ellipse>
 
             <TextBlock
                 VerticalAlignment="Center"
-                FontSize="12"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                Text="{Binding DisplayName}" />
+                Text="{Binding DisplayName}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="12" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
+                                <Setter Property="FontSize" Value="11" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
+                                <Setter Property="FontSize" Value="10" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
         </StackPanel>
     </DataTemplate>
 
