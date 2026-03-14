@@ -1,10 +1,10 @@
 # Orbit
 
-Modern WPF control surface for MemoryError. Orbit launches RuneScape clients, manages session injection, hosts tooling, and supports embedding external script windows through OrbitAPI.
+Modern WPF control surface for RuneScape session management. Orbit launches RuneScape clients, manages session injection, hosts tooling, and supports embedding external script windows through OrbitAPI.
 
 ## Overview
 
-Orbit is the operational UI for MemoryError workflows:
+Orbit is the operational UI for automation workflows:
 
 - Launch and manage multiple RS3 sessions
 - Inject `XInput1_4_inject.dll` into each session
@@ -163,7 +163,3 @@ Settings displays the full app version string from `AppVersion.Display`.
 
 - **Drag/tab interactions feel unstable**
   - Enable Orbit interaction logging in **Advanced** and inspect events around drag/reparent operations.
-
-## Repository Notes
-
-Orbit lives under `Orbit/Orbit` in the MemoryError repository. Additional operator docs are under `docs/OrbitersGuide`.
