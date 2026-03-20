@@ -714,6 +714,24 @@ namespace Orbit.ViewModels
 		}
 	}
 
+	public bool HideNativeDebugMenuOnInject
+	{
+		get => Settings.Default.HideNativeDebugMenuOnInject;
+		set
+		{
+			if (Settings.Default.HideNativeDebugMenuOnInject == value)
+			{
+				return;
+			}
+
+			Settings.Default.HideNativeDebugMenuOnInject = value;
+			Settings.Default.Save();
+			OnPropertyChanged();
+
+			TryApplyToMain(vm => _ = vm.ApplyNativeDebugMenuInjectionPreferenceAsync(value));
+		}
+	}
+
 	#endregion
 
 	#region Floating Menu Settings

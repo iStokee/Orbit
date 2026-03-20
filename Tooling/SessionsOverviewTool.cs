@@ -25,7 +25,9 @@ public sealed class SessionsOverviewTool : IOrbitTool
             mainVm.Sessions,
             mainVm.ActivateSession,
             mainVm.FocusSession,
-            mainVm.CloseSession);
+            mainVm.CloseSession,
+            session => mainVm.ToggleNativeDebugMenuAsync(session),
+            session => mainVm.CanToggleNativeDebugMenu(session));
 
         return new SessionsOverviewView(viewModel);
     }

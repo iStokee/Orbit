@@ -50,6 +50,9 @@
   <Setting Name="AutoInjectOnReady" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>
+  <Setting Name="HideNativeDebugMenuOnInject" Type="System.Boolean" Scope="User">
+    <Value Profile="(Default)">True</Value>
+  </Setting>
   <Setting Name="ShowMenuAddSession" Type="System.Boolean" Scope="User">
     <Value Profile="(Default)">True</Value>
   </Setting>

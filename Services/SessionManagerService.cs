@@ -27,6 +27,7 @@ namespace Orbit.Services
 		private static readonly nint HWND_TOP = nint.Zero;
 		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(3);
 		private static bool IsMesharpIntegrationEnabled => Settings.Default.MesharpIntegrationEnabled;
+		private static bool HideNativeDebugMenuOnInject => Settings.Default.HideNativeDebugMenuOnInject;
 
 		private enum ProcessRole
 		{
@@ -239,13 +240,34 @@ namespace Orbit.Services
 						Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode to passthrough (keyboard capture may persist).");
 					}
 
-					var debugMenuHidden = await OrbitCommandClient
-						.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-						.ConfigureAwait(true);
-					if (!debugMenuHidden)
-					{
-						Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
-					}
+						if (HideNativeDebugMenuOnInject)
+						{
+							var debugMenuHidden = await OrbitCommandClient
+								.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+								.ConfigureAwait(true);
+							if (!debugMenuHidden)
+							{
+								Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
+							}
+							else
+							{
+								session.NativeDebugMenuVisible = false;
+							}
+						}
+						else
+						{
+							var debugMenuShown = await OrbitCommandClient
+								.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+								.ConfigureAwait(true);
+							if (!debugMenuShown)
+							{
+								Console.WriteLine("[Orbit] Warning: Unable to restore MemoryError debug menu after injection.");
+							}
+							else
+							{
+								session.NativeDebugMenuVisible = true;
+							}
+						}
 
 					var focusSpoofApplied = await OrbitCommandClient
 						.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
@@ -276,30 +298,34 @@ namespace Orbit.Services
 			}
 
 			// Final safeguard: reassert passthrough shortly after MESharp finishes wiring hooks.
-			if (IsMesharpIntegrationEnabled)
-			{
-				_ = Task.Run(async () =>
+				if (IsMesharpIntegrationEnabled)
 				{
-					try
+					_ = Task.Run(async () =>
 					{
-						await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-						if (!process.HasExited)
-						{
-							await OrbitCommandClient
-								.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-								.ConfigureAwait(false);
-
-							await OrbitCommandClient
-								.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-								.ConfigureAwait(false);
-
-							await OrbitCommandClient
-								.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-								.ConfigureAwait(false);
-
-							// Attempt to refocus the embedded client on the UI thread.
-							_ = session.HostControl?.Dispatcher?.InvokeAsync(() =>
+						try
+					{
+							await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+							if (!process.HasExited)
 							{
+								if (HideNativeDebugMenuOnInject && !session.NativeDebugMenuVisible)
+								{
+									await OrbitCommandClient
+										.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
+
+									await OrbitCommandClient
+										.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
+									session.NativeDebugMenuVisible = false;
+
+									await OrbitCommandClient
+										.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
+								}
+
+								// Attempt to refocus the embedded client on the UI thread.
+								_ = session.HostControl?.Dispatcher?.InvokeAsync(() =>
+								{
 								try { session.HostControl.FocusEmbeddedClient(); } catch { }
 							});
 						}

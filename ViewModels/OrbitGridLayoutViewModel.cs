@@ -450,7 +450,19 @@ namespace Orbit.ViewModels
 			var oldCount = e.OldItems?.Count ?? 0;
 			OrbitInteractionLogger.Log($"[OrbitView][Tabs] Items changed action={e.Action}, new={newCount}, old={oldCount}, total={control.Items.Count}.");
 
-			ScheduleReconcile($"tab-items-{e.Action}", intervalMs: _dragOperationActive ? 220 : 120);
+			// Ordinary item adds are already placed deterministically by Orbit workspace code.
+			// Re-running the full workspace reconcile immediately after each add creates avoidable
+			// ownership/activation churn once multiple live sessions are visible.
+			var shouldScheduleReconcile =
+				e.Action == NotifyCollectionChangedAction.Remove ||
+				e.Action == NotifyCollectionChangedAction.Reset ||
+				e.Action == NotifyCollectionChangedAction.Replace ||
+				_dragOperationActive;
+
+			if (shouldScheduleReconcile)
+			{
+				ScheduleReconcile($"tab-items-{e.Action}", intervalMs: _dragOperationActive ? 220 : 120);
+			}
 		}
 
 		private void ReconcileWorkspaceStructure()
@@ -1182,18 +1194,29 @@ namespace Orbit.ViewModels
 				return candidate;
 			}
 
-			private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+		private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (_isReconcilingWorkspace)
 			{
-				if (_isReconcilingWorkspace)
-				{
-					RefreshCommandStates();
+				RefreshCommandStates();
 					UpdateSuggestedGridLabel();
 					return;
 				}
 
-				if (_sessionLayout != null && e != null)
+			if (_sessionLayout != null && e != null)
+			{
+				RefreshObservedTabControls();
+
+				if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
 				{
-					RefreshObservedTabControls();
+					if (e.NewItems != null)
+					{
+						foreach (var item in e.NewItems.Cast<object>())
+						{
+							AddItemToLayout(item);
+						}
+					}
+				}
 
 					if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
 					{
@@ -1222,19 +1245,24 @@ namespace Orbit.ViewModels
 					}
 				}
 
-				RefreshCommandStates();
-				UpdateSuggestedGridLabel();
+			RefreshCommandStates();
+			UpdateSuggestedGridLabel();
 
-				var reconcileDelay = e.Action switch
-				{
-					NotifyCollectionChangedAction.Add => 180,
-					NotifyCollectionChangedAction.Replace => 180,
-					NotifyCollectionChangedAction.Reset => 120,
-					_ => 70
-				};
+			var reconcileDelay = e.Action switch
+			{
+				// Direct adds already have a concrete owner control by this point.
+				// Avoid an immediate global reconcile unless a drag/remove/reset path needs recovery.
+				NotifyCollectionChangedAction.Add => -1,
+				NotifyCollectionChangedAction.Replace => 180,
+				NotifyCollectionChangedAction.Reset => 120,
+				_ => 70
+			};
 
+			if (reconcileDelay >= 0)
+			{
 				ScheduleReconcile($"workspace-{e.Action}", intervalMs: reconcileDelay);
 			}
+		}
 
 			private static void DisposeToolItem(object item)
 			{

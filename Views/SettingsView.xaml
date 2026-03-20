@@ -525,6 +525,18 @@
                                     Header="Auto-inject when session is ready"
                                     IsOn="{Binding AutoInjectOnReady, Mode=TwoWay}" />
 
+                                <Controls:ToggleSwitch
+                                    Margin="0,8,0,0"
+                                    Header="Hide native menu on inject"
+                                    IsOn="{Binding HideNativeDebugMenuOnInject, Mode=TwoWay}" />
+
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                    Opacity="0.75"
+                                    Text="Applies the inject-time native menu suppression step. Turning this off immediately tries to restore the native menu for injected sessions." />
+
                                 <Separator Margin="0,20,0,12" Opacity="0.35" />
 
                                 <TextBlock

@@ -214,6 +214,18 @@ namespace Orbit {
                 this["AutoInjectOnReady"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool HideNativeDebugMenuOnInject {
+            get {
+                return ((bool)(this["HideNativeDebugMenuOnInject"]));
+            }
+            set {
+                this["HideNativeDebugMenuOnInject"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

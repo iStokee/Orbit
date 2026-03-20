@@ -25,10 +25,11 @@ namespace Orbit.Models
 		private bool _galleryAutoRefreshEnabled = true;
 		private double _galleryRefreshIntervalSeconds = 5;
 		private nint _renderSurfaceHandle;
-		private string? _activeScriptPath;
-		private string? _activeScriptId;
-		private string _scriptRuntimeStatus = "No script loaded";
-		private DateTime? _scriptLastChangedAt;
+			private string? _activeScriptPath;
+			private string? _activeScriptId;
+			private string _scriptRuntimeStatus = "No script loaded";
+			private DateTime? _scriptLastChangedAt;
+			private bool _nativeDebugMenuVisible;
 
 		public SessionModel()
 		{
@@ -307,17 +308,36 @@ namespace Orbit.Models
 			}
 		}
 
-		public DateTime? ScriptLastChangedAt
-		{
-			get => _scriptLastChangedAt;
-			private set
+			public DateTime? ScriptLastChangedAt
 			{
+				get => _scriptLastChangedAt;
+				private set
+				{
 				if (_scriptLastChangedAt == value)
 					return;
 				_scriptLastChangedAt = value;
-				OnPropertyChanged();
+					OnPropertyChanged();
+				}
 			}
-		}
+
+			public bool NativeDebugMenuVisible
+			{
+				get => _nativeDebugMenuVisible;
+				set
+				{
+					if (_nativeDebugMenuVisible == value)
+						return;
+
+					_nativeDebugMenuVisible = value;
+					OnPropertyChanged();
+					OnPropertyChanged(nameof(NativeDebugMenuStatus));
+					OnPropertyChanged(nameof(NativeDebugMenuButtonText));
+				}
+			}
+
+			public string NativeDebugMenuStatus => NativeDebugMenuVisible ? "Visible" : "Hidden";
+
+			public string NativeDebugMenuButtonText => NativeDebugMenuVisible ? "Hide Menu" : "Show Menu";
 
 
 		public void UpdateState(SessionState state, bool clearError = true)
@@ -329,8 +349,14 @@ namespace Orbit.Models
 			State = state;
 		}
 
-		public void UpdateInjectionState(InjectionState state)
-			=> InjectionState = state;
+			public void UpdateInjectionState(InjectionState state)
+			{
+				InjectionState = state;
+				if (state != InjectionState.Injected)
+				{
+					NativeDebugMenuVisible = false;
+				}
+			}
 
 		public void Fail(Exception exception)
 		{

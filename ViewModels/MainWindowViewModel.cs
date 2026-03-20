@@ -87,6 +87,7 @@ namespace Orbit.ViewModels
 	private bool isFloatingMenuClipping;
 	private readonly object sessionCloseSync = new();
 	private static readonly object sessionNameSync = new();
+	private readonly SemaphoreSlim orbitSessionLaunchGate = new(1, 1);
 	private readonly HashSet<Guid> closingSessionIds = new();
 	private readonly HashSet<Guid> pendingOrphanValidationSessionIds = new();
 	private static readonly ConcurrentDictionary<Guid, byte> relaunchingSessionIds = new();
@@ -97,7 +98,6 @@ namespace Orbit.ViewModels
 	private bool sessionCrashCheckRunning;
 	private bool hasUpdateNotification;
 	private bool isFloatingMenuDragging;
-	private bool nativeDebugMenuVisible;
 
 	/// <summary>
 	/// Creates the main window view model. Most dependencies are long-lived services shared via DI;
@@ -190,7 +190,6 @@ namespace Orbit.ViewModels
 		FloatingMenuDirectionOptions = Enum.GetValues(typeof(FloatingMenuDirection));
 		FloatingMenuQuickToggleModes = Enum.GetValues(typeof(FloatingMenuQuickToggleMode));
 		autoInjectOnReady = Settings.Default.AutoInjectOnReady;
-		nativeDebugMenuVisible = false;
 
 		// initialize auto side from current position
 		ComputeAutoActiveSide();
@@ -460,9 +459,16 @@ namespace Orbit.ViewModels
 				LauncherAccountStore.BeginSelectedLaunchBatch();
 				var fullWaitForDock = Settings.Default.LauncherBatchWaitForDockBeforeNext;
 				var launchDelaySeconds = Math.Clamp(Settings.Default.LauncherBatchLaunchDelaySeconds, 5, 30);
+				var launchBehavior = NormalizeSessionLaunchBehavior(Settings.Default.SessionLaunchBehavior);
+				var serializeBatchLaunch = fullWaitForDock || string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal);
 
-				if (fullWaitForDock)
+				if (serializeBatchLaunch)
 				{
+					if (!fullWaitForDock && string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
+					{
+						Console.WriteLine("[Orbit][Launcher] Serializing batch launch because Orbit View workspace updates are not safe under concurrent session creation.");
+					}
+
 					for (var i = 0; i < batchCount; i++)
 					{
 						var docked = await AddSingleSessionAsync();
@@ -515,6 +521,15 @@ namespace Orbit.ViewModels
 
 		private async Task<bool> AddSingleSessionAsync(string? preferredName = null)
 		{
+			var launchBehavior = NormalizeSessionLaunchBehavior(Settings.Default.SessionLaunchBehavior);
+			var gateHeld = false;
+
+			if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
+			{
+				await orbitSessionLaunchGate.WaitAsync().ConfigureAwait(true);
+				gateHeld = true;
+			}
+
 			var hostControl = new ChildClientView();
 			var initialized = false;
 
@@ -532,9 +547,6 @@ namespace Orbit.ViewModels
 
 			// Always add to Sessions collection
 			Sessions.Add(session);
-
-			// Check launch behavior setting
-			var launchBehavior = NormalizeSessionLaunchBehavior(Settings.Default.SessionLaunchBehavior);
 
 			if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
 			{
@@ -581,6 +593,11 @@ namespace Orbit.ViewModels
 		}
 			finally
 			{
+				if (gateHeld)
+				{
+					orbitSessionLaunchGate.Release();
+				}
+
 				CommandManager.InvalidateRequerySuggested();
 			}
 
@@ -2372,7 +2389,92 @@ namespace Orbit.ViewModels
 		if (session == null)
 			return;
 
+		var ownerVm = ResolveOwningShellForSession(session);
+		ownerVm.RevealSession(session, requestFocus: false);
+		ownerVm.TryActivateOwningWindow();
+	}
+
+	private MainWindowViewModel ResolveOwningShellForSession(SessionModel session)
+	{
+		if (Tabs.Contains(session))
+		{
+			return this;
+		}
+
+		var hostWindow = session.HostControl != null ? Window.GetWindow(session.HostControl) : null;
+		if (hostWindow?.DataContext is MainWindowViewModel hostVm)
+		{
+			return hostVm;
+		}
+
+		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
+		foreach (var window in windows)
+		{
+			if (window.DataContext is not MainWindowViewModel candidate)
+			{
+				continue;
+			}
+
+			if (candidate.Tabs.Contains(session))
+			{
+				return candidate;
+			}
+		}
+
+		return this;
+	}
+
+	private void RevealSession(SessionModel session, bool requestFocus)
+	{
 		SelectedSession = session;
+
+		if (Tabs.Contains(session))
+		{
+			SelectedTab = session;
+		}
+		else
+		{
+			var orbitTab = Tabs.OfType<Models.ToolTabItem>()
+				.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
+			if (orbitTab != null)
+			{
+				SelectedTab = orbitTab;
+			}
+		}
+
+		var dispatcher = session.HostControl?.Dispatcher ?? Application.Current?.Dispatcher;
+		_ = dispatcher?.InvokeAsync(() =>
+		{
+			try
+			{
+				session.HostControl?.EnsureActiveAfterLayout();
+				if (requestFocus)
+				{
+					session.HostControl?.FocusEmbeddedClient();
+					session.SetFocus();
+				}
+			}
+			catch
+			{
+				// Best effort.
+			}
+		}, DispatcherPriority.Input);
+	}
+
+	private void TryActivateOwningWindow()
+	{
+		try
+		{
+			var owningWindow = Application.Current?.Windows
+				?.OfType<Window>()
+				.FirstOrDefault(window => ReferenceEquals(window.DataContext, this));
+			owningWindow?.Activate();
+			owningWindow?.Focus();
+		}
+		catch
+		{
+			// Best effort.
+		}
 	}
 
 	/// <summary>
@@ -2392,8 +2494,6 @@ namespace Orbit.ViewModels
 		}
 
 		var focusSpoofEnabled = false;
-		var allowUserDebugMenuToggle = Settings.Default.MesharpDebugMenuHotkeyEnabled;
-		var targetDebugMenuVisible = allowUserDebugMenuToggle && nativeDebugMenuVisible;
 
 		return Task.Run(async () =>
 		{
@@ -2407,7 +2507,9 @@ namespace Orbit.ViewModels
 						continue;
 					}
 
-					if (!targetDebugMenuVisible)
+						var targetDebugMenuVisible = session.NativeDebugMenuVisible;
+
+						if (!targetDebugMenuVisible)
 					{
 						await OrbitCommandClient
 							.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
@@ -2450,12 +2552,27 @@ namespace Orbit.ViewModels
 	}
 
 	public Task ToggleNativeDebugMenuAsync()
-		=> SetNativeDebugMenuVisibleAsync(!nativeDebugMenuVisible);
+		=> ToggleNativeDebugMenuAsync(SelectedSession);
+
+	public Task ToggleNativeDebugMenuAsync(SessionModel? session)
+	{
+		if (!CanToggleNativeDebugMenu(session))
+		{
+			return Task.CompletedTask;
+		}
+
+		return SetNativeDebugMenuVisibleAsync(session!, !session!.NativeDebugMenuVisible);
+	}
+
+	public bool CanToggleNativeDebugMenu(SessionModel? session)
+		=> Settings.Default.MesharpIntegrationEnabled &&
+		   session != null &&
+		   session.InjectionState == InjectionState.Injected &&
+		   session.RSProcess != null &&
+		   !session.RSProcess.HasExited;
 
 	public async Task SetNativeDebugMenuVisibleAsync(bool visible)
 	{
-		nativeDebugMenuVisible = visible;
-
 		var targets = Sessions
 			.OfType<SessionModel>()
 			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
@@ -2463,28 +2580,99 @@ namespace Orbit.ViewModels
 
 		foreach (var session in targets)
 		{
-			var process = session.RSProcess;
-			if (process == null || process.HasExited)
+			await SetNativeDebugMenuVisibleAsync(session, visible).ConfigureAwait(false);
+		}
+	}
+
+	public async Task SetNativeDebugMenuVisibleAsync(SessionModel session, bool visible)
+	{
+		if (session == null)
+		{
+			return;
+		}
+
+		var process = session.RSProcess;
+		if (process == null || process.HasExited)
+		{
+			session.NativeDebugMenuVisible = false;
+			return;
+		}
+
+		var previousVisible = session.NativeDebugMenuVisible;
+		session.NativeDebugMenuVisible = visible;
+
+		try
+		{
+			if (visible)
 			{
-				continue;
+				var ownerVm = ResolveOwningShellForSession(session);
+				ownerVm.RevealSession(session, requestFocus: true);
+				ownerVm.TryActivateOwningWindow();
 			}
 
-			try
+			var applied = false;
+			if (visible)
 			{
 				await OrbitCommandClient
-					.SendDebugMenuVisibleWithRetryAsync(visible, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(120))
+					.ConfigureAwait(false);
+
+				applied = await OrbitCommandClient
+					.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
 					.ConfigureAwait(false);
 			}
-			catch
+			else
 			{
-				// Best effort.
+				applied = await OrbitCommandClient
+					.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
+
+				await OrbitCommandClient
+					.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
+
+				await OrbitCommandClient
+					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
 			}
+			if (applied)
+			{
+				session.NativeDebugMenuVisible = visible;
+			}
+			else
+			{
+				session.NativeDebugMenuVisible = previousVisible;
+			}
+		}
+		catch
+		{
+			session.NativeDebugMenuVisible = previousVisible;
+		}
+	}
+
+	public async Task ApplyNativeDebugMenuInjectionPreferenceAsync(bool hideOnInject)
+	{
+		var targets = Sessions
+			.OfType<SessionModel>()
+			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
+			.ToList();
+
+		foreach (var session in targets)
+		{
+			await SetNativeDebugMenuVisibleAsync(session, !hideOnInject).ConfigureAwait(false);
 		}
 	}
 
 	public void FocusSession(SessionModel session)
 	{
-		session?.SetFocus();
+		if (session == null)
+		{
+			return;
+		}
+
+		var ownerVm = ResolveOwningShellForSession(session);
+		ownerVm.RevealSession(session, requestFocus: true);
+		ownerVm.TryActivateOwningWindow();
 	}
 
 	public void CloseSession(SessionModel session)

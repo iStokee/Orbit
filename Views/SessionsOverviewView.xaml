@@ -152,15 +152,18 @@
 
                                     <StackPanel Grid.Column="1">
                                         <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding DisplayName}" />
-                                        <WrapPanel Margin="0,4,0,0">
-                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding State}" />
-                                            </Border>
-                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
-                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectionState}" />
-                                            </Border>
-                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
-                                        </WrapPanel>
+	                                        <WrapPanel Margin="0,4,0,0">
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding State}" />
+	                                            </Border>
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectionState}" />
+	                                            </Border>
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding NativeDebugMenuStatus, StringFormat='Menu: {0}'}" />
+	                                            </Border>
+	                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
+	                                        </WrapPanel>
                                     </StackPanel>
                                 </Grid>
 
@@ -186,15 +189,21 @@
                                         CommandParameter="{Binding}"
                                         Content="Set Active"
                                         Style="{StaticResource MahApps.Styles.Button.Square}" />
-                                    <Button
-                                        Margin="0,0,6,6"
-                                        Command="{Binding DataContext.FocusCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                        CommandParameter="{Binding}"
-                                        Content="Focus"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
-                                    <Button
-                                        Margin="0,0,6,6"
-                                        Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+	                                    <Button
+	                                        Margin="0,0,6,6"
+	                                        Command="{Binding DataContext.FocusCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+	                                        CommandParameter="{Binding}"
+	                                        Content="Focus"
+	                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+	                                    <Button
+	                                        Margin="0,0,6,6"
+	                                        Command="{Binding DataContext.ToggleNativeDebugMenuCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+	                                        CommandParameter="{Binding}"
+	                                        Content="{Binding NativeDebugMenuButtonText}"
+	                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+	                                    <Button
+	                                        Margin="0,0,6,6"
+	                                        Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Load Script"
                                         Style="{StaticResource MahApps.Styles.Button.Square}" />

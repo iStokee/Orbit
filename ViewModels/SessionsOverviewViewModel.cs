@@ -16,22 +16,28 @@ namespace Orbit.ViewModels
 {
 	public class SessionsOverviewViewModel : INotifyPropertyChanged, IDisposable
 	{
-		private readonly Action<SessionModel> activateSession;
-		private readonly Action<SessionModel> focusSession;
-		private readonly Action<SessionModel> closeSession;
-		private SessionModel? selectedSession;
-		private bool _isScriptCommandInFlight;
+			private readonly Action<SessionModel> activateSession;
+			private readonly Action<SessionModel> focusSession;
+			private readonly Action<SessionModel> closeSession;
+			private readonly Func<SessionModel, Task> toggleNativeDebugMenu;
+			private readonly Func<SessionModel, bool> canToggleNativeDebugMenu;
+			private SessionModel? selectedSession;
+			private bool _isScriptCommandInFlight;
 
-		public SessionsOverviewViewModel(
-			ObservableCollection<SessionModel> sessions,
-			Action<SessionModel> activateSession,
-			Action<SessionModel> focusSession,
-			Action<SessionModel> closeSession)
-		{
-			Sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-			this.activateSession = activateSession ?? throw new ArgumentNullException(nameof(activateSession));
-			this.focusSession = focusSession ?? throw new ArgumentNullException(nameof(focusSession));
-			this.closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
+			public SessionsOverviewViewModel(
+				ObservableCollection<SessionModel> sessions,
+				Action<SessionModel> activateSession,
+				Action<SessionModel> focusSession,
+				Action<SessionModel> closeSession,
+				Func<SessionModel, Task> toggleNativeDebugMenu,
+				Func<SessionModel, bool> canToggleNativeDebugMenu)
+			{
+				Sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+				this.activateSession = activateSession ?? throw new ArgumentNullException(nameof(activateSession));
+				this.focusSession = focusSession ?? throw new ArgumentNullException(nameof(focusSession));
+				this.closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
+				this.toggleNativeDebugMenu = toggleNativeDebugMenu ?? throw new ArgumentNullException(nameof(toggleNativeDebugMenu));
+				this.canToggleNativeDebugMenu = canToggleNativeDebugMenu ?? throw new ArgumentNullException(nameof(canToggleNativeDebugMenu));
 
 			SetActiveCommand = new RelayCommand<SessionModel?>(session =>
 			{
@@ -49,15 +55,25 @@ namespace Orbit.ViewModels
 				}
 			}, session => session is SessionModel);
 
-			CloseCommand = new RelayCommand<SessionModel?>(session =>
-			{
-				if (TryResolveSession(session, out var resolved))
+				CloseCommand = new RelayCommand<SessionModel?>(session =>
 				{
-					closeSession.Invoke(resolved);
-				}
-			}, session => session is SessionModel);
+					if (TryResolveSession(session, out var resolved))
+					{
+						closeSession.Invoke(resolved);
+					}
+				}, session => session is SessionModel);
 
-			LoadScriptCommand = new RelayCommand<SessionModel?>(async session => await LoadScriptAsync(session), CanLoadScript);
+				ToggleNativeDebugMenuCommand = new RelayCommand<SessionModel?>(
+					async session =>
+					{
+						if (TryResolveSession(session, out var resolved))
+						{
+							await this.toggleNativeDebugMenu(resolved).ConfigureAwait(true);
+						}
+					},
+					session => session is SessionModel model && this.canToggleNativeDebugMenu(model));
+
+				LoadScriptCommand = new RelayCommand<SessionModel?>(async session => await LoadScriptAsync(session), CanLoadScript);
 			ReloadScriptCommand = new RelayCommand<SessionModel?>(async session => await ReloadScriptAsync(session), CanReloadScript);
 			StopScriptCommand = new RelayCommand<SessionModel?>(async session => await StopScriptAsync(session), CanStopScript);
 
@@ -92,8 +108,9 @@ namespace Orbit.ViewModels
 
 		public IRelayCommand<SessionModel?> SetActiveCommand { get; }
 		public IRelayCommand<SessionModel?> FocusCommand { get; }
-		public IRelayCommand<SessionModel?> CloseCommand { get; }
-		public IRelayCommand<SessionModel?> LoadScriptCommand { get; }
+			public IRelayCommand<SessionModel?> CloseCommand { get; }
+			public IRelayCommand<SessionModel?> ToggleNativeDebugMenuCommand { get; }
+			public IRelayCommand<SessionModel?> LoadScriptCommand { get; }
 		public IRelayCommand<SessionModel?> ReloadScriptCommand { get; }
 		public IRelayCommand<SessionModel?> StopScriptCommand { get; }
 
@@ -412,11 +429,12 @@ namespace Orbit.ViewModels
 				NotifySummaryChanged();
 			}
 
-			if (e.PropertyName == nameof(SessionModel.InjectionState) ||
-				e.PropertyName == nameof(SessionModel.RSProcess) ||
-				e.PropertyName == nameof(SessionModel.ActiveScriptPath) ||
-				e.PropertyName == nameof(SessionModel.ScriptRuntimeStatus) ||
-				e.PropertyName == nameof(SessionModel.ScriptLastChangedAt))
+				if (e.PropertyName == nameof(SessionModel.InjectionState) ||
+					e.PropertyName == nameof(SessionModel.RSProcess) ||
+					e.PropertyName == nameof(SessionModel.NativeDebugMenuVisible) ||
+					e.PropertyName == nameof(SessionModel.ActiveScriptPath) ||
+					e.PropertyName == nameof(SessionModel.ScriptRuntimeStatus) ||
+					e.PropertyName == nameof(SessionModel.ScriptLastChangedAt))
 			{
 				RefreshCommandStates();
 			}
@@ -424,11 +442,12 @@ namespace Orbit.ViewModels
 
 		private void RefreshCommandStates()
 		{
-			LoadScriptCommand.NotifyCanExecuteChanged();
-			ReloadScriptCommand.NotifyCanExecuteChanged();
-			StopScriptCommand.NotifyCanExecuteChanged();
-			CommandManager.InvalidateRequerySuggested();
-		}
+				LoadScriptCommand.NotifyCanExecuteChanged();
+				ReloadScriptCommand.NotifyCanExecuteChanged();
+				StopScriptCommand.NotifyCanExecuteChanged();
+				ToggleNativeDebugMenuCommand.NotifyCanExecuteChanged();
+				CommandManager.InvalidateRequerySuggested();
+			}
 
 		private void NotifySummaryChanged()
 		{
