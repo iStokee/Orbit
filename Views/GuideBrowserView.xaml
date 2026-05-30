@@ -13,8 +13,8 @@
     mc:Ignorable="d">
     <UserControl.Resources>
         <LinearGradientBrush x:Key="GuideHeaderBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent3}" />
+            <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+            <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Tertiary}" />
         </LinearGradientBrush>
 
         <DropShadowEffect
@@ -33,19 +33,19 @@
         <Style x:Key="GuideChapterBorderStyle" TargetType="Border">
             <Setter Property="Padding" Value="16" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Effect" Value="{StaticResource GuideCardShadow}" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                    <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Muted}" />
                 </Trigger>
                 <Trigger Property="Tag" Value="Selected">
-                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent4}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                    <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Subtle}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -120,7 +120,7 @@
             <Border
                 Grid.Column="0"
                 Padding="20"
-                Background="{DynamicResource MahApps.Brushes.Gray10}"
+                Background="{DynamicResource Orbit.Brushes.Surface.Card}"
                 CornerRadius="12"
                 Effect="{StaticResource GuideCardShadow}">
                 <StackPanel>
@@ -128,7 +128,7 @@
                         IsExpanded="True"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                         FontWeight="SemiBold"
                         Header="Guides">
                         <StackPanel Margin="0,10,0,0">
@@ -161,21 +161,21 @@
                                                     Width="36"
                                                     Height="36"
                                                     VerticalAlignment="Center"
-                                                    Background="{DynamicResource MahApps.Brushes.Gray8}"
+                                                    Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
                                                     CornerRadius="8">
                                                     <iconPacks:PackIconMaterial
                                                         Width="20"
                                                         Height="20"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
-                                                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                                                         Kind="{Binding Icon}" />
                                                 </Border>
                                                 <StackPanel Margin="10,0,0,0">
                                                     <TextBlock
                                                         FontSize="15"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                                         Text="{Binding Title}" />
                                                     <TextBlock
                                                         Margin="0,2,0,0"
@@ -195,7 +195,7 @@
                         IsExpanded="False"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{DynamicResource MahApps.Brushes.Text}"
+                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                         FontWeight="SemiBold"
                         Header="Tips">
                         <StackPanel Margin="0,10,0,0">
@@ -215,7 +215,7 @@
             <Border
                 Grid.Column="2"
                 Padding="0"
-                Background="{DynamicResource MahApps.Brushes.Gray10}"
+                Background="{DynamicResource Orbit.Brushes.Surface.Card}"
                 CornerRadius="12"
                 Effect="{StaticResource GuideCardShadow}">
                 <Grid>
@@ -235,7 +235,7 @@
                             <mah:ProgressRing
                                 Width="48"
                                 Height="48"
-                                Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 IsActive="True" />
                             <TextBlock
                                 Margin="0,10,0,0"
@@ -253,14 +253,14 @@
             Grid.Row="2"
             Margin="0,16,0,0"
             Padding="16,12"
-            Background="{DynamicResource MahApps.Brushes.Gray10}"
+            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
             CornerRadius="12"
             Effect="{StaticResource GuideCardShadow}">
             <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial
                     Width="18"
                     Height="18"
-                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                    Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                     Kind="HelpCircleOutline" />
                 <TextBlock
                     Margin="10,0,0,0"

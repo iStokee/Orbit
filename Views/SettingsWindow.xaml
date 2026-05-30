@@ -79,7 +79,7 @@
                           SelectedItem="{Binding FloatingMenuDirection, Mode=TwoWay}" />
             </StackPanel>
 
-            <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+            <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
 
             <TextBlock Text="Dock Zones" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"
                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"/>

@@ -11,13 +11,13 @@
                       MinHeight="520"
                       MaxWidth="820"
                       MaxHeight="860"
-                      BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                      BorderBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
                       BorderThickness="1"
-                      GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+                      GlowBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
                       ResizeMode="CanResizeWithGrip"
                       ShowInTaskbar="False"
                       WindowStartupLocation="CenterOwner"
-                      WindowTitleBrush="{DynamicResource MahApps.Brushes.Accent}"
+                      WindowTitleBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
                       d:DataContext="{d:DesignInstance viewModels:SessionCloseDialogViewModel}"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -37,7 +37,7 @@
     <Controls:MetroWindow.Resources>
         <Style x:Key="InfoLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray4}" />
+            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Tertiary}" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
         <Style x:Key="InfoValueStyle" TargetType="TextBlock">
@@ -63,13 +63,13 @@
                     Width="48"
                     Height="48"
                     Margin="0,0,16,0"
-                    Background="{DynamicResource MahApps.Brushes.Accent}"
+                    Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                     CornerRadius="24">
                     <Viewbox Margin="12">
                         <iconPacks:PackIconMaterial
                             Width="24"
                             Height="24"
-                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                             Kind="Alert" />
                     </Viewbox>
                 </Border>
@@ -92,8 +92,8 @@
                 Grid.Row="1"
                 Margin="0,24,0,0"
                 Padding="20"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                Background="{DynamicResource Orbit.Brushes.Surface.Base}"
+                BorderBrush="{DynamicResource Orbit.Brushes.Surface.Muted}"
                 BorderThickness="1"
                 CornerRadius="8">
                 <Grid>
@@ -112,7 +112,7 @@
                     <TextBlock
                         FontSize="16"
                         FontWeight="Bold"
-                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                        Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                         Text="{Binding SessionName}"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
@@ -167,8 +167,8 @@
                 Margin="0,16,0,0"
                 Padding="16,12"
                 VerticalAlignment="Top"
-                Background="{DynamicResource MahApps.Brushes.Gray9}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                 BorderThickness="1"
                 CornerRadius="6">
                 <StackPanel Orientation="Horizontal">
@@ -177,7 +177,7 @@
                         Height="16"
                         Margin="0,0,10,0"
                         VerticalAlignment="Top"
-                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                        Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                         Kind="InformationOutline" />
                     <TextBlock
                         FontSize="12"

@@ -21,8 +21,11 @@ namespace Orbit.ViewModels
 			private readonly Action<SessionModel> closeSession;
 			private readonly Func<SessionModel, Task> toggleNativeDebugMenu;
 			private readonly Func<SessionModel, bool> canToggleNativeDebugMenu;
+			private readonly SessionReconciliationService reconciliationService;
+			private readonly OrbitLayoutStateService orbitLayoutState;
 			private SessionModel? selectedSession;
 			private bool _isScriptCommandInFlight;
+			private string _diagnosticsStatus = "Diagnostics not captured yet.";
 
 			public SessionsOverviewViewModel(
 				ObservableCollection<SessionModel> sessions,
@@ -30,7 +33,9 @@ namespace Orbit.ViewModels
 				Action<SessionModel> focusSession,
 				Action<SessionModel> closeSession,
 				Func<SessionModel, Task> toggleNativeDebugMenu,
-				Func<SessionModel, bool> canToggleNativeDebugMenu)
+				Func<SessionModel, bool> canToggleNativeDebugMenu,
+				SessionReconciliationService reconciliationService,
+				OrbitLayoutStateService orbitLayoutState)
 			{
 				Sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
 				this.activateSession = activateSession ?? throw new ArgumentNullException(nameof(activateSession));
@@ -38,6 +43,8 @@ namespace Orbit.ViewModels
 				this.closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
 				this.toggleNativeDebugMenu = toggleNativeDebugMenu ?? throw new ArgumentNullException(nameof(toggleNativeDebugMenu));
 				this.canToggleNativeDebugMenu = canToggleNativeDebugMenu ?? throw new ArgumentNullException(nameof(canToggleNativeDebugMenu));
+				this.reconciliationService = reconciliationService ?? throw new ArgumentNullException(nameof(reconciliationService));
+				this.orbitLayoutState = orbitLayoutState ?? throw new ArgumentNullException(nameof(orbitLayoutState));
 
 			SetActiveCommand = new RelayCommand<SessionModel?>(session =>
 			{
@@ -76,6 +83,7 @@ namespace Orbit.ViewModels
 				LoadScriptCommand = new RelayCommand<SessionModel?>(async session => await LoadScriptAsync(session), CanLoadScript);
 			ReloadScriptCommand = new RelayCommand<SessionModel?>(async session => await ReloadScriptAsync(session), CanReloadScript);
 			StopScriptCommand = new RelayCommand<SessionModel?>(async session => await StopScriptAsync(session), CanStopScript);
+			DumpDiagnosticsCommand = new RelayCommand(DumpDiagnostics);
 
 			Sessions.CollectionChanged += OnSessionsCollectionChanged;
 			foreach (var session in Sessions)
@@ -105,6 +113,21 @@ namespace Orbit.ViewModels
 		public int InjectedSessionCount => Sessions.Count(s => s.InjectionState == InjectionState.Injected);
 		public int ScriptLoadedCount => Sessions.Count(s => !string.IsNullOrWhiteSpace(s.ActiveScriptPath));
 		public int ErrorSessionCount => Sessions.Count(s => !string.IsNullOrWhiteSpace(s.LastError));
+		public int ConflictingUiOwnershipCount => reconciliationService
+			.CaptureAll(orbitLayoutState.Items.Cast<object>(), "sessions-overview-count")
+			.Count(snapshot => snapshot.HasConflictingUiOwnership);
+
+		public string DiagnosticsStatus
+		{
+			get => _diagnosticsStatus;
+			private set
+			{
+				if (_diagnosticsStatus == value)
+					return;
+				_diagnosticsStatus = value;
+				OnPropertyChanged();
+			}
+		}
 
 		public IRelayCommand<SessionModel?> SetActiveCommand { get; }
 		public IRelayCommand<SessionModel?> FocusCommand { get; }
@@ -113,6 +136,7 @@ namespace Orbit.ViewModels
 			public IRelayCommand<SessionModel?> LoadScriptCommand { get; }
 		public IRelayCommand<SessionModel?> ReloadScriptCommand { get; }
 		public IRelayCommand<SessionModel?> StopScriptCommand { get; }
+		public IRelayCommand DumpDiagnosticsCommand { get; }
 
 		public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -130,6 +154,20 @@ namespace Orbit.ViewModels
 
 			session = null!;
 			return false;
+		}
+
+		private void DumpDiagnostics()
+		{
+			var snapshots = reconciliationService.CaptureAll(orbitLayoutState.Items.Cast<object>(), "sessions-overview-dump");
+			var conflicts = snapshots.Count(snapshot => snapshot.HasConflictingUiOwnership);
+			var orphaned = snapshots.Count(snapshot =>
+				snapshot.InSessionCollection &&
+				!snapshot.HasAnyUiReference &&
+				snapshot.State is not SessionState.Closed and not SessionState.ShuttingDown);
+
+			reconciliationService.LogDiagnostics(orbitLayoutState.Items.Cast<object>(), "sessions-overview-dump");
+			DiagnosticsStatus = $"Captured {snapshots.Count} session(s), {conflicts} ownership conflict(s), {orphaned} visible orphan candidate(s).";
+			OnPropertyChanged(nameof(ConflictingUiOwnershipCount));
 		}
 
 		private bool CanLoadScript(SessionModel? session)
@@ -455,6 +493,7 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(InjectedSessionCount));
 			OnPropertyChanged(nameof(ScriptLoadedCount));
 			OnPropertyChanged(nameof(ErrorSessionCount));
+			OnPropertyChanged(nameof(ConflictingUiOwnershipCount));
 		}
 
 		public void Dispose()

@@ -76,8 +76,8 @@
         <Style x:Key="OrbitToolbarGroupStyle" TargetType="Border">
             <Setter Property="Padding" Value="6,4" />
             <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="6" />
             <Style.Triggers>
@@ -96,7 +96,7 @@
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="28" />
             <Setter Property="Margin" Value="8,0" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Height" Value="24" />
@@ -609,7 +609,7 @@
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Background="Transparent"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
                     BorderThickness="{Binding Source={x:Static local:Settings.Default}, Path=OrbitViewBorderThickness, Converter={StaticResource BorderThicknessConverter}}"
                     ClosingItemCallback="{Binding TabClosingHandler}"
                     ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"

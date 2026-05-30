@@ -12,8 +12,8 @@
 
     <UserControl.Resources>
         <Style x:Key="SnapIndicatorStylePreview" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Opacity">
@@ -25,7 +25,7 @@
         <converters:RatioToSizeConverter x:Key="RatioToSizeConverter" />
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource MahApps.Brushes.Gray8}">
+    <Grid Background="{DynamicResource Orbit.Brushes.Surface.Muted}">
         <Viewbox Stretch="Fill">
             <Grid
                 x:Name="PreviewSurface"
@@ -34,7 +34,7 @@
                 <Border
                     Margin="20"
                     CornerRadius="14"
-                    Background="{DynamicResource MahApps.Brushes.Gray7}"
+                    Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
                     BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
                     BorderThickness="1">
                     <Grid>
@@ -124,7 +124,7 @@
                         <Ellipse
                             Width="52"
                             Height="52"
-                            Fill="{DynamicResource MahApps.Brushes.Accent}"
+                            Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                             Opacity="0.85"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
@@ -132,7 +132,7 @@
                                 <DropShadowEffect
                                     BlurRadius="24"
                                     Opacity="0.45"
-                                    Color="{DynamicResource MahApps.Colors.Accent}" />
+                                    Color="{DynamicResource Orbit.Colors.Action.Primary}" />
                             </Ellipse.Effect>
                         </Ellipse>
 

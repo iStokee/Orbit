@@ -26,18 +26,18 @@ namespace Orbit.Converters
 			{
 				return state switch
 				{
-					SessionState.Initializing => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray),
-					SessionState.ClientReady => GetThemeBrush("MahApps.Brushes.Yellow", FallbackYellow),
-					SessionState.Injecting => GetThemeBrush("MahApps.Brushes.Accent2", FallbackBlue),
-					SessionState.Injected => GetThemeBrush("MahApps.Brushes.Accent3", FallbackGreen),
-					SessionState.Failed => GetThemeBrush("MahApps.Brushes.SystemControlErrorTextForeground", FallbackRed),
-					SessionState.ShuttingDown => GetThemeBrush("MahApps.Brushes.Gray7", FallbackGray),
-					SessionState.Closed => GetThemeBrush("MahApps.Brushes.Gray6", FallbackGray),
-					_ => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray)
+					SessionState.Initializing => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray),
+					SessionState.ClientReady => GetThemeBrush("Orbit.Brushes.Status.Warning", FallbackYellow),
+					SessionState.Injecting => GetThemeBrush("Orbit.Brushes.Status.Info", FallbackBlue),
+					SessionState.Injected => GetThemeBrush("Orbit.Brushes.Status.Success", FallbackGreen),
+					SessionState.Failed => GetThemeBrush("Orbit.Brushes.Status.Error", FallbackRed),
+					SessionState.ShuttingDown => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray),
+					SessionState.Closed => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray),
+					_ => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray)
 				};
 			}
 
-			return GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray);
+			return GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray);
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

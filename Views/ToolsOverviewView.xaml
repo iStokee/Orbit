@@ -55,8 +55,8 @@
                                 <DataTemplate>
                                     <Border Margin="0,0,0,10"
                                            Padding="20"
-                                           Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                           BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                           Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                                           BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                            BorderThickness="1"
                                            CornerRadius="8">
                                         <Grid>
@@ -70,7 +70,7 @@
                                             <Border Grid.Column="0"
                                                    Width="48"
                                                    Height="48"
-                                                   Background="{DynamicResource MahApps.Brushes.Accent}"
+                                                   Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                                    CornerRadius="8"
                                                    VerticalAlignment="Top">
                                                 <iconPacks:PackIconMaterial Kind="{Binding Icon, Mode=OneWay}"
@@ -79,7 +79,7 @@
                                                                            Margin="0,2,0,0"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"
-                                                                           Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" />
+                                                                           Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                             </Border>
 
                                             <!-- Tool Info -->
@@ -126,11 +126,11 @@
                     <Border
                         Style="{StaticResource Orbit.ToolCard}"
                         Margin="0,8,0,0"
-                        Background="{DynamicResource MahApps.Brushes.Accent}"
-                        BorderBrush="{DynamicResource MahApps.Brushes.Accent2}">
+                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
+                        BorderBrush="{DynamicResource Orbit.Brushes.Action.Secondary}">
                         <StackPanel>
                             <TextBlock
-                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                 FontSize="13"
                                 Opacity="0.95"
                                 TextWrapping="Wrap">

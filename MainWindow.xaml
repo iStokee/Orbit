@@ -21,7 +21,7 @@
                                      IsDesignTimeCreatable=False}"
     d:DesignHeight="1000"
     d:DesignWidth="1400"
-    Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     PreviewKeyUp="MainWindow_PreviewKeyUp"
     PreviewMouseUp="MainWindow_PreviewMouseUp"
     ShowIconOnTitleBar="False"
@@ -96,13 +96,13 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Tertiary}" />
             <Setter Property="Tag" Value="1.5" />
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                        <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                        <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+                        <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -117,7 +117,7 @@
                             <Ellipse
                                 x:Name="Glow"
                                 Margin="-6"
-                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 Opacity="0">
                                 <Ellipse.Effect>
                                     <BlurEffect Radius="12" />
@@ -132,7 +132,7 @@
                                 x:Name="HoverRing"
                                 Margin="-1"
                                 Opacity="0.14"
-                                Stroke="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                Stroke="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                 StrokeThickness="1.4" />
 
                             <ContentPresenter
@@ -142,7 +142,7 @@
 
                             <Polygon
                                 x:Name="IndicatorLeft"
-                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 Opacity="0.9"
                                 Points="0,12 0,0 12,0"
                                 Visibility="Collapsed">
@@ -152,7 +152,7 @@
                             </Polygon>
                             <Polygon
                                 x:Name="IndicatorRight"
-                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 Opacity="0.9"
                                 Points="0,0 12,0 12,12"
                                 Visibility="Collapsed">
@@ -162,7 +162,7 @@
                             </Polygon>
                             <Polygon
                                 x:Name="IndicatorUp"
-                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 Opacity="0.9"
                                 Points="0,0 12,0 0,12"
                                 Visibility="Collapsed">
@@ -172,7 +172,7 @@
                             </Polygon>
                             <Polygon
                                 x:Name="IndicatorDown"
-                                Fill="{DynamicResource MahApps.Brushes.Accent}"
+                                Fill="{DynamicResource Orbit.Brushes.Action.Primary}"
                                 Opacity="0.9"
                                 Points="12,0 12,12 0,12"
                                 Visibility="Collapsed">
@@ -255,7 +255,7 @@
         <!--  Main Content Area  -->
         <DockPanel>
 
-            <!--  Main shell layout enables side-by-side snapping outside Orbit View  -->
+            <!--  Primary shell supports normal individual-mode splits for tools and sessions.  -->
             <dockablz:Layout Partition="OrbitMainShell">
                 <dockablz:Layout.BranchTemplate>
                     <DataTemplate>
@@ -264,29 +264,25 @@
                             ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
                             Loaded="MainShellBranchTabControl_Loaded"
                             SelectionChanged="MainShellTabControl_SelectionChanged"
-                            Style="{StaticResource Orbit.TabablzControlStyle}"
-                            ShowDefaultCloseButton="True">
+                            ShowDefaultCloseButton="True"
+                            Style="{StaticResource Orbit.TabablzControlStyle}">
                             <dragablz:TabablzControl.InterTabController>
-                                <dragablz:InterTabController
-                                    InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Partition="OrbitMainShell" />
+                                <dragablz:InterTabController InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=Controls:MetroWindow}}" Partition="OrbitMainShell" />
                             </dragablz:TabablzControl.InterTabController>
                         </dragablz:TabablzControl>
                     </DataTemplate>
                 </dockablz:Layout.BranchTemplate>
 
-                <!--  TabablzControl bound to Sessions and InterTabClient  -->
                 <dragablz:TabablzControl
                     x:Name="SessionTabControl"
                     Padding="5"
+                    ContentTemplateSelector="{StaticResource TabContentTemplateSelector}"
                     ItemsSource="{Binding Tabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     SelectionChanged="MainShellTabControl_SelectionChanged"
                     ShowDefaultCloseButton="True"
-                    Style="{StaticResource Orbit.TabablzControlStyle}"
-                    ContentTemplateSelector="{StaticResource TabContentTemplateSelector}">
+                    Style="{StaticResource Orbit.TabablzControlStyle}">
 
-                <!--  InterTabController with binding to InterTabClient  -->
                     <dragablz:TabablzControl.InterTabController>
                         <dragablz:InterTabController InterTabClient="{Binding InterTabClient}" Partition="OrbitMainShell" />
                     </dragablz:TabablzControl.InterTabController>
@@ -297,7 +293,7 @@
 
         <!--  Empty State Background - Branded Orbit Logo (Overlay)  -->
         <Grid
-            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+            Background="{DynamicResource Orbit.Brushes.Surface.Base}"
             IsHitTestVisible="False">
             <Grid.Style>
                 <Style TargetType="Grid">
@@ -325,15 +321,15 @@
                         <SolidColorBrush
                             x:Key="OrbitHome.IconBrush"
                             Opacity="0.85"
-                            Color="{DynamicResource MahApps.Colors.Accent}" />
+                            Color="{DynamicResource Orbit.Colors.Action.Primary}" />
                         <SolidColorBrush
                             x:Key="OrbitHome.RingBrush"
                             Opacity="0.55"
-                            Color="{DynamicResource MahApps.Colors.Accent2}" />
+                            Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
                         <SolidColorBrush
                             x:Key="OrbitHome.TextBrush"
                             Opacity="0.72"
-                            Color="{DynamicResource MahApps.Colors.Accent}" />
+                            Color="{DynamicResource Orbit.Colors.Action.Primary}" />
                     </Grid.Resources>
 
                     <!--  Orbit Icon with theme-aware coloring using Canvas  -->
@@ -349,7 +345,7 @@
                                 Direction="315"
                                 Opacity="0.28"
                                 ShadowDepth="6"
-                                Color="{DynamicResource MahApps.Colors.Accent}" />
+                                Color="{DynamicResource Orbit.Colors.Action.Primary}" />
                         </Canvas.Effect>
 
                         <!--  Main icon geometry using shared resource  -->
@@ -376,7 +372,7 @@
                                 Direction="315"
                                 Opacity="0.3"
                                 ShadowDepth="4"
-                                Color="{DynamicResource MahApps.Colors.Accent}" />
+                                Color="{DynamicResource Orbit.Colors.Action.Primary}" />
                         </TextBlock.Effect>
                     </TextBlock>
                 </Grid>
@@ -391,8 +387,8 @@
             Visibility="{Binding IsFloatingMenuDockOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.Resources>
                 <Style x:Key="SnapIndicatorStyle" TargetType="Border">
-                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                    <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                     <Setter Property="BorderThickness" Value="2" />
                     <Setter Property="CornerRadius" Value="24" />
                     <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -605,7 +601,7 @@
                 <Border
                     x:Name="FloatingMenuHandle"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Accent3}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Action.Tertiary}"
                     BorderThickness="1.5"
                     CornerRadius="29"
                     MouseMove="FloatingMenu_MouseMove"
@@ -628,7 +624,7 @@
                                         <Setter.Value>
                                             <DropShadowEffect
                                                 BlurRadius="20"
-                                                Color="{DynamicResource MahApps.Colors.Accent}"
+                                                Color="{DynamicResource Orbit.Colors.Action.Primary}"
                                                 Direction="0"
                                                 Opacity="0.65"
                                                 ShadowDepth="0" />
@@ -659,8 +655,8 @@
                     </Border.Style>
                     <Border.Background>
                         <LinearGradientBrush Opacity="0.94" StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                            <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+                            <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
                         </LinearGradientBrush>
                     </Border.Background>
                     <Grid>
@@ -672,7 +668,7 @@
                             <iconPacks:PackIconGameIcons
                                 Width="32"
                                 Height="32"
-                                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
                                 Kind="Orbital" />
                             <ToggleButton.ContextMenu>
                                 <ContextMenu>
@@ -717,14 +713,14 @@
                         x:Name="FloatingMenuPopupContent"
                         Padding="12"
                         Background="Transparent"
-                        BorderBrush="{DynamicResource MahApps.Brushes.Accent2}"
+                        BorderBrush="{DynamicResource Orbit.Brushes.Action.Secondary}"
                         BorderThickness="1.5"
                         CornerRadius="18"
                         MouseMove="FloatingMenu_MouseMove"
                         Opacity="1">
                         <Grid>
                             <Border
-                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                Background="{DynamicResource Orbit.Brushes.Surface.Base}"
                                 CornerRadius="18"
                                 Opacity="{Binding FloatingMenuBackgroundOpacity}">
                                 <Border.Effect>
@@ -733,7 +729,7 @@
                                         Direction="90"
                                         Opacity="0.15"
                                         ShadowDepth="1"
-                                        Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+                                        Color="{DynamicResource Orbit.Colors.Text.Primary}" />
                                 </Border.Effect>
                             </Border>
                             <StackPanel Margin="10">
@@ -971,14 +967,14 @@
                         </Style>
                     </Popup.Style>
                     <Border
-                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                         CornerRadius="18"
                         Padding="12"
                         Opacity="0.95">
                         <Border.Effect>
                             <DropShadowEffect
                                 BlurRadius="16"
-                                Color="{DynamicResource MahApps.Colors.Accent}"
+                                Color="{DynamicResource Orbit.Colors.Action.Primary}"
                                 Direction="270"
                                 Opacity="0.4"
                                 ShadowDepth="4" />
@@ -989,14 +985,14 @@
                             BorderBrush="{x:Null}"
                             Cursor="Hand"
                             FocusVisualStyle="{x:Null}"
-                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                             Padding="0">
                             <StackPanel Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
                                     Width="20"
                                     Height="20"
                                     VerticalAlignment="Center"
-                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                     Kind="HandPointingRight" />
                                 <StackPanel Margin="10,0,0,0">
                                     <TextBlock

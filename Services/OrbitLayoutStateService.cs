@@ -1,9 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows;
 using Orbit.Models;
-using Orbit.ViewModels;
 using Application = System.Windows.Application;
 
 namespace Orbit.Services
@@ -19,9 +17,17 @@ namespace Orbit.Services
 	/// </summary>
 	public sealed class OrbitLayoutStateService
 	{
-		public OrbitLayoutStateService(SessionCollectionService sessionCollectionService)
+		private readonly SessionPlacementService _sessionPlacementService;
+		private readonly SessionReconciliationService _sessionReconciliationService;
+
+		public OrbitLayoutStateService(
+			SessionCollectionService sessionCollectionService,
+			SessionPlacementService sessionPlacementService,
+			SessionReconciliationService sessionReconciliationService)
 		{
 			_ = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+			_sessionPlacementService = sessionPlacementService ?? throw new ArgumentNullException(nameof(sessionPlacementService));
+			_sessionReconciliationService = sessionReconciliationService ?? throw new ArgumentNullException(nameof(sessionReconciliationService));
 		}
 
 		/// <summary>
@@ -60,41 +66,21 @@ namespace Orbit.Services
 	{
 		ExecuteOnUi(() =>
 		{
-			RemoveFromWindowTabs(item);
+			if (item is SessionModel session)
+			{
+				_sessionPlacementService.SetPlacement(session, SessionPlacementKind.OrbitWorkspace);
+			}
+
+			_sessionReconciliationService.RemoveItemFromTabOwners(
+				item,
+				SessionTabOwnerScope.NonOrbitOnly,
+				"orbit-layout-add");
 
 			if (!Items.Contains(item))
 			{
 				Items.Add(item);
 			}
 		});
-	}
-
-	private static void RemoveFromWindowTabs(object item)
-	{
-		if (item == null)
-		{
-			return;
-		}
-
-		// Orbit View is itself a shell tool; never purge it from tab strips automatically.
-		if (item is ToolTabItem orbitTool && string.Equals(orbitTool.Key, "OrbitView", StringComparison.Ordinal))
-		{
-			return;
-		}
-
-		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-		foreach (var window in windows)
-		{
-			if (window.DataContext is not MainWindowViewModel vm)
-			{
-				continue;
-			}
-
-			if (vm.Tabs.Contains(item))
-			{
-				vm.Tabs.Remove(item);
-			}
-		}
 	}
 
 		private static void ExecuteOnUi(Action action)

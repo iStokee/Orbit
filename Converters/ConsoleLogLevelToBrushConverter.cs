@@ -25,16 +25,16 @@ public sealed class ConsoleLogLevelToBrushConverter : IValueConverter
 	public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 	{
 		if (value is not ConsoleLogLevel level)
-			return GetThemeBrush("MahApps.Brushes.ThemeForeground", FallbackWhite);
+			return GetThemeBrush("Orbit.Brushes.Text.Primary", FallbackWhite);
 
 		return level switch
 		{
-			ConsoleLogLevel.Debug => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray),
-			ConsoleLogLevel.Info => GetThemeBrush("MahApps.Brushes.ThemeForeground", FallbackWhite),
-			ConsoleLogLevel.Warning => GetThemeBrush("MahApps.Brushes.Yellow", FallbackGold),
-			ConsoleLogLevel.Error => GetThemeBrush("MahApps.Brushes.SystemControlErrorTextForeground", FallbackOrangeRed),
-			ConsoleLogLevel.Critical => GetThemeBrush("MahApps.Brushes.SystemControlErrorTextForeground", FallbackRed),
-			_ => GetThemeBrush("MahApps.Brushes.ThemeForeground", FallbackWhite)
+			ConsoleLogLevel.Debug => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray),
+			ConsoleLogLevel.Info => GetThemeBrush("Orbit.Brushes.Text.Primary", FallbackWhite),
+			ConsoleLogLevel.Warning => GetThemeBrush("Orbit.Brushes.Status.Warning", FallbackGold),
+			ConsoleLogLevel.Error => GetThemeBrush("Orbit.Brushes.Status.Error", FallbackOrangeRed),
+			ConsoleLogLevel.Critical => GetThemeBrush("Orbit.Brushes.Status.Error", FallbackRed),
+			_ => GetThemeBrush("Orbit.Brushes.Text.Primary", FallbackWhite)
 		};
 	}
 

@@ -64,8 +64,8 @@
 
         <Style x:Key="ChipStyle" TargetType="Border">
             <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray10}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,7" />
             <Setter Property="Margin" Value="0,0,0,6" />
@@ -84,11 +84,11 @@
         <Style x:Key="ScriptItemBorderStyle" TargetType="Border" BasedOn="{StaticResource ChipStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Secondary}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsSelected}" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
+                    <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -130,7 +130,7 @@
                             <Border
                                 Margin="8,0,0,0"
                                 Padding="6,1"
-                                Background="{DynamicResource MahApps.Brushes.Gray8}"
+                                Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
                                 CornerRadius="8">
                                 <TextBlock
                                     FontSize="10"
@@ -140,12 +140,12 @@
                             <Border
                                 Margin="6,0,0,0"
                                 Padding="6,1"
-                                Background="{DynamicResource MahApps.Brushes.Accent2}"
+                                Background="{DynamicResource Orbit.Brushes.Action.Secondary}"
                                 CornerRadius="8"
                                 Opacity="0.9">
                                 <TextBlock
                                     FontSize="10"
-                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                     Text="{Binding ScriptId}" />
                             </Border>
                         </StackPanel>
@@ -191,7 +191,7 @@
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsFavorite}" Value="True">
                                                 <Setter Property="Kind" Value="Star" />
-                                                <Setter Property="Foreground" Value="#FFD700" />
+                                                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Status.Warning}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -279,7 +279,7 @@
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsFavorite}" Value="True">
                                                     <Setter Property="Kind" Value="Star" />
-                                                    <Setter Property="Foreground" Value="#FFD700" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Status.Warning}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -342,7 +342,7 @@
                         <Border
                             Padding="8,4"
                             Margin="0,0,8,0"
-                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                             CornerRadius="6"
                             Opacity="0.9">
                             <StackPanel Orientation="Horizontal">
@@ -351,19 +351,19 @@
                                     Height="14"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
-                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                     Kind="CrosshairsGps" />
                                 <TextBlock
                                     VerticalAlignment="Center"
                                     FontSize="11"
                                     FontWeight="SemiBold"
-                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                     Text="Target Session" />
                             </StackPanel>
                         </Border>
                         <Border
                             Padding="4"
-                            Background="{DynamicResource MahApps.Brushes.Gray7}"
+                            Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
                             CornerRadius="6">
                             <ComboBox
                                 MinWidth="210"
@@ -437,8 +437,8 @@
                         Grid.Column="0"
                         Margin="0,0,12,0"
                         Padding="2"
-                        Background="{DynamicResource MahApps.Brushes.Gray7}"
-                        BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                        Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
+                        BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                         BorderThickness="1"
                         CornerRadius="6">
                         <ComboBox
@@ -457,7 +457,7 @@
                                             Height="14"
                                             Margin="0,0,8,0"
                                             Kind="Star"
-                                            Foreground="#FFD700"
+                                            Foreground="{DynamicResource Orbit.Brushes.Status.Warning}"
                                             Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}" />
                                         <TextBlock
                                             Margin="0,0,10,0"

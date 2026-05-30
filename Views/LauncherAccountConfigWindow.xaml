@@ -44,8 +44,8 @@
             <Border
                 Margin="12,0"
                 Padding="12,8"
-                Background="{DynamicResource MahApps.Brushes.Gray8}"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
+                BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                 BorderThickness="1"
                 CornerRadius="8">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -81,7 +81,7 @@
                     <Border
                         Margin="8,0,0,0"
                         Padding="8,2"
-                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                         CornerRadius="10">
                         <TextBlock
                             FontWeight="SemiBold"

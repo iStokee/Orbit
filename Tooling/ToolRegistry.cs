@@ -22,7 +22,8 @@ public interface IToolRegistry
 
 internal sealed class ToolRegistry : IToolRegistry
 {
-	private readonly Dictionary<string, IOrbitTool> _tools;
+	private readonly Dictionary<string, IOrbitTool> _builtInTools;
+	private readonly Dictionary<string, IOrbitTool> _pluginTools = new(StringComparer.Ordinal);
 	private readonly object _lock = new();
 
 	public ToolRegistry(IEnumerable<IOrbitTool> tools)
@@ -32,7 +33,7 @@ internal sealed class ToolRegistry : IToolRegistry
 			throw new ArgumentNullException(nameof(tools));
 		}
 
-		_tools = tools
+		_builtInTools = tools
 			.GroupBy(tool => tool.Key, StringComparer.Ordinal)
 			.ToDictionary(group => group.Key, group =>
 			{
@@ -47,7 +48,9 @@ internal sealed class ToolRegistry : IToolRegistry
 		{
 			lock (_lock)
 			{
-				return _tools.Values.ToList();
+				return _builtInTools.Values
+					.Concat(_pluginTools.Values)
+					.ToList();
 			}
 		}
 	}
@@ -59,7 +62,12 @@ internal sealed class ToolRegistry : IToolRegistry
 
 		lock (_lock)
 		{
-			return _tools.TryGetValue(key, out var tool) ? tool : null;
+			if (_pluginTools.TryGetValue(key, out var pluginTool))
+			{
+				return pluginTool;
+			}
+
+			return _builtInTools.TryGetValue(key, out var tool) ? tool : null;
 		}
 	}
 
@@ -70,7 +78,13 @@ internal sealed class ToolRegistry : IToolRegistry
 
 		lock (_lock)
 		{
-			_tools[tool.Key] = tool;
+			if (_builtInTools.ContainsKey(tool.Key))
+			{
+				Console.WriteLine($"[Orbit][Plugin] Ignoring plugin tool key '{tool.Key}' because it conflicts with a built-in Orbit tool.");
+				return;
+			}
+
+			_pluginTools[tool.Key] = tool;
 		}
 	}
 
@@ -81,7 +95,7 @@ internal sealed class ToolRegistry : IToolRegistry
 
 		lock (_lock)
 		{
-			return _tools.Remove(key);
+			return _pluginTools.Remove(key);
 		}
 	}
 }

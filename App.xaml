@@ -90,8 +90,8 @@
                 BasedOn="{StaticResource MahApps.Styles.Button}"
                 TargetType="Button">
                 <Setter Property="MinHeight" Value="30" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Muted}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Setter Property="Padding" Value="12,6" />
@@ -99,11 +99,11 @@
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                        <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Strong}" />
                     </Trigger>
                     <Trigger Property="IsPressed" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                        <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                     </Trigger>
                     <Trigger Property="IsEnabled" Value="False">
                         <Setter Property="Opacity" Value="0.6" />
@@ -119,8 +119,8 @@
                 <Setter Property="MinHeight" Value="30" />
                 <Setter Property="Padding" Value="8,4" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             </Style>
             <Style TargetType="TextBox" BasedOn="{StaticResource Orbit.Styles.TextBox.Default}" />
@@ -130,8 +130,8 @@
                 BasedOn="{StaticResource MahApps.Styles.ComboBox}"
                 TargetType="ComboBox">
                 <Setter Property="MinHeight" Value="30" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             </Style>
             <Style TargetType="ComboBox" BasedOn="{StaticResource Orbit.Styles.ComboBox.Default}" />
@@ -144,8 +144,8 @@
                 <Setter Property="Margin" Value="0" />
                 <Setter Property="Padding" Value="2,0" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                 <Setter Property="BorderThickness" Value="0,0,0,1" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
@@ -182,22 +182,55 @@
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" Opacity="0.82" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="{DynamicResource MahApps.Colors.ThemeForeground}" Opacity="0.64" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnAccent" Color="{DynamicResource MahApps.Colors.AccentForeground}" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeader" Color="{DynamicResource MahApps.Colors.AccentForeground}" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeaderSecondary" Color="{DynamicResource MahApps.Colors.AccentForeground}" Opacity="0.88" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnOverlay" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="{DynamicResource Orbit.Colors.Text.Primary}" Opacity="0.82" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="{DynamicResource Orbit.Colors.Text.Primary}" Opacity="0.64" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnAccent" Color="{DynamicResource Orbit.Colors.Action.PrimaryForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeader" Color="{DynamicResource Orbit.Colors.Action.PrimaryForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHeaderSecondary" Color="{DynamicResource Orbit.Colors.Action.PrimaryForeground}" Opacity="0.88" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnOverlay" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnBase" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnCard" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnSubtle" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnMuted" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnHover" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Base" Color="{DynamicResource Orbit.Colors.Surface.Base}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Card" Color="{DynamicResource Orbit.Colors.Surface.Base}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Subtle" Color="{DynamicResource MahApps.Colors.Gray9}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Muted" Color="{DynamicResource MahApps.Colors.Gray8}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Hover" Color="{DynamicResource MahApps.Colors.Gray7}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Border.Subtle" Color="{DynamicResource MahApps.Colors.Gray6}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Border.Strong" Color="{DynamicResource MahApps.Colors.Gray5}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Neutral" Color="{DynamicResource MahApps.Colors.Gray5}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Info" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Success" Color="#FF4CAF50" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Warning" Color="#FFFFC107" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Error" Color="#FFF44336" />
+            <Color x:Key="Orbit.Colors.Action.Primary">{StaticResource MahApps.Colors.Accent}</Color>
+            <Color x:Key="Orbit.Colors.Action.Secondary">{StaticResource MahApps.Colors.Accent2}</Color>
+            <Color x:Key="Orbit.Colors.Action.Tertiary">{StaticResource MahApps.Colors.Accent3}</Color>
+            <Color x:Key="Orbit.Colors.Action.Subtle">{StaticResource MahApps.Colors.Accent4}</Color>
+            <Color x:Key="Orbit.Colors.Action.PrimaryForeground">{StaticResource MahApps.Colors.AccentForeground}</Color>
+            <Color x:Key="Orbit.Colors.Text.Primary">{StaticResource MahApps.Colors.ThemeForeground}</Color>
+            <Color x:Key="Orbit.Colors.Surface.Base">{StaticResource MahApps.Colors.ThemeBackground}</Color>
+            <SolidColorBrush x:Key="Orbit.Brushes.Action.Primary" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Action.Secondary" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Action.Tertiary" Color="{DynamicResource Orbit.Colors.Action.Tertiary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Action.Subtle" Color="{DynamicResource Orbit.Colors.Action.Subtle}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnStatus.Neutral" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnStatus.Info" Color="{DynamicResource Orbit.Colors.Action.PrimaryForeground}" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnStatus.Success" Color="White" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnStatus.Warning" Color="Black" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Text.OnStatus.Error" Color="White" />
 
             <!--  Orbit Grid Cell Style - for TabablzControls in Orbit View grid layout  -->
             <Style
                 x:Key="OrbitGridCellStyle"
                 BasedOn="{StaticResource Orbit.TabablzControlStyle}"
                 TargetType="{x:Type dragablz:TabablzControl}">
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
             </Style>
 
             <!--  Fallback style for MahApps toggle buttons (Orbit only consumes the square variant)  -->
@@ -207,8 +240,8 @@
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Strong}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                 <Setter Property="Template">
@@ -227,13 +260,13 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource Orbit.Brushes.Border.Strong}" />
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                                     <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
@@ -253,12 +286,12 @@
                 <Setter Property="Padding" Value="14,6" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Tertiary}" />
                 <Setter Property="Background">
                     <Setter.Value>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent2}" />
+                            <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+                            <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
                         </LinearGradientBrush>
                     </Setter.Value>
                 </Setter>
@@ -284,9 +317,9 @@
                 <Setter Property="Background">
                     <Setter.Value>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Offset="0" Color="{DynamicResource MahApps.Colors.Accent}" />
-                            <GradientStop Offset="0.55" Color="{DynamicResource MahApps.Colors.Accent2}" />
-                            <GradientStop Offset="1" Color="{DynamicResource MahApps.Colors.Accent3}" />
+                            <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
+                            <GradientStop Offset="0.55" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
+                            <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Tertiary}" />
                         </LinearGradientBrush>
                     </Setter.Value>
                 </Setter>
@@ -374,8 +407,8 @@
                 <Setter Property="Margin" Value="0,10,0,0" />
                 <Setter Property="Padding" Value="12" />
                 <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Effect">
                     <Setter.Value>
@@ -383,7 +416,7 @@
                             BlurRadius="12"
                             Opacity="0.1"
                             ShadowDepth="1.5"
-                            Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
+                            Color="{DynamicResource Orbit.Colors.Text.Primary}" />
                     </Setter.Value>
                 </Setter>
             </Style>

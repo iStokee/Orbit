@@ -53,6 +53,39 @@ namespace Orbit.Services
 		private const string OrbitTextOnHeaderKey = "Orbit.Brushes.Text.OnHeader";
 		private const string OrbitTextOnHeaderSecondaryKey = "Orbit.Brushes.Text.OnHeaderSecondary";
 		private const string OrbitTextOnOverlayKey = "Orbit.Brushes.Text.OnOverlay";
+		private const string OrbitTextOnBaseKey = "Orbit.Brushes.Text.OnBase";
+		private const string OrbitTextOnCardKey = "Orbit.Brushes.Text.OnCard";
+		private const string OrbitTextOnSubtleKey = "Orbit.Brushes.Text.OnSubtle";
+		private const string OrbitTextOnMutedKey = "Orbit.Brushes.Text.OnMuted";
+		private const string OrbitTextOnHoverKey = "Orbit.Brushes.Text.OnHover";
+		private const string OrbitSurfaceBaseKey = "Orbit.Brushes.Surface.Base";
+		private const string OrbitSurfaceCardKey = "Orbit.Brushes.Surface.Card";
+		private const string OrbitSurfaceSubtleKey = "Orbit.Brushes.Surface.Subtle";
+		private const string OrbitSurfaceMutedKey = "Orbit.Brushes.Surface.Muted";
+		private const string OrbitSurfaceHoverKey = "Orbit.Brushes.Surface.Hover";
+		private const string OrbitBorderSubtleKey = "Orbit.Brushes.Border.Subtle";
+		private const string OrbitBorderStrongKey = "Orbit.Brushes.Border.Strong";
+		private const string OrbitStatusNeutralKey = "Orbit.Brushes.Status.Neutral";
+		private const string OrbitStatusInfoKey = "Orbit.Brushes.Status.Info";
+		private const string OrbitStatusSuccessKey = "Orbit.Brushes.Status.Success";
+		private const string OrbitStatusWarningKey = "Orbit.Brushes.Status.Warning";
+		private const string OrbitStatusErrorKey = "Orbit.Brushes.Status.Error";
+		private const string OrbitActionPrimaryKey = "Orbit.Brushes.Action.Primary";
+		private const string OrbitActionSecondaryKey = "Orbit.Brushes.Action.Secondary";
+		private const string OrbitActionTertiaryKey = "Orbit.Brushes.Action.Tertiary";
+		private const string OrbitActionSubtleKey = "Orbit.Brushes.Action.Subtle";
+		private const string OrbitActionPrimaryColorKey = "Orbit.Colors.Action.Primary";
+		private const string OrbitActionSecondaryColorKey = "Orbit.Colors.Action.Secondary";
+		private const string OrbitActionTertiaryColorKey = "Orbit.Colors.Action.Tertiary";
+		private const string OrbitActionSubtleColorKey = "Orbit.Colors.Action.Subtle";
+		private const string OrbitActionPrimaryForegroundColorKey = "Orbit.Colors.Action.PrimaryForeground";
+		private const string OrbitTextPrimaryColorKey = "Orbit.Colors.Text.Primary";
+		private const string OrbitSurfaceBaseColorKey = "Orbit.Colors.Surface.Base";
+		private const string OrbitTextOnStatusNeutralKey = "Orbit.Brushes.Text.OnStatus.Neutral";
+		private const string OrbitTextOnStatusInfoKey = "Orbit.Brushes.Text.OnStatus.Info";
+		private const string OrbitTextOnStatusSuccessKey = "Orbit.Brushes.Text.OnStatus.Success";
+		private const string OrbitTextOnStatusWarningKey = "Orbit.Brushes.Text.OnStatus.Warning";
+		private const string OrbitTextOnStatusErrorKey = "Orbit.Brushes.Text.OnStatus.Error";
 		private const string TypographyStorageFileName = "appearance.settings.json";
 		private const string FontFamilyResourceKey = "Orbit.Fonts.Family";
 		private const string FontSizeResourceKey = "Orbit.Fonts.Size.Base";
@@ -613,7 +646,21 @@ namespace Orbit.Services
 		{
 			var resources = Application.Current.Resources;
 			var themeForeground = ResolveResourceColor(resources, "MahApps.Brushes.ThemeForeground", Colors.White);
+			var themeBackground = ResolveResourceColor(resources, "MahApps.Brushes.ThemeBackground", Colors.Black);
+			var accent = ResolveResourceColor(resources, "MahApps.Brushes.Accent", Colors.SteelBlue);
+			var accent2 = ResolveResourceColor(resources, "MahApps.Brushes.Accent2", ChangeColorBrightness(accent, 0.15));
+			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent, -0.15));
+			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent, -0.3));
 			var accentForeground = ResolveResourceColor(resources, "MahApps.Brushes.AccentForeground", Colors.White);
+			var gray9 = ResolveResourceColor(resources, "MahApps.Brushes.Gray9", themeBackground);
+			var gray8 = ResolveResourceColor(resources, "MahApps.Brushes.Gray8", themeBackground);
+			var gray7 = ResolveResourceColor(resources, "MahApps.Brushes.Gray7", themeBackground);
+			var gray6 = ResolveResourceColor(resources, "MahApps.Brushes.Gray6", themeForeground);
+			var gray5 = ResolveResourceColor(resources, "MahApps.Brushes.Gray5", themeForeground);
+			var info = accent2;
+			var success = Colors.ForestGreen;
+			var warning = Colors.Goldenrod;
+			var error = Colors.Firebrick;
 			var secondary = CreateSecondaryFrom(themeForeground, 0.82);
 			var tertiary = CreateSecondaryFrom(themeForeground, 0.64);
 			var headerSecondary = CreateSecondaryFrom(accentForeground, 0.88);
@@ -625,6 +672,42 @@ namespace Orbit.Services
 			SetBrushResource(OrbitTextOnHeaderKey, accentForeground);
 			SetBrushResource(OrbitTextOnHeaderSecondaryKey, headerSecondary);
 			SetBrushResource(OrbitTextOnOverlayKey, themeForeground);
+			SetBrushResource(OrbitTextOnBaseKey, GetBestContrastText(themeBackground));
+			SetBrushResource(OrbitTextOnCardKey, GetBestContrastText(themeBackground));
+			SetBrushResource(OrbitTextOnSubtleKey, GetBestContrastText(gray9));
+			SetBrushResource(OrbitTextOnMutedKey, GetBestContrastText(gray8));
+			SetBrushResource(OrbitTextOnHoverKey, GetBestContrastText(gray7));
+			SetBrushResource(OrbitSurfaceBaseKey, themeBackground);
+			SetBrushResource(OrbitSurfaceCardKey, themeBackground);
+			SetBrushResource(OrbitSurfaceSubtleKey, gray9);
+			SetBrushResource(OrbitSurfaceMutedKey, gray8);
+			SetBrushResource(OrbitSurfaceHoverKey, gray7);
+			SetBrushResource(OrbitBorderSubtleKey, gray6);
+			SetBrushResource(OrbitBorderStrongKey, gray5);
+			SetBrushResource(OrbitStatusNeutralKey, gray5);
+			SetBrushResource(OrbitStatusInfoKey, info);
+			SetBrushResource(OrbitStatusSuccessKey, success);
+			SetBrushResource(OrbitStatusWarningKey, warning);
+			SetBrushResource(OrbitStatusErrorKey, error);
+			SetColorResource(OrbitActionPrimaryColorKey, accent);
+			SetColorResource(OrbitActionSecondaryColorKey, accent2);
+			SetColorResource(OrbitActionTertiaryColorKey, accent3);
+			SetColorResource(OrbitActionSubtleColorKey, accent4);
+			SetColorResource(OrbitActionPrimaryForegroundColorKey, GetBestContrastText(accent));
+			SetColorResource(OrbitTextPrimaryColorKey, themeForeground);
+			SetColorResource(OrbitSurfaceBaseColorKey, themeBackground);
+			SetBrushResource(OrbitActionPrimaryKey, accent);
+			SetBrushResource(OrbitActionSecondaryKey, accent2);
+			SetBrushResource(OrbitActionTertiaryKey, accent3);
+			SetBrushResource(OrbitActionSubtleKey, accent4);
+			SetBrushResource(OrbitTextOnStatusNeutralKey, GetBestContrastText(gray5));
+			SetBrushResource(OrbitTextOnStatusInfoKey, GetBestContrastText(info));
+			SetBrushResource(OrbitTextOnStatusSuccessKey, GetBestContrastText(success));
+			SetBrushResource(OrbitTextOnStatusWarningKey, GetBestContrastText(warning));
+			SetBrushResource(OrbitTextOnStatusErrorKey, GetBestContrastText(error));
+
+			// Keep MahApps accent foreground aligned with the strongest active accent.
+			SetBrushResource(OrbitTextOnAccentKey, GetBestContrastText(accent));
 		}
 
 		private static void EnsureDragablzMahAppsCompatResources()
@@ -635,6 +718,8 @@ namespace Orbit.Services
 			var accent3 = ResolveResourceColor(resources, "MahApps.Brushes.Accent3", ChangeColorBrightness(accent1, -0.15));
 			var accent4 = ResolveResourceColor(resources, "MahApps.Brushes.Accent4", ChangeColorBrightness(accent1, -0.3));
 			var highlight = ResolveResourceColor(resources, "MahApps.Brushes.Highlight", ChangeColorBrightness(accent1, 0.3));
+			var themeForeground = ResolveResourceColor(resources, "MahApps.Brushes.ThemeForeground", Colors.White);
+			var accentForeground = ResolveResourceColor(resources, "MahApps.Brushes.AccentForeground", GetSharedAccentForeground(accent1, accent2, accent3, accent4));
 
 			resources["AccentColor"] = accent1;
 			resources["AccentColor2"] = accent2;
@@ -648,11 +733,12 @@ namespace Orbit.Services
 			SetBrushResource("AccentColorBrush4", accent4);
 			SetBrushResource("HighlightBrush", highlight);
 
-			// Dragablz MahApps templates still reference these legacy names.
-			SetBrushResource("WhiteBrush", Colors.White);
-			SetBrushResource("BlackBrush", Colors.Black);
-			SetBrushResource("WhiteColorBrush", Colors.White);
-			SetBrushResource("BlackColorBrush", Colors.Black);
+			// Dragablz MahApps templates still reference these legacy names. Keep them
+			// semantic so theme changes do not regress to literal black/white.
+			SetBrushResource("WhiteBrush", accentForeground);
+			SetBrushResource("BlackBrush", themeForeground);
+			SetBrushResource("WhiteColorBrush", accentForeground);
+			SetBrushResource("BlackColorBrush", themeForeground);
 			SetBrushResource("TransparentWhiteBrush", Color.FromArgb(32, 255, 255, 255));
 			SetBrushResource("SemiTransparentWhiteBrush", Color.FromArgb(72, 255, 255, 255));
 		}
@@ -698,6 +784,30 @@ namespace Orbit.Services
 			return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
 		}
 
+		private static Color GetBestContrastText(Color background)
+		{
+			var effectiveBackground = BlendAgainstOpaqueBackground(background);
+			var blackContrast = GetContrastRatio(effectiveBackground, Colors.Black);
+			var whiteContrast = GetContrastRatio(effectiveBackground, Colors.White);
+			return blackContrast >= whiteContrast ? Colors.Black : Colors.White;
+		}
+
+		private static Color BlendAgainstOpaqueBackground(Color color)
+		{
+			if (color.A == 255)
+			{
+				return color;
+			}
+
+			var resources = Application.Current.Resources;
+			var baseColor = ResolveResourceColor(resources, "MahApps.Brushes.ThemeBackground", Colors.Black);
+			var alpha = color.A / 255.0;
+			return Color.FromRgb(
+				(byte)Math.Round((color.R * alpha) + (baseColor.R * (1 - alpha))),
+				(byte)Math.Round((color.G * alpha) + (baseColor.G * (1 - alpha))),
+				(byte)Math.Round((color.B * alpha) + (baseColor.B * (1 - alpha))));
+		}
+
 		private static Color CreateSecondaryFrom(Color source, double alphaScale)
 		{
 			var clamped = Math.Clamp(alphaScale, 0.0, 1.0);
@@ -713,6 +823,12 @@ namespace Orbit.Services
 			var brush = CreateFrozenBrush(color);
 			Application.Current.Resources[key] = brush;
 			ThemeLogger.LogResourceSet(key.ToString() ?? key.GetType().Name, brush);
+		}
+
+		private static void SetColorResource(object key, Color color)
+		{
+			Application.Current.Resources[key] = color;
+			ThemeLogger.LogResourceSet(key.ToString() ?? key.GetType().Name, color);
 		}
 
 		private static void RemoveCustomAccentOverrides()

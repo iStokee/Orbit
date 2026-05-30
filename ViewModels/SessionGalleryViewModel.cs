@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Orbit.Models;
@@ -60,6 +61,8 @@ namespace Orbit.ViewModels
 				}
 			});
 			RefreshThumbnailsCommand = new RelayCommand(async () => await RefreshAllThumbnailsAsync());
+			ActiveSessions = CollectionViewSource.GetDefaultView(Sessions);
+			ActiveSessions.Filter = item => item is SessionModel session && session.State != SessionState.Closed;
 
 			// Auto-refresh timer (tick every second and check per-session intervals)
 			_refreshTimer = new DispatcherTimer { Interval = TimerInterval };
@@ -84,6 +87,8 @@ namespace Orbit.ViewModels
 		/// Gets the shared session collection
 		/// </summary>
 		public ObservableCollection<SessionModel> Sessions => _sessionCollectionService.Sessions;
+
+		public ICollectionView ActiveSessions { get; }
 
 		/// <summary>
 		/// Gets or sets the thumbnail size (width in pixels)
@@ -531,7 +536,8 @@ namespace Orbit.ViewModels
 				var thumbnail = WindowThumbnailCapture.CaptureWindow(
 					targetHandle,
 					(int)EffectiveThumbnailSize,
-					(int)ThumbnailSizeWithAspect);
+					(int)ThumbnailSizeWithAspect,
+					allowScreenFallback: false);
 
 				if (thumbnail == null)
 					return;
@@ -644,12 +650,6 @@ namespace Orbit.ViewModels
 				return false;
 			}
 
-			if (session.HostControl is Views.ChildClientView clientView)
-			{
-				if (TryCandidate(session, clientView.GetCaptureHandle(), out var handle))
-					return handle;
-			}
-
 			if (TryCandidate(session, session.RenderSurfaceHandle, out var fromCache))
 				return fromCache;
 
@@ -733,6 +733,7 @@ namespace Orbit.ViewModels
 				}
 			}
 
+			ActiveSessions.Refresh();
 			UpdateTimerState();
 			RequestRefreshCheck();
 		}
@@ -765,6 +766,9 @@ namespace Orbit.ViewModels
 
 			switch (e.PropertyName)
 			{
+				case nameof(SessionModel.State):
+					ActiveSessions.Refresh();
+					break;
 				case nameof(SessionModel.GalleryOverrideEnabled):
 				case nameof(SessionModel.GalleryAutoRefreshEnabled):
 					UpdateTimerState();

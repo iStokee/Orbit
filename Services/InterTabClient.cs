@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using Dragablz;
+using Dragablz.Dockablz;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Services;
+using Orbit.Views;
 using Application = System.Windows.Application;
 
 namespace Orbit
@@ -61,8 +65,9 @@ namespace Orbit
 
 		private static bool IsOrbitViewSource(TabablzControl? source)
 		{
-			// Orbit View's tab controls live under a Dockablz Layout. Main window tabs do not.
-			return source != null && FindVisualAncestor<Dragablz.Dockablz.Layout>(source) != null;
+			// Main shell tabs can also live under a Dockablz Layout; only the dedicated Orbit
+			// workspace should be treated as Orbit-origin for tear-off cleanup/rehome behavior.
+			return source != null && FindVisualAncestor<OrbitGridLayoutView>(source) != null;
 		}
 
 		private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
@@ -89,10 +94,16 @@ namespace Orbit
 		/// </summary>
 		public TabEmptiedResponse TabEmptiedHandler(TabablzControl tabControl, Window window)
 		{
-			// Keep the primary shell alive even when all tabs close; allow tear-off shells to close normally.
+			// Keep the primary shell window alive, but still collapse empty split branches inside it.
 			if (ReferenceEquals(window, Application.Current.MainWindow))
 			{
-				OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on primary shell; keeping window alive.");
+				if (ShouldCollapsePrimaryShellBranch(tabControl))
+				{
+					OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on primary shell branch; collapsing empty layout branch.");
+					return TabEmptiedResponse.CloseWindowOrLayoutBranch;
+				}
+
+				OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on last primary shell tab control; keeping window alive.");
 				return TabEmptiedResponse.DoNothing;
 			}
 
@@ -102,6 +113,46 @@ namespace Orbit
 			// - Collapse the branch if it's within a Layout control
 			OrbitInteractionLogger.Log("[OrbitView][Drag] TabEmptied on secondary window/layout; closing host branch.");
 			return TabEmptiedResponse.CloseWindowOrLayoutBranch;
+		}
+
+		private static bool ShouldCollapsePrimaryShellBranch(TabablzControl tabControl)
+		{
+			if (tabControl == null)
+			{
+				return false;
+			}
+
+			var layout = FindVisualAncestor<Layout>(tabControl);
+			if (layout == null)
+			{
+				return false;
+			}
+
+			var tabControls = FindVisualChildren<TabablzControl>(layout).ToList();
+			return tabControls.Count > 1;
+		}
+
+		private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+		{
+			if (parent == null)
+			{
+				yield break;
+			}
+
+			var count = VisualTreeHelper.GetChildrenCount(parent);
+			for (var index = 0; index < count; index++)
+			{
+				var child = VisualTreeHelper.GetChild(parent, index);
+				if (child is T typed)
+				{
+					yield return typed;
+				}
+
+				foreach (var descendant in FindVisualChildren<T>(child))
+				{
+					yield return descendant;
+				}
+			}
 		}
 	}
 }

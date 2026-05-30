@@ -58,6 +58,9 @@ namespace Orbit.ViewModels
 	private readonly AccountService accountService;
 	private readonly AutoLoginService autoLoginService;
 	private readonly SessionCollectionService sessionCollectionService;
+	private readonly SessionPlacementService sessionPlacementService;
+	private readonly SessionReconciliationService sessionReconciliationService;
+	private readonly SessionUiCoordinatorService sessionUiCoordinator;
 	private readonly OrbitLayoutStateService orbitLayoutState;
 	private readonly ConsoleLogService consoleLogService;
 	private readonly IToolRegistry toolRegistry;
@@ -111,6 +114,9 @@ namespace Orbit.ViewModels
 		AccountService accountService,
 		AutoLoginService autoLoginService,
 		SessionCollectionService sessionCollectionService,
+		SessionPlacementService sessionPlacementService,
+		SessionReconciliationService sessionReconciliationService,
+		SessionUiCoordinatorService sessionUiCoordinator,
 		OrbitLayoutStateService orbitLayoutStateService,
 		ConsoleLogService consoleLogService,
 		InterTabClient interTabClient,
@@ -124,6 +130,9 @@ namespace Orbit.ViewModels
 		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
 		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+		this.sessionPlacementService = sessionPlacementService ?? throw new ArgumentNullException(nameof(sessionPlacementService));
+		this.sessionReconciliationService = sessionReconciliationService ?? throw new ArgumentNullException(nameof(sessionReconciliationService));
+		this.sessionUiCoordinator = sessionUiCoordinator ?? throw new ArgumentNullException(nameof(sessionUiCoordinator));
 			this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
 			this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
 			this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
@@ -551,7 +560,7 @@ namespace Orbit.ViewModels
 			if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
 			{
 				// Don't add to Tabs - add to Orbit View workspace explicitly.
-				orbitLayoutState.AddItem(session);
+				sessionUiCoordinator.MoveItemToOrbit(session, HandleTabRemoval, this, "launch-session-to-orbit");
 				SelectedSession = session;
 				// If Orbit View isn't open, open it
 				if (!Tabs.OfType<Models.ToolTabItem>().Any(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal)))
@@ -563,12 +572,14 @@ namespace Orbit.ViewModels
 			{
 				// TODO: Show dialog asking user where to dock
 				// For now, default to individual tabs
+				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs);
 				Tabs.Add(session);
 				SelectedSession = session;
 				SelectedTab = session;
 			}
 			else // IndividualTabs or default
 			{
+				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs);
 				Tabs.Add(session);
 				SelectedSession = session;
 				SelectedTab = session; // Auto-focus the new tab
@@ -1153,30 +1164,12 @@ namespace Orbit.ViewModels
 
 		if (target is SessionModel session)
 		{
-			// Ensure the session isn't simultaneously shown in other session surfaces.
-			if (Tabs.Contains(session))
-			{
-				Tabs.Remove(session);
-				HandleTabRemoval(session);
-			}
-
-			orbitLayoutState.AddItem(session);
+			sessionUiCoordinator.MoveItemToOrbit(session, HandleTabRemoval, this, "move-session-to-orbit");
 			SelectedSession = session;
 		}
 		else if (target is Models.ToolTabItem tool)
 		{
-			if (Tabs.Contains(tool))
-			{
-				Tabs.Remove(tool);
-				HandleTabRemoval(tool);
-			}
-
-			if (tool.HostControl != null && !ReferenceEquals(tool.HostControl.DataContext, this))
-			{
-				tool.HostControl.DataContext = this;
-			}
-
-			orbitLayoutState.AddItem(tool);
+			sessionUiCoordinator.MoveItemToOrbit(tool, HandleTabRemoval, this, "move-tool-to-orbit");
 		}
 
 		TryOpenToolByKey("OrbitView");
@@ -1198,18 +1191,10 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		SessionModel? firstMoved = null;
-		foreach (var session in sessionTabs)
-		{
-			if (Tabs.Contains(session))
-			{
-				Tabs.Remove(session);
-				HandleTabRemoval(session);
-			}
-
-			orbitLayoutState.AddItem(session);
-			firstMoved ??= session;
-		}
+		var firstMoved = sessionUiCoordinator.AdoptSessionsIntoOrbit(
+			sessionTabs,
+			HandleTabRemoval,
+			"adopt-session-to-orbit");
 
 		if (firstMoved != null)
 		{
@@ -1242,12 +1227,7 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		orbitLayoutState.RemoveItem(session);
-
-		if (!Tabs.Contains(session))
-		{
-			Tabs.Add(session);
-		}
+		sessionUiCoordinator.MoveSessionToMainTabs(session, Tabs, "move-session-to-main-tabs");
 
 		SelectedSession = session;
 		SelectedTab = session;
@@ -2594,12 +2574,12 @@ namespace Orbit.ViewModels
 		var process = session.RSProcess;
 		if (process == null || process.HasExited)
 		{
-			session.NativeDebugMenuVisible = false;
+			session.SetNativeDebugMenuVisible(false, "process unavailable");
 			return;
 		}
 
 		var previousVisible = session.NativeDebugMenuVisible;
-		session.NativeDebugMenuVisible = visible;
+		session.SetNativeDebugMenuVisible(visible, "native menu command pending");
 
 		try
 		{
@@ -2617,8 +2597,16 @@ namespace Orbit.ViewModels
 					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(120))
 					.ConfigureAwait(false);
 
+				await OrbitCommandClient
+					.SendInputModeWithRetryAsync(0, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
+
 				applied = await OrbitCommandClient
 					.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
+					.ConfigureAwait(false);
+
+				await OrbitCommandClient
+					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
 					.ConfigureAwait(false);
 			}
 			else
@@ -2637,16 +2625,16 @@ namespace Orbit.ViewModels
 			}
 			if (applied)
 			{
-				session.NativeDebugMenuVisible = visible;
+				session.SetNativeDebugMenuVisible(visible, "native menu command applied");
 			}
 			else
 			{
-				session.NativeDebugMenuVisible = previousVisible;
+				session.SetNativeDebugMenuVisible(previousVisible, "native menu command failed");
 			}
 		}
 		catch
 		{
-			session.NativeDebugMenuVisible = previousVisible;
+			session.SetNativeDebugMenuVisible(previousVisible, "native menu command threw");
 		}
 	}
 
@@ -2728,6 +2716,10 @@ namespace Orbit.ViewModels
 					}
 				}
 
+				sessionPlacementService.SetPlacement(session, SessionPlacementKind.Closing);
+				sessionReconciliationService.LogDecision(
+					"close-start",
+					sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "close-start"));
 				var removeFromUiCollections = false;
 				var removedFromTabShell = false;
 				try
@@ -2741,6 +2733,10 @@ namespace Orbit.ViewModels
 					// Remove the visible tab/workspace shell immediately so close feels instant,
 					// while the process shutdown continues in the background.
 					removedFromTabShell = RemoveSessionFromTabShell(session);
+					sessionReconciliationService.LogDecision(
+						"close-removed-visible-shell",
+						sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "close-visible-remove"),
+						$"removedFromTabShell={removedFromTabShell}");
 
 					await sessionManager.ShutdownSessionAsync(session, forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
 					removeFromUiCollections = true;
@@ -2759,6 +2755,10 @@ namespace Orbit.ViewModels
 							? SessionState.Injected
 							: SessionState.ClientReady;
 						session.UpdateState(recoveryState, clearError: false);
+						sessionReconciliationService.LogDecision(
+							"close-recover-running-session",
+							sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "shutdown-failed"),
+							ex.Message);
 						ConsoleLog.Append(
 							$"[Orbit] Session '{session.Name}' is still running after shutdown failure; keeping it in UI for manual recovery.",
 							ConsoleLogSource.Orbit,
@@ -2769,10 +2769,16 @@ namespace Orbit.ViewModels
 				{
 					if (removeFromUiCollections)
 					{
+						sessionReconciliationService.LogDecision(
+							"close-final-remove",
+							sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "shutdown-complete"));
+
 						if (Sessions.Contains(session))
 						{
 							Sessions.Remove(session);
 						}
+
+						sessionPlacementService.Remove(session);
 
 						if (!removedFromTabShell)
 						{
@@ -2781,6 +2787,11 @@ namespace Orbit.ViewModels
 					}
 					else
 					{
+						if (sessionPlacementService.GetPlacement(session) == SessionPlacementKind.Closing)
+						{
+							sessionPlacementService.SetPlacement(session, SessionPlacementKind.Unknown, "close-aborted-or-failed");
+						}
+
 						EnsureSessionRemainsVisible(session);
 					}
 				}
@@ -2795,17 +2806,9 @@ namespace Orbit.ViewModels
 		{
 			var removedAny = false;
 
-			orbitLayoutState.RemoveItem(session);
-
-			if (Tabs.Contains(session))
+			if (sessionUiCoordinator.RemoveSessionFromVisibleShell(session, HandleTabRemoval, "remove-session-from-visible-shell"))
 			{
-				Tabs.Remove(session);
 				removedAny = true;
-			}
-
-			if (removedAny)
-			{
-				HandleTabRemoval(session);
 			}
 
 			return removedAny;
@@ -2836,11 +2839,15 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			var sessionInOrbitWorkspace = orbitLayoutState.Items
-				.OfType<SessionModel>()
-				.Any(item => ReferenceEquals(item, session));
-			if (!sessionInOrbitWorkspace && !Tabs.Contains(session))
+			if (sessionPlacementService.GetPlacement(session) == SessionPlacementKind.Closing)
 			{
+				return;
+			}
+
+			var snapshot = sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "ensure-visible");
+			if (!snapshot.HasAnyUiReference)
+			{
+				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs, "restore-visible-session");
 				Tabs.Add(session);
 			}
 
@@ -2955,27 +2962,50 @@ namespace Orbit.ViewModels
 			{
 				foreach (var removedSession in e.OldItems.OfType<SessionModel>())
 				{
-					ScheduleOrphanedSessionValidation(removedSession);
-				}
-			}
-
-			if (e.NewItems != null)
-			{
-				foreach (var added in e.NewItems.Cast<object>())
-				{
-					switch (added)
+					if (!sessionPlacementService.IsMoveInProgress(removedSession) &&
+						sessionPlacementService.GetPlacement(removedSession) is not SessionPlacementKind.OrbitWorkspace and not SessionPlacementKind.Closing)
 					{
-						case SessionModel session:
-							orbitLayoutState.RemoveItem(session);
-							break;
-						case Models.ToolTabItem tool when !string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal):
-							orbitLayoutState.RemoveItem(tool);
-							break;
+						ScheduleOrphanedSessionValidation(removedSession);
 					}
 				}
 			}
 
+				if (e.NewItems != null)
+				{
+					var isOrbitTearOffWindow = IsOrbitViewTearOffWindow();
+					foreach (var added in e.NewItems.Cast<object>())
+					{
+						switch (added)
+						{
+							case SessionModel session:
+								if (isOrbitTearOffWindow)
+								{
+									sessionPlacementService.SetPlacement(session, SessionPlacementKind.OrbitWorkspace, "orbit-tearoff-tab-add");
+								}
+								else
+								{
+									sessionPlacementService.SetPlacement(
+										session,
+										ReferenceEquals(Application.Current?.MainWindow?.DataContext, this)
+											? SessionPlacementKind.MainTabs
+											: SessionPlacementKind.TearOffWindow);
+									orbitLayoutState.RemoveItem(session);
+								}
+								break;
+							case Models.ToolTabItem tool when !isOrbitTearOffWindow && !string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal):
+								orbitLayoutState.RemoveItem(tool);
+								break;
+						}
+				}
+			}
+
 			UpdateFloatingMenuVisibilityForCurrentTab();
+		}
+
+		private bool IsOrbitViewTearOffWindow()
+		{
+			var ownership = sessionReconciliationService.CaptureUiOwnership(orbitLayoutState.Items.Cast<object>());
+			return ownership.OrbitWindows.Any(window => ReferenceEquals(window.DataContext, this));
 		}
 
 	private static object? ResolveClosingItem(ItemActionCallbackArgs<TabablzControl> args)
@@ -3031,27 +3061,31 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			if (!Sessions.Contains(session))
+			var snapshot = sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "orphan-validation");
+			if (snapshot.HasConflictingUiOwnership)
 			{
+				sessionReconciliationService.LogDecision(
+					"orphan-conflicting-ownership",
+					snapshot,
+					"session is visible in both orbit and non-orbit owners; leaving ownership cleanup to workspace reconciliation");
+			}
+
+			if (!sessionReconciliationService.ShouldRestoreOrphan(snapshot))
+			{
+				if (snapshot.InSessionCollection && !snapshot.HasAnyUiReference)
+				{
+					sessionReconciliationService.LogDecision("orphan-ignore", snapshot);
+				}
 				return;
 			}
 
-			if (orbitLayoutState.Items.OfType<SessionModel>().Any(item => ReferenceEquals(item, session)))
-			{
-				return;
-			}
-
-			if (IsSessionInAnyOpenWindowTabs(session))
-			{
-				return;
-			}
-
+			sessionReconciliationService.LogDecision("orphan-restore", snapshot);
 			ConsoleLog.Append(
-				$"[Orbit] Session '{session.Name}' lost all UI references; closing to avoid orphaned process.",
+				$"[Orbit] Session '{session.Name}' temporarily lost all UI references; restoring it to tabs instead of closing the process.",
 				ConsoleLogSource.Orbit,
 				ConsoleLogLevel.Warning);
 
-			_ = CloseSessionInternalAsync(session, skipConfirmation: false, forceKillOnTimeout: true);
+			EnsureSessionRemainsVisible(session);
 		}
 		finally
 		{
@@ -3061,20 +3095,6 @@ namespace Orbit.ViewModels
 			}
 		}
 	}
-
-		private static bool IsSessionInAnyOpenWindowTabs(SessionModel session)
-		{
-			var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-			foreach (var window in windows)
-			{
-				if (window.DataContext is MainWindowViewModel vm && vm.Tabs.Contains(session))
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
 
 		private async void SessionCrashWatchTimer_Tick(object? sender, EventArgs e)
 		{
@@ -3237,41 +3257,7 @@ namespace Orbit.ViewModels
 
 		private void RestoreOrbitWorkspaceToTabs()
 		{
-			var workspaceItems = orbitLayoutState.Items.ToList();
-			if (workspaceItems.Count == 0)
-			{
-				return;
-			}
-
-			foreach (var item in workspaceItems)
-			{
-				switch (item)
-				{
-					case SessionModel session:
-						orbitLayoutState.RemoveItem(session);
-						if (!Tabs.Contains(session))
-						{
-							Tabs.Add(session);
-						}
-						break;
-					case Models.ToolTabItem tool:
-						if (string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal))
-						{
-							continue;
-						}
-
-						orbitLayoutState.RemoveItem(tool);
-						if (tool.HostControl != null && !ReferenceEquals(tool.HostControl.DataContext, this))
-						{
-							tool.HostControl.DataContext = this;
-						}
-						if (!Tabs.Contains(tool))
-						{
-							Tabs.Add(tool);
-						}
-						break;
-				}
-			}
+			sessionUiCoordinator.RestoreOrbitWorkspaceToTabs(Tabs, this, "restore-orbit-workspace");
 		}
 
 		private void OnSessionsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -3289,6 +3275,7 @@ namespace Orbit.ViewModels
 				foreach (var item in e.OldItems.OfType<SessionModel>())
 				{
 					item.PropertyChanged -= OnSessionPropertyChanged;
+					sessionPlacementService.Remove(item);
 				}
 			}
 

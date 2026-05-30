@@ -9,7 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     d:DesignHeight="700"
     d:DesignWidth="900"
-    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    Background="{DynamicResource Orbit.Brushes.Surface.Base}"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     mc:Ignorable="d">
     <UserControl.Resources>
@@ -51,8 +51,8 @@
         <Border
             Grid.Row="1"
             Padding="20,12"
-            Background="{DynamicResource MahApps.Brushes.Gray10}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
+            BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
             BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.RowDefinitions>
@@ -161,12 +161,12 @@
                                     <Setter Property="Margin" Value="0,0,16,16" />
                                     <Setter Property="Width" Value="380" />
                                     <Setter Property="Padding" Value="16" />
-                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+                                    <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                     <Setter Property="BorderThickness" Value="1" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsPlugin}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Secondary}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -192,12 +192,12 @@
                                         Grid.Column="0"
                                         Margin="0,0,12,0"
                                         Padding="8"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="4">
                                         <iconPacks:PackIconMaterial
                                             Width="24"
                                             Height="24"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="{Binding Icon}" />
                                     </Border>
 
@@ -211,12 +211,12 @@
                                         <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
                                             <Border
                                                 Padding="6,2"
-                                                Background="{DynamicResource MahApps.Brushes.Accent}"
+                                                Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                                 CornerRadius="2">
                                                 <TextBlock
                                                     FontSize="10"
                                                     FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                                     Text="{Binding ToolType}" />
                                             </Border>
                                             <TextBlock
@@ -255,7 +255,7 @@
                                     Visibility="{Binding IsPlugin, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}">
                                         <Run Text="Author:" />
-                                        <Run Foreground="{DynamicResource MahApps.Brushes.Accent}" Text="{Binding Author, Mode=OneWay}" />
+                                        <Run Foreground="{DynamicResource Orbit.Brushes.Action.Primary}" Text="{Binding Author, Mode=OneWay}" />
                                     </TextBlock>
                                     <TextBlock
                                         Margin="0,2,0,0"
@@ -336,7 +336,7 @@
         <Border
             Grid.Row="3"
             Padding="20,10"
-            Background="{DynamicResource MahApps.Brushes.Gray10}"
+            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
             BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
             BorderThickness="0,1,0,0">
             <Grid>

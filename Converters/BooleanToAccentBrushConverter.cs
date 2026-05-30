@@ -20,14 +20,12 @@ namespace Orbit.Converters
 			{
 				if (boolValue)
 				{
-					// Return accent brush
-					return Application.Current?.TryFindResource("MahApps.Brushes.Accent") as SolidColorBrush
+					return Application.Current?.TryFindResource("Orbit.Brushes.Status.Info") as System.Windows.Media.Brush
 						?? new SolidColorBrush(Colors.Blue);
 				}
 				else
 				{
-					// Return gray brush
-					return Application.Current?.TryFindResource("MahApps.Brushes.Gray6") as SolidColorBrush
+					return Application.Current?.TryFindResource("Orbit.Brushes.Status.Neutral") as System.Windows.Media.Brush
 						?? new SolidColorBrush(Colors.Gray);
 				}
 			}

@@ -15,12 +15,18 @@ namespace Orbit.Tooling
 		private readonly SessionCollectionService _sessionCollectionService;
 		private readonly OrbitLayoutStateService _layoutStateService;
 		private readonly TearOffHostRegistry _tearOffRegistry;
+		private readonly SessionReconciliationService _reconciliationService;
 
-		public OrbitViewTool(SessionCollectionService sessionCollectionService, OrbitLayoutStateService layoutStateService, TearOffHostRegistry tearOffRegistry)
+		public OrbitViewTool(
+			SessionCollectionService sessionCollectionService,
+			OrbitLayoutStateService layoutStateService,
+			TearOffHostRegistry tearOffRegistry,
+			SessionReconciliationService reconciliationService)
 		{
 			_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 			_layoutStateService = layoutStateService ?? throw new ArgumentNullException(nameof(layoutStateService));
 			_tearOffRegistry = tearOffRegistry ?? throw new ArgumentNullException(nameof(tearOffRegistry));
+			_reconciliationService = reconciliationService ?? throw new ArgumentNullException(nameof(reconciliationService));
 		}
 
 		public string Key => "OrbitView";
@@ -51,6 +57,7 @@ namespace Orbit.Tooling
 				_layoutStateService,
 				mainVm.InterTabClient,
 				_tearOffRegistry,
+				_reconciliationService,
 				mainVm.CloseSessionFromTab,
 				session => mainVm.MoveSessionToIndividualTabsCommand.Execute(session),
 				mainVm.AdoptSessionsIntoOrbitWorkspace);

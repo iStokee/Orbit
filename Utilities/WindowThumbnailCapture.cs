@@ -23,6 +23,12 @@ namespace Orbit.Utilities
 		private static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
 
 		[DllImport("user32.dll")]
+		private static extern IntPtr GetDC(IntPtr hWnd);
+
+		[DllImport("user32.dll")]
+		private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+		[DllImport("user32.dll")]
 		private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
 		[DllImport("user32.dll")]
@@ -44,10 +50,14 @@ namespace Orbit.Utilities
 		[DllImport("dwmapi.dll", PreserveSig = true)]
 		private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
+		[DllImport("gdi32.dll")]
+		private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int width, int height, IntPtr hdcSrc, int xSrc, int ySrc, int rop);
+
 		private const uint GA_ROOT = 2;
 		private const int DWMWA_CLOAKED = 14;
 		private const int GWL_STYLE = -16;
 		private const int WS_CHILD = 0x40000000;
+		private const int SRCCOPY = 0x00CC0020;
 
 		[StructLayout(LayoutKind.Sequential)]
 		private struct RECT
@@ -75,7 +85,7 @@ namespace Orbit.Utilities
 		/// <param name="maxWidth">Maximum width for thumbnail (maintains aspect ratio)</param>
 		/// <param name="maxHeight">Maximum height for thumbnail (maintains aspect ratio)</param>
 		/// <returns>BitmapSource thumbnail or null if capture fails</returns>
-		public static BitmapSource CaptureWindow(IntPtr hWnd, int maxWidth = 320, int maxHeight = 240)
+		public static BitmapSource CaptureWindow(IntPtr hWnd, int maxWidth = 320, int maxHeight = 240, bool allowScreenFallback = true)
 		{
 			if (hWnd == IntPtr.Zero)
 				return null;
@@ -92,7 +102,16 @@ namespace Orbit.Utilities
 				if (width <= 0 || height <= 0)
 					return null;
 
-				// Create a bitmap to hold the window image
+				var isChildWindow = IsChildWindow(hWnd);
+				if (isChildWindow)
+				{
+					using var dcCapture = TryCaptureWindowDc(hWnd, width, height);
+					if (dcCapture != null)
+					{
+						return ScaleAndConvert(dcCapture, maxWidth, maxHeight);
+					}
+				}
+
 				using var bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 				using var graphics = Graphics.FromImage(bitmap);
 
@@ -112,7 +131,7 @@ namespace Orbit.Utilities
 				{
 					// Do not CopyFromScreen docked child windows. In Orbit those children live inside a shared
 					// shell surface, so screen-copy fallback can capture whichever tab is currently visible.
-					using var fallback = ShouldUseScreenFallback(hWnd)
+					using var fallback = allowScreenFallback && ShouldUseScreenFallback(hWnd)
 						? TryCaptureFallback(hWnd, width, height)
 						: null;
 					if (fallback == null)
@@ -129,6 +148,49 @@ namespace Orbit.Utilities
 			{
 				System.Diagnostics.Debug.WriteLine($"Failed to capture window thumbnail: {ex.Message}");
 				return null;
+			}
+		}
+
+		private static Bitmap? TryCaptureWindowDc(IntPtr hWnd, int width, int height)
+		{
+			IntPtr sourceDc = IntPtr.Zero;
+			try
+			{
+				sourceDc = GetDC(hWnd);
+				if (sourceDc == IntPtr.Zero)
+				{
+					return null;
+				}
+
+				var bitmap = new Bitmap(width, height, DrawingPixelFormat.Format32bppArgb);
+				using var graphics = Graphics.FromImage(bitmap);
+				var targetDc = graphics.GetHdc();
+				try
+				{
+					if (!BitBlt(targetDc, 0, 0, width, height, sourceDc, 0, 0, SRCCOPY))
+					{
+						bitmap.Dispose();
+						return null;
+					}
+				}
+				finally
+				{
+					graphics.ReleaseHdc(targetDc);
+				}
+
+				return bitmap;
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Window DC thumbnail capture failed: {ex.Message}");
+				return null;
+			}
+			finally
+			{
+				if (sourceDc != IntPtr.Zero)
+				{
+					ReleaseDC(hWnd, sourceDc);
+				}
 			}
 		}
 
@@ -197,13 +259,23 @@ namespace Orbit.Utilities
 
 			try
 			{
-				var style = GetWindowLong(hWnd, GWL_STYLE);
-				return (style & WS_CHILD) == 0;
+				return !IsChildWindow(hWnd);
 			}
 			catch
 			{
 				return false;
 			}
+		}
+
+		private static bool IsChildWindow(IntPtr hWnd)
+		{
+			if (hWnd == IntPtr.Zero)
+			{
+				return false;
+			}
+
+			var style = GetWindowLong(hWnd, GWL_STYLE);
+			return (style & WS_CHILD) != 0;
 		}
 
 		private static bool PointBelongsToWindow(IntPtr window, POINT screenPoint)

@@ -16,13 +16,16 @@ namespace Orbit.Services
 	public class ScriptIntegrationService
 	{
 		private readonly SessionCollectionService _sessionCollection;
+		private readonly SessionPlacementService _sessionPlacement;
 		private readonly OrbitLayoutStateService _orbitLayoutState;
 
 		public ScriptIntegrationService(
 			SessionCollectionService sessionCollection,
+			SessionPlacementService sessionPlacement,
 			OrbitLayoutStateService orbitLayoutState)
 		{
 			_sessionCollection = sessionCollection ?? throw new ArgumentNullException(nameof(sessionCollection));
+			_sessionPlacement = sessionPlacement ?? throw new ArgumentNullException(nameof(sessionPlacement));
 			_orbitLayoutState = orbitLayoutState ?? throw new ArgumentNullException(nameof(orbitLayoutState));
 		}
 
@@ -76,6 +79,10 @@ namespace Orbit.Services
 			if (existingSession != null)
 			{
 				existingSession.Name = tabName;
+				if (!ReferenceEquals(existingSession.RSProcess, scriptProcess))
+				{
+					try { existingSession.RSProcess?.Dispose(); } catch { }
+				}
 				existingSession.RSProcess = scriptProcess;
 				existingSession.UpdateState(SessionState.ClientReady);
 				existingSession.UpdateInjectionState(InjectionState.NotReady);
@@ -119,7 +126,10 @@ namespace Orbit.Services
 
 					if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
 					{
-						_orbitLayoutState.AddItem(session);
+						using (_sessionPlacement.BeginMove(session, SessionPlacementKind.OrbitWorkspace))
+						{
+							_orbitLayoutState.AddItem(session);
+						}
 						mainVm?.OpenOrbitViewCommand?.Execute(null);
 						mainVm?.ActivateSession(session);
 				}
@@ -127,6 +137,7 @@ namespace Orbit.Services
 				{
 					if (mainVm != null && !mainVm.Tabs.Contains(session))
 					{
+						_sessionPlacement.SetPlacement(session, SessionPlacementKind.MainTabs);
 						mainVm.Tabs.Add(session);
 						mainVm.SelectedSession = session;
 						mainVm.SelectedTab = session;
@@ -188,6 +199,7 @@ namespace Orbit.Services
 					}
 				}
 
+				_sessionPlacement.Remove(session);
 				_sessionCollection.Sessions.Remove(session);
 			});
 

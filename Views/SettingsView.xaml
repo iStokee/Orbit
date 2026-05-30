@@ -31,8 +31,8 @@
             <Setter Property="Margin" Value="12,0,0,0" />
             <Setter Property="Padding" Value="6,2" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
@@ -94,7 +94,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -102,7 +102,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="PlayCircleOutline" />
                                     </Border>
                                     <StackPanel>
@@ -120,7 +120,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -149,7 +149,7 @@
                                             Content="Config" />
                                     </StackPanel>
 
-                                    <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                    <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
@@ -192,7 +192,7 @@
                                         <Border
                                             Width="32"
                                             Height="32"
-                                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                                            Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                             CornerRadius="16"
                                             Opacity="0.8">
                                             <iconPacks:PackIconMaterial
@@ -200,7 +200,7 @@
                                                 Height="18"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                                Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                                 Kind="Download" />
                                         </Border>
                                         <TextBlock
@@ -317,7 +317,7 @@
                                                             <Setter Property="Foreground" Value="{DynamicResource Orbit.UpdateBadgeBrush}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding HasUpdateError}" Value="True">
-                                                            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ValidationText5}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Status.Error}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -338,7 +338,7 @@
                                                             <Setter Property="FontWeight" Value="SemiBold" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding HasUpdateError}" Value="True">
-                                                            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ValidationText5}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Status.Error}" />
                                                             <Setter Property="FontWeight" Value="SemiBold" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -464,7 +464,7 @@
                                 <Border
                                     Margin="0,10,0,0"
                                     Padding="12"
-                                    Background="{DynamicResource MahApps.Brushes.Validation5}"
+                                    Background="{DynamicResource Orbit.Brushes.Status.Error}"
                                     BorderBrush="{DynamicResource MahApps.Brushes.Validation3}"
                                     BorderThickness="1"
                                     CornerRadius="4"
@@ -475,10 +475,10 @@
                                             Height="16"
                                             Margin="0,0,8,0"
                                             VerticalAlignment="Top"
-                                            Foreground="{DynamicResource MahApps.Brushes.ValidationText5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Error}"
                                             Kind="AlertCircleOutline" />
                                         <TextBlock
-                                            Foreground="{DynamicResource MahApps.Brushes.ValidationText5}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Error}"
                                             Text="{Binding UpdateErrorMessage, Mode=OneWay}"
                                             TextWrapping="Wrap" />
                                     </StackPanel>
@@ -494,7 +494,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -502,7 +502,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="ChartTimelineVariant" />
                                     </Border>
                                     <StackPanel>
@@ -579,7 +579,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -587,7 +587,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="BorderAllVariant" />
                                     </Border>
                                     <StackPanel>
@@ -615,8 +615,8 @@
                                     <StackPanel Grid.Column="0" Width="280">
                                         <Border
                                             Padding="8"
-                                            Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                            Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                                            BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                             BorderThickness="1"
                                             CornerRadius="14">
                                             <orbitControls:FloatingMenuSnapPreview
@@ -836,7 +836,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -845,7 +845,7 @@
                                             Margin="0,0,0,1"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="TuneVariant" />
                                     </Border>
                                     <StackPanel>
@@ -967,7 +967,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -975,7 +975,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="CrosshairsGps" />
                                     </Border>
                                     <StackPanel>
@@ -1120,7 +1120,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -1128,7 +1128,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="ViewGrid" />
                                     </Border>
                                     <StackPanel>
@@ -1147,7 +1147,7 @@
                                 </StackPanel>
 
                                 <!--  Grid Density  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1184,7 +1184,7 @@
                                 </StackPanel>
 
                                 <!--  UI Compactness  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1221,7 +1221,7 @@
                                 </StackPanel>
 
                                 <!--  Tab Header Size  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1258,7 +1258,7 @@
                                 </StackPanel>
 
                                 <!--  Border Thickness  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1295,7 +1295,7 @@
                                 </StackPanel>
 
                                 <!--  Auto-Open on Startup  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
                                 <StackPanel>
                                     <Controls:ToggleSwitch Header="Auto-open Orbit View on Startup" IsOn="{Binding AutoOpenOrbitViewOnStartup, Mode=TwoWay}" />
                                     <TextBlock
@@ -1354,7 +1354,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -1362,7 +1362,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="FileCodeOutline" />
                                     </Border>
                                     <StackPanel>
@@ -1380,7 +1380,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Separator Margin="0,12,0,12" Background="{DynamicResource MahApps.Brushes.Gray7}" />
+                                <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
 
                                 <ComboBox
                                     Height="30"
@@ -1408,8 +1408,8 @@
                                 <Border
                                     Margin="0,10,0,0"
                                     Padding="12"
-                                    Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                     BorderThickness="1"
                                     CornerRadius="4">
                                     <StackPanel>
@@ -1452,7 +1452,7 @@
                                         Width="32"
                                         Height="32"
                                         Margin="0,0,12,0"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                         CornerRadius="16"
                                         Opacity="0.8">
                                         <iconPacks:PackIconMaterial
@@ -1460,7 +1460,7 @@
                                             Height="18"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Foreground="{DynamicResource MahApps.Brushes.AccentForeground}"
+                                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                             Kind="ChartTimelineVariant" />
                                     </Border>
                                     <StackPanel>
@@ -1496,8 +1496,8 @@
                                 <Border
                                     Margin="0,12,0,0"
                                     Padding="12"
-                                    Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                    BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                                    BorderBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
                                     BorderThickness="1"
                                     CornerRadius="8">
                                     <StackPanel>
@@ -1522,8 +1522,8 @@
                                             <Border
                                                 MinWidth="120"
                                                 Padding="10,6"
-                                                Background="{DynamicResource MahApps.Brushes.Gray7}"
-                                                BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                                Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
+                                                BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                                 BorderThickness="1"
                                                 CornerRadius="6">
                                                 <TextBlock
@@ -1564,7 +1564,7 @@
                                     Visibility="{Binding IsThemeLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Border
                                         Padding="12"
-                                        Background="{DynamicResource MahApps.Brushes.Gray7}"
+                                        Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
                                         CornerRadius="8">
                                         <TextBlock
                                             FontSize="12"
@@ -1598,7 +1598,7 @@
                                     Visibility="{Binding IsOrbitInteractionLoggingEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Border
                                         Padding="12"
-                                        Background="{DynamicResource MahApps.Brushes.Gray7}"
+                                        Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
                                         CornerRadius="8">
                                         <TextBlock
                                             FontSize="12"

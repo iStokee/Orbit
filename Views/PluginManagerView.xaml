@@ -11,7 +11,7 @@
     d:DataContext="{d:DesignInstance Type=viewmodels:PluginManagerViewModel, IsDesignTimeCreatable=False}"
     d:DesignHeight="600"
     d:DesignWidth="800"
-    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    Background="{DynamicResource Orbit.Brushes.Surface.Base}"
     Unloaded="OnUnloaded"
     mc:Ignorable="d">
     <UserControl.Resources>
@@ -132,8 +132,8 @@
                                 <Border
                                     Margin="0,0,0,10"
                                     Padding="20"
-                                    Background="{DynamicResource MahApps.Brushes.Gray9}"
-                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+                                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                     BorderThickness="1"
                                     CornerRadius="8">
                                     <Grid>
@@ -162,7 +162,7 @@
                                                 <Run Text="v" />
                                                 <Run Text="{Binding Version}" />
                                                 <Run Text=" by " />
-                                                <Run Foreground="{DynamicResource MahApps.Brushes.Accent}" Text="{Binding Author}" />
+                                                <Run Foreground="{DynamicResource Orbit.Brushes.Action.Primary}" Text="{Binding Author}" />
                                             </TextBlock>
                                         </StackPanel>
 
@@ -277,8 +277,8 @@
                     Margin="0"
                     Padding="32"
                     Panel.ZIndex="1"
-                    Background="{DynamicResource MahApps.Brushes.Gray9}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Visibility="{Binding Plugins.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=Zero}">
@@ -291,7 +291,7 @@
                             Width="36"
                             Height="36"
                             HorizontalAlignment="Center"
-                            Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                            Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                             Kind="PuzzleRemove" />
                         <TextBlock
                             HorizontalAlignment="Center"
@@ -316,8 +316,8 @@
             Grid.Row="2"
             Margin="0,16,0,0"
             Padding="16,8"
-            Background="{DynamicResource MahApps.Brushes.Gray9}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Gray6}"
+            Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+            BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
             BorderThickness="0,1,0,0">
             <Grid>
                 <TextBlock

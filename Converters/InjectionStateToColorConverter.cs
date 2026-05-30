@@ -26,16 +26,16 @@ namespace Orbit.Converters
 			{
 				return state switch
 				{
-					InjectionState.NotReady => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray),
-					InjectionState.Ready => GetThemeBrush("MahApps.Brushes.Accent", FallbackIndigo),
-					InjectionState.Injecting => GetThemeBrush("MahApps.Brushes.Accent2", FallbackBlue),
-					InjectionState.Injected => GetThemeBrush("MahApps.Brushes.Accent3", FallbackGreen),
-					InjectionState.Failed => GetThemeBrush("MahApps.Brushes.SystemControlErrorTextForeground", FallbackRed),
-					_ => GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray)
+					InjectionState.NotReady => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray),
+					InjectionState.Ready => GetThemeBrush("Orbit.Brushes.Status.Info", FallbackIndigo),
+					InjectionState.Injecting => GetThemeBrush("Orbit.Brushes.Status.Info", FallbackBlue),
+					InjectionState.Injected => GetThemeBrush("Orbit.Brushes.Status.Success", FallbackGreen),
+					InjectionState.Failed => GetThemeBrush("Orbit.Brushes.Status.Error", FallbackRed),
+					_ => GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray)
 				};
 			}
 
-			return GetThemeBrush("MahApps.Brushes.Gray5", FallbackGray);
+			return GetThemeBrush("Orbit.Brushes.Status.Neutral", FallbackGray);
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

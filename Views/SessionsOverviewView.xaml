@@ -53,7 +53,7 @@
                     <Setter Property="Padding" Value="8" />
                 </DataTrigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -87,23 +87,37 @@
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Session Manager" />
                         <WrapPanel Margin="0,4,0,0" VerticalAlignment="Center">
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
+                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Surface.Muted}" CornerRadius="3">
+                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.OnMuted}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
                             </Border>
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
+                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Action.Primary}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
                             </Border>
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource MahApps.Brushes.Accent2}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts: {0}'}" />
+                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Action.Secondary}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts: {0}'}" />
                             </Border>
-                            <Border Padding="8,2" Background="{DynamicResource MahApps.Brushes.Validation5}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.ValidationText5}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
+                            <Border Padding="8,2" Background="{DynamicResource Orbit.Brushes.Status.Error}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Error}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
+                            </Border>
+                            <Border Margin="6,0,0,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Status.Warning}" CornerRadius="3">
+                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Warning}" Text="{Binding ConflictingUiOwnershipCount, StringFormat='UI Conflicts: {0}'}" />
                             </Border>
                         </WrapPanel>
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="11"
+                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                            Text="{Binding DiagnosticsStatus}"
+                            TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button
+                        Margin="0,0,10,0"
+                        Command="{Binding DumpDiagnosticsCommand}"
+                        Content="Dump Diagnostics"
+                        Style="{StaticResource MahApps.Styles.Button.Square}" />
                     <TextBlock Margin="0,0,8,0" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Density:" />
                     <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Full"
                                   IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
@@ -146,28 +160,28 @@
 
                                     <Grid Grid.Column="0" Width="44" Height="44" Margin="0,0,10,0" VerticalAlignment="Top">
                                         <Border CornerRadius="12" Background="{Binding State, Converter={StaticResource SessionStateToColorConverter}}" />
-                                        <iconPacks:PackIconMaterial Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Kind="Monitor" />
-                                        <Ellipse Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Fill="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}" Stroke="{DynamicResource MahApps.Brushes.Gray8}" StrokeThickness="1" />
+                                        <iconPacks:PackIconMaterial Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Info}" Kind="Monitor" />
+                                        <Ellipse Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Fill="{Binding InjectionState, Converter={StaticResource InjectionStateToColorConverter}}" Stroke="{DynamicResource Orbit.Brushes.Surface.Muted}" StrokeThickness="1" />
                                     </Grid>
 
                                     <StackPanel Grid.Column="1">
                                         <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding DisplayName}" />
 	                                        <WrapPanel Margin="0,4,0,0">
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding State}" />
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Surface.Muted}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.OnMuted}" Text="{Binding State}" />
 	                                            </Border>
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Accent}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.AccentForeground}" Text="{Binding InjectionState}" />
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Action.Primary}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding InjectionState}" />
 	                                            </Border>
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding NativeDebugMenuStatus, StringFormat='Menu: {0}'}" />
+	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Surface.Hover}" CornerRadius="3">
+	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnHover}" Text="{Binding NativeDebugMenuStatus, StringFormat='Menu: {0}'}" />
 	                                            </Border>
 	                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
 	                                        </WrapPanel>
                                     </StackPanel>
                                 </Grid>
 
-                                <Border Margin="0,8,0,0" Padding="8,6" Background="{DynamicResource MahApps.Brushes.Gray8}" BorderBrush="{DynamicResource MahApps.Brushes.Gray6}" BorderThickness="1" CornerRadius="4">
+                                <Border Margin="0,8,0,0" Padding="8,6" Background="{DynamicResource Orbit.Brushes.Surface.Muted}" BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}" BorderThickness="1" CornerRadius="4">
                                     <StackPanel>
                                         <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding ScriptRuntimeStatus, StringFormat=Script: {0}}" />
                                         <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding ActiveScriptName, StringFormat=Active: {0}}" />
@@ -175,9 +189,9 @@
                                     </StackPanel>
                                 </Border>
 
-                                <Border Margin="0,8,0,0" Padding="8,5" Background="{DynamicResource MahApps.Brushes.Gray9}" BorderBrush="{DynamicResource MahApps.Brushes.Accent3}" BorderThickness="1" CornerRadius="3" Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
+                                <Border Margin="0,8,0,0" Padding="8,5" Background="{DynamicResource Orbit.Brushes.Surface.Subtle}" BorderBrush="{DynamicResource Orbit.Brushes.Status.Warning}" BorderThickness="1" CornerRadius="3" Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
                                     <StackPanel Orientation="Horizontal">
-                                        <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.Accent}" Kind="AlertCircle" />
+                                        <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource Orbit.Brushes.Status.Warning}" Kind="AlertCircle" />
                                         <TextBlock MaxWidth="700" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Text="{Binding LastError}" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
@@ -224,7 +238,7 @@
                                         Command="{Binding DataContext.CloseCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Close"
-                                        Foreground="#F44336"
+                                        Foreground="{DynamicResource Orbit.Brushes.Status.Error}"
                                         Style="{StaticResource MahApps.Styles.Button.Square}" />
                                 </WrapPanel>
                             </StackPanel>

@@ -74,8 +74,8 @@
         </Style>
 
         <Style x:Key="SessionCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray9}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="8" />
@@ -104,14 +104,14 @@
 
         <!--  Thumbnail card style  -->
         <Style x:Key="ThumbnailCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray6}" />
+            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                     <Setter Property="BorderThickness" Value="2" />
                 </Trigger>
             </Style.Triggers>
@@ -308,7 +308,7 @@
                 Padding="8,6,16,8"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto">
-                <ItemsControl Margin="0" ItemsSource="{Binding Sessions}">
+                <ItemsControl Margin="0" ItemsSource="{Binding ActiveSessions}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -392,7 +392,7 @@
                                             <!--  Overlay with session info  -->
                                             <Border VerticalAlignment="Bottom">
                                                 <Border.Background>
-                                                    <SolidColorBrush Opacity="0.85" Color="{DynamicResource MahApps.Colors.ThemeBackground}" />
+                                                    <SolidColorBrush Opacity="0.85" Color="{DynamicResource Orbit.Colors.Surface.Base}" />
                                                 </Border.Background>
                                                 <Grid Margin="8">
                                                     <Grid.RowDefinitions>
@@ -435,7 +435,7 @@
                                                 Padding="6,3"
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Top"
-                                                Background="{DynamicResource MahApps.Brushes.Accent}"
+                                                Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                                                 CornerRadius="0,8,0,8"
                                                 Visibility="{Binding IsExternalScript, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <iconPacks:PackIconMaterial

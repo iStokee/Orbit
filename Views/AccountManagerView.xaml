@@ -75,7 +75,7 @@
                         MinWidth="240"
                         Background="Transparent"
                         BorderThickness="1"
-                        BorderBrush="{DynamicResource MahApps.Brushes.Gray6}">
+                        BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -237,8 +237,8 @@
                     Grid.Row="1"
                     Margin="0,10,0,0"
                     Padding="48,32"
-                    Background="{DynamicResource MahApps.Brushes.Gray9}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Visibility="{Binding FilteredAccounts.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=Zero}">
@@ -277,7 +277,7 @@
         <Border
             Grid.Row="4"
             Style="{StaticResource Orbit.ToolCard}"
-            BorderBrush="{DynamicResource MahApps.Brushes.Accent}">
+            BorderBrush="{DynamicResource Orbit.Brushes.Action.Primary}">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <Grid MinWidth="640">
                 <Grid.ColumnDefinitions>

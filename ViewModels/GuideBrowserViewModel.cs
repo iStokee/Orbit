@@ -190,12 +190,12 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
         document.TextAlignment = TextAlignment.Left;
         document.Background = System.Windows.Media.Brushes.Transparent;
 
-        if (TryFindResource("MahApps.Brushes.Text") is System.Windows.Media.Brush textBrush)
-        {
-            document.SetValue(TextElement.ForegroundProperty, textBrush);
-        }
+	        if (TryFindResource("Orbit.Brushes.Text.Primary") is System.Windows.Media.Brush textBrush)
+	        {
+	            document.SetValue(TextElement.ForegroundProperty, textBrush);
+	        }
 
-		if (TryFindResource("MahApps.Brushes.Accent") is System.Windows.Media.Brush accentBrush)
+			if (TryFindResource("Orbit.Brushes.Status.Info") is System.Windows.Media.Brush accentBrush)
 		{
 			foreach (var block in document.Blocks.OfType<Paragraph>())
 			{
@@ -240,10 +240,10 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI")
         };
 
-        if (TryFindResource("MahApps.Brushes.Text") is System.Windows.Media.Brush textBrush)
-        {
-            document.SetValue(TextElement.ForegroundProperty, textBrush);
-        }
+	        if (TryFindResource("Orbit.Brushes.Text.Primary") is System.Windows.Media.Brush textBrush)
+	        {
+	            document.SetValue(TextElement.ForegroundProperty, textBrush);
+	        }
 
 		return document;
 	}
@@ -289,10 +289,10 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI")
         };
 
-        if (TryFindResource("MahApps.Brushes.Text") is System.Windows.Media.Brush textBrush)
-        {
-            document.SetValue(TextElement.ForegroundProperty, textBrush);
-        }
+	        if (TryFindResource("Orbit.Brushes.Text.Primary") is System.Windows.Media.Brush textBrush)
+	        {
+	            document.SetValue(TextElement.ForegroundProperty, textBrush);
+	        }
 
         return document;
 	}

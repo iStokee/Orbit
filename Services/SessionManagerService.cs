@@ -86,8 +86,9 @@ namespace Orbit.Services
 					{
 						Console.WriteLine($"[Orbit] Re-applying MESharp commands after docking for session '{session.Name}'...");
 
+						var inputMode = session.NativeDebugMenuVisible ? 0 : 1;
 						var applied = await OrbitCommandClient
-							.SendInputModeWithRetryAsync(1, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+							.SendInputModeWithRetryAsync(inputMode, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
 							.ConfigureAwait(false);
 						if (!applied)
 						{
@@ -231,13 +232,15 @@ namespace Orbit.Services
 						Console.WriteLine("[Orbit] MCP policy: runtime auto-start on injection is disabled.");
 					}
 
-					// Ensure ImGui does not capture keyboard input by default
+					// Keep normal gameplay passthrough by default, but allow ImGui capture when
+					// the native debug menu is intentionally shown after injection.
+					var postInjectInputMode = HideNativeDebugMenuOnInject ? 1 : 0;
 					var inputModeApplied = await OrbitCommandClient
-						.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
+						.SendInputModeWithRetryAsync(postInjectInputMode, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
 						.ConfigureAwait(true);
 					if (!inputModeApplied)
 					{
-						Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode to passthrough (keyboard capture may persist).");
+						Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode after injection.");
 					}
 
 						if (HideNativeDebugMenuOnInject)
@@ -251,7 +254,7 @@ namespace Orbit.Services
 							}
 							else
 							{
-								session.NativeDebugMenuVisible = false;
+								session.SetNativeDebugMenuVisible(false, "post-injection preference");
 							}
 						}
 						else
@@ -265,7 +268,7 @@ namespace Orbit.Services
 							}
 							else
 							{
-								session.NativeDebugMenuVisible = true;
+								session.SetNativeDebugMenuVisible(true, "post-injection preference");
 							}
 						}
 
@@ -316,7 +319,21 @@ namespace Orbit.Services
 									await OrbitCommandClient
 										.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
 										.ConfigureAwait(false);
-									session.NativeDebugMenuVisible = false;
+									session.SetNativeDebugMenuVisible(false, "deferred post-injection safeguard");
+
+									await OrbitCommandClient
+										.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
+								}
+								else if (!HideNativeDebugMenuOnInject && session.NativeDebugMenuVisible)
+								{
+									await OrbitCommandClient
+										.SendInputModeWithRetryAsync(0, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
+
+									await OrbitCommandClient
+										.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+										.ConfigureAwait(false);
 
 									await OrbitCommandClient
 										.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
@@ -382,53 +399,6 @@ namespace Orbit.Services
 			}
 			HideOrMinimizeProcessWindowSilently(process);
 
-			// Detach embedded host and restore original top-level parent/styles first.
-			// This improves CloseMainWindow/WM_CLOSE behavior versus signalling a hidden child window.
-			if (session.HostControl is ChildClientView childHost)
-			{
-				childHost.DetachSession(restoreParent: true);
-			}
-			else if (session.RSForm is RSForm standaloneForm)
-			{
-				try
-				{
-					standaloneForm.Undock(restoreParent: true, restoreStyles: true);
-					if (standaloneForm.InvokeRequired)
-					{
-						standaloneForm.Invoke(new Action(() =>
-						{
-							try
-							{
-								if (!standaloneForm.IsDisposed)
-								{
-									standaloneForm.Close();
-								}
-							}
-							catch
-							{
-								// best effort
-							}
-						}));
-					}
-					else if (!standaloneForm.IsDisposed)
-					{
-						standaloneForm.Close();
-					}
-
-					if (!standaloneForm.IsDisposed)
-					{
-						standaloneForm.Dispose();
-					}
-				}
-				catch
-				{
-					// WinForms teardown can fail if the form is already closing; ignore.
-				}
-			}
-
-			// After unparent/undock, force the client window invisible so shutdown appears seamless to users.
-			HideOrMinimizeProcessWindowSilently(process);
-
 			Process parentProcess = null;
 			if (session.ParentProcessId is int parentPid)
 			{
@@ -456,14 +426,40 @@ namespace Orbit.Services
 				(parentProcess, "launcher", nint.Zero, false)
 			}.Where(p => p.process != null).ToList();
 
+			var clientExited = process == null;
 			foreach (var target in shutdownTargets)
 			{
-				var exited = await TryShutdownProcessAsync(target.process, target.fallbackHandle, target.label, session.Name, shutdownTimeout, cancellationToken, target.allowKill).ConfigureAwait(false);
+				var isClient = string.Equals(target.label, "client", StringComparison.Ordinal);
+				var exited = await TryShutdownProcessAsync(
+					target.process,
+					target.fallbackHandle,
+					target.label,
+					session.Name,
+					shutdownTimeout,
+					cancellationToken,
+					target.allowKill,
+					disposeProcess: !isClient).ConfigureAwait(false);
+				if (isClient)
+				{
+					clientExited = exited;
+				}
+
 				if (exited)
 				{
 					TryUnregisterProcess(target.process.Id);
 				}
 			}
+
+			if (!clientExited)
+			{
+				var recoveryState = session.InjectionState == InjectionState.Injected
+					? SessionState.Injected
+					: SessionState.ClientReady;
+				session.UpdateState(recoveryState, clearError: false);
+				throw new TimeoutException($"Session '{session.Name}' client did not exit within {shutdownTimeout.TotalSeconds:F1}s.");
+			}
+
+			DisposeSessionHost(session);
 
 			session.RSForm = null;
 			session.RSProcess = null;
@@ -667,7 +663,15 @@ namespace Orbit.Services
 			}
 		}
 
-		private async Task<bool> TryShutdownProcessAsync(Process process, nint fallbackHandle, string processLabel, string sessionName, TimeSpan timeout, CancellationToken cancellationToken, bool forceKillOnTimeout)
+		private async Task<bool> TryShutdownProcessAsync(
+			Process process,
+			nint fallbackHandle,
+			string processLabel,
+			string sessionName,
+			TimeSpan timeout,
+			CancellationToken cancellationToken,
+			bool forceKillOnTimeout,
+			bool disposeProcess = true)
 		{
 			if (process == null)
 				return true;
@@ -720,7 +724,71 @@ namespace Orbit.Services
 			}
 			finally
 			{
-				process.Dispose();
+				if (disposeProcess || SafeHasExited(process))
+				{
+					process.Dispose();
+				}
+			}
+		}
+
+		private static bool SafeHasExited(Process process)
+		{
+			try
+			{
+				return process == null || process.HasExited;
+			}
+			catch
+			{
+				return true;
+			}
+		}
+
+		private static void DisposeSessionHost(SessionModel session)
+		{
+			if (session?.HostControl is ChildClientView childHost)
+			{
+				childHost.DetachSession(restoreParent: true);
+				return;
+			}
+
+			if (session?.RSForm is not RSForm standaloneForm)
+			{
+				return;
+			}
+
+			try
+			{
+				standaloneForm.Undock(restoreParent: true, restoreStyles: true);
+				if (standaloneForm.InvokeRequired)
+				{
+					standaloneForm.Invoke(new Action(() =>
+					{
+						try
+						{
+							if (!standaloneForm.IsDisposed)
+							{
+								standaloneForm.Close();
+							}
+						}
+						catch
+						{
+							// best effort
+						}
+					}));
+				}
+				else if (!standaloneForm.IsDisposed)
+				{
+					standaloneForm.Close();
+				}
+
+				if (!standaloneForm.IsDisposed)
+				{
+					standaloneForm.Dispose();
+				}
+			}
+			catch
+			{
+				// WinForms teardown can fail if the form is already closing; ignore.
 			}
 		}
 

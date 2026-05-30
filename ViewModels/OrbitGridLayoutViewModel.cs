@@ -46,6 +46,7 @@ namespace Orbit.ViewModels
 		private readonly OrbitLayoutStateService _layoutStateService;
 		private readonly IInterTabClient _interTabClient;
 		private readonly TearOffHostRegistry _tearOffRegistry;
+		private readonly SessionReconciliationService _reconciliationService;
 		private readonly Action<SessionModel> _closeSession;
 		private readonly Action<SessionModel> _moveToIndividualTabs;
 		private readonly Action _adoptSessionsIntoOrbit;
@@ -74,6 +75,7 @@ namespace Orbit.ViewModels
 		OrbitLayoutStateService layoutStateService,
 		IInterTabClient interTabClient,
 		TearOffHostRegistry tearOffRegistry,
+		SessionReconciliationService reconciliationService,
 		Action<SessionModel> closeSession,
 		Action<SessionModel> moveToIndividualTabs,
 		Action adoptSessionsIntoOrbit)
@@ -82,11 +84,13 @@ namespace Orbit.ViewModels
 		_layoutStateService = layoutStateService ?? throw new ArgumentNullException(nameof(layoutStateService));
 		_interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
 		_tearOffRegistry = tearOffRegistry ?? throw new ArgumentNullException(nameof(tearOffRegistry));
+		_reconciliationService = reconciliationService ?? throw new ArgumentNullException(nameof(reconciliationService));
 		_closeSession = closeSession ?? throw new ArgumentNullException(nameof(closeSession));
 		_moveToIndividualTabs = moveToIndividualTabs ?? throw new ArgumentNullException(nameof(moveToIndividualTabs));
 		_adoptSessionsIntoOrbit = adoptSessionsIntoOrbit ?? throw new ArgumentNullException(nameof(adoptSessionsIntoOrbit));
 
-			CollectionChangedEventManager.AddHandler(Items, OnWorkspaceItemsChanged);
+				CollectionChangedEventManager.AddHandler(Items, OnWorkspaceItemsChanged);
+				CollectionChangedEventManager.AddHandler(Sessions, OnSessionsCollectionChanged);
 
 			MoveToIndividualTabsCommand = new RelayCommand<object?>(o =>
 			{
@@ -490,15 +494,25 @@ namespace Orbit.ViewModels
 				var allControls = _observedTabControls
 					.Where(c => c != null && c.ItemsSource == null)
 					.ToList();
-				if (allControls.Count == 0 && _sessionLayout != null)
-				{
-					allControls = GetAllTabControls(_sessionLayout)
-						.Where(c => c.ItemsSource == null)
-						.ToList();
-				}
+					if (allControls.Count == 0 && _sessionLayout != null)
+					{
+						allControls = GetAllTabControls(_sessionLayout)
+							.Where(c => c.ItemsSource == null)
+							.ToList();
+					}
 
-					// Deduplicate: drag-to-split can temporarily leave the same item in two controls.
-					// Keep one owner control per item.
+					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
+					var ownership = _reconciliationService.CaptureUiOwnership(Items.Cast<object>());
+					foreach (var (_, tabControl) in _tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView))
+					{
+						if (tabControl?.ItemsSource == null && !allControls.Contains(tabControl))
+						{
+							allControls.Add(tabControl);
+						}
+					}
+
+						// Deduplicate: drag-to-split can temporarily leave the same item in two controls.
+						// Keep one owner control per item.
 					var ownerByItem = new Dictionary<object, TabablzControl>(ReferenceEqualityComparer.Instance);
 					var removals = new List<(TabablzControl control, object item)>();
 					foreach (var control in allControls)
@@ -545,35 +559,7 @@ namespace Orbit.ViewModels
 					// and removes workspace membership only when the item has clearly moved elsewhere.
 					var workspaceItems = Items.OfType<object>().ToList();
 
-					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
-					var orbitTearOffWindows = new HashSet<Window>(
-						_tearOffRegistry
-							.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
-							.Select(h => h.Window));
-					var elsewhere = new HashSet<object>(ReferenceEqualityComparer.Instance);
-					var elsewhereNonOrbit = new HashSet<object>(ReferenceEqualityComparer.Instance);
-					foreach (var window in windows)
-					{
-						if (window.DataContext is not MainWindowViewModel vm)
-						{
-							continue;
-						}
-
-						foreach (var t in vm.Tabs)
-						{
-							if (t != null)
-							{
-								elsewhere.Add(t);
-								// Any item living in a MainWindowViewModel.Tabs strip is considered
-								// outside Orbit workspace ownership, even if that window originated
-								// from an Orbit tear-off. This prevents HostControl "snap-back"
-								// where Orbit View steals focus/content back and leaves empty shells.
-								elsewhereNonOrbit.Add(t);
-							}
-						}
-					}
-
-				// Ensure workspace items exist in some Orbit control; if not, re-home them into the least-loaded cell.
+					// Ensure workspace items exist in some Orbit control; if not, re-home them into the least-loaded cell.
 				foreach (var item in workspaceItems)
 				{
 					if (ownerByItem.ContainsKey(item))
@@ -581,8 +567,8 @@ namespace Orbit.ViewModels
 						continue;
 					}
 
-					// If the item is hosted elsewhere (main tabs), it has been moved out of Orbit View.
-					if (elsewhere.Contains(item))
+					// If the item is hosted in a non-Orbit tab strip, it has been moved out of Orbit View.
+					if (ownership.IsInNonOrbitTabs(item))
 					{
 						continue;
 					}
@@ -591,6 +577,13 @@ namespace Orbit.ViewModels
 					if (target == null)
 					{
 						LogReconcileDiagnostic($"orphan-miss:{item.GetType().Name}", $"[OrbitView][Reconcile] Unable to recover orphan workspace item ({item.GetType().Name}) after {_lastReconcileReason}.");
+						if (item is SessionModel missedSession)
+						{
+							_reconciliationService.LogDecision(
+								"orbit-orphan-miss",
+								_reconciliationService.Capture(missedSession, Items.Cast<object>(), _lastReconcileReason),
+								"no target tab control available");
+						}
 						continue;
 					}
 
@@ -603,13 +596,19 @@ namespace Orbit.ViewModels
 						ownerByItem[item] = target;
 						_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(target);
 						LogReconcileDiagnostic($"orphan-rehome:{item.GetType().Name}", $"[OrbitView][Reconcile] Re-homed orphan workspace item ({item.GetType().Name}) after {_lastReconcileReason}.");
+						if (item is SessionModel rehomedSession)
+						{
+							_reconciliationService.LogDecision(
+								"orbit-orphan-rehome",
+								_reconciliationService.Capture(rehomedSession, Items.Cast<object>(), _lastReconcileReason));
+						}
 					}
 					catch { /* best effort */ }
 				}
 
 					// If an item is now hosted in a non-Orbit tab surface, evict it from Orbit controls.
 					// This prevents duplicate session/tool tabs when users tear out from Orbit into independent hosts.
-					foreach (var movedElsewhere in ownerByItem.Keys.Where(item => elsewhereNonOrbit.Contains(item)).ToList())
+					foreach (var movedElsewhere in ownerByItem.Keys.Where(ownership.IsInNonOrbitTabs).ToList())
 					{
 						if (ownerByItem.TryGetValue(movedElsewhere, out var owner))
 						{
@@ -638,11 +637,28 @@ namespace Orbit.ViewModels
 
 				// Sessions no longer present in the global session collection are stale UI shells.
 				// Remove them from Orbit-owned controls so reconcile cannot rehydrate them into Items.
+				foreach (var conflictingSession in actual
+					.OfType<SessionModel>()
+					.Select(session => _reconciliationService.Capture(session, Items.Cast<object>(), _lastReconcileReason))
+					.Where(snapshot => snapshot.HasConflictingUiOwnership)
+					.ToList())
+				{
+					_reconciliationService.LogDecision(
+						"orbit-conflicting-ownership",
+						conflictingSession,
+						"session is hosted by Orbit and non-Orbit UI simultaneously");
+				}
+
 				foreach (var staleSession in actual
 					.OfType<SessionModel>()
 					.Where(session => !Sessions.Contains(session))
 					.ToList())
 				{
+					_reconciliationService.LogDecision(
+						"orbit-remove-stale-session",
+						_reconciliationService.Capture(staleSession, Items.Cast<object>(), _lastReconcileReason),
+						"session missing from global collection");
+
 					if (ownerByItem.TryGetValue(staleSession, out var staleOwner))
 					{
 						try
@@ -671,9 +687,17 @@ namespace Orbit.ViewModels
 					for (int i = Items.Count - 1; i >= 0; i--)
 					{
 						var item = Items[i];
-						if (!actual.Contains(item) && elsewhereNonOrbit.Contains(item))
-						{
-							Items.RemoveAt(i);
+							if (!actual.Contains(item) && ownership.IsInNonOrbitTabs(item))
+							{
+							if (item is SessionModel movedSession)
+							{
+								_reconciliationService.LogDecision(
+									"orbit-remove-moved-session",
+									_reconciliationService.Capture(movedSession, Items.Cast<object>(), _lastReconcileReason),
+									"session hosted by non-orbit tab strip");
+							}
+
+							_layoutStateService.RemoveItem(item);
 						}
 				}
 
@@ -682,7 +706,7 @@ namespace Orbit.ViewModels
 				{
 					if (!Items.Contains(item))
 					{
-						Items.Add(item);
+						_layoutStateService.AddItem(item);
 					}
 				}
 
@@ -714,10 +738,10 @@ namespace Orbit.ViewModels
 
 						// Preserve tabs for Orbit-origin tear-off hosts; those windows are valid
 						// owners for Orbit View items and should not be swept by main-tab cleanup.
-						if (orbitTearOffWindows.Contains(window))
-						{
-							continue;
-						}
+							if (ownership.OrbitWindows.Contains(window))
+							{
+								continue;
+							}
 
 						foreach (var item in actual.Where(i => i is SessionModel or ToolTabItem).ToList())
 						{
@@ -923,7 +947,7 @@ namespace Orbit.ViewModels
 				Margin = GetMarginFromSettings(),
 				Padding = GetCellMarginFromSettings(),
 				Background = System.Windows.Media.Brushes.Transparent,
-				BorderBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["MahApps.Brushes.Accent"],
+					BorderBrush = GetResourceBrush("Orbit.Brushes.Border.Strong", System.Windows.Media.Brushes.DimGray),
 				BorderThickness = GetBorderThicknessFromSettings(),
 				ShowDefaultAddButton = false,
 				ShowDefaultCloseButton = true,
@@ -939,17 +963,24 @@ namespace Orbit.ViewModels
 				Partition = "OrbitMainShell"
 			};
 
-			return tabControl;
-		}
+				return tabControl;
+			}
 
-		private void ConfigureTabControl(TabablzControl control)
+			private static System.Windows.Media.Brush GetResourceBrush(string key, System.Windows.Media.Brush fallback)
+			{
+				return System.Windows.Application.Current?.TryFindResource(key) as System.Windows.Media.Brush
+					?? fallback;
+			}
+
+			private void ConfigureTabControl(TabablzControl control)
 		{
 			control.HorizontalAlignment = HorizontalAlignment.Stretch;
 			control.VerticalAlignment = VerticalAlignment.Stretch;
-			control.Margin = GetMarginFromSettings();
-			control.Padding = GetCellMarginFromSettings();
-			control.BorderThickness = GetBorderThicknessFromSettings();
-		}
+				control.Margin = GetMarginFromSettings();
+				control.Padding = GetCellMarginFromSettings();
+				control.BorderBrush = GetResourceBrush("Orbit.Brushes.Border.Strong", System.Windows.Media.Brushes.DimGray);
+				control.BorderThickness = GetBorderThicknessFromSettings();
+			}
 
 		private bool CanResetLayout()
 		{
@@ -1172,7 +1203,7 @@ namespace Orbit.ViewModels
 					Application.Current.Dispatcher.BeginInvoke(() =>
 					{
 						_preferredOwnerByItem.Remove(item);
-						Items.Remove(item);
+						_layoutStateService.RemoveItem(item);
 						RefreshCommandStates();
 					}, DispatcherPriority.Background);
 				}
@@ -1194,11 +1225,11 @@ namespace Orbit.ViewModels
 				return candidate;
 			}
 
-		private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-		{
-			if (_isReconcilingWorkspace)
+			private void OnWorkspaceItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
 			{
-				RefreshCommandStates();
+				if (_isReconcilingWorkspace)
+				{
+					RefreshCommandStates();
 					UpdateSuggestedGridLabel();
 					return;
 				}
@@ -1260,9 +1291,22 @@ namespace Orbit.ViewModels
 
 			if (reconcileDelay >= 0)
 			{
-				ScheduleReconcile($"workspace-{e.Action}", intervalMs: reconcileDelay);
+					ScheduleReconcile($"workspace-{e.Action}", intervalMs: reconcileDelay);
+				}
 			}
-		}
+
+			private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+			{
+				RefreshCommandStates();
+				UpdateSuggestedGridLabel();
+
+				if (e.Action is NotifyCollectionChangedAction.Remove or
+					NotifyCollectionChangedAction.Replace or
+					NotifyCollectionChangedAction.Reset)
+				{
+					ScheduleReconcile($"sessions-{e.Action}", intervalMs: 80);
+				}
+			}
 
 			private static void DisposeToolItem(object item)
 			{
@@ -1442,6 +1486,12 @@ namespace Orbit.ViewModels
 			if (control == null || control.Items.Count > 0)
 				return;
 
+			if (_dragOperationActive || Mouse.LeftButton == MouseButtonState.Pressed)
+			{
+				ScheduleReconcile("collapse-deferred", intervalMs: 220);
+				return;
+			}
+
 			// Attempt to collapse empty branches inside the Layout (matches Dragablz branch consolidation).
 			// Dragablz should normally handle this via TabEmptiedHandler, but we keep a best-effort
 			// consolidation here to avoid "stuck empty cells" after programmatic item moves/removals.
@@ -1484,9 +1534,10 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			_disposed = true;
-			CollectionChangedEventManager.RemoveHandler(Items, OnWorkspaceItemsChanged);
-			DetachLayoutControl();
+				_disposed = true;
+				CollectionChangedEventManager.RemoveHandler(Items, OnWorkspaceItemsChanged);
+				CollectionChangedEventManager.RemoveHandler(Sessions, OnSessionsCollectionChanged);
+				DetachLayoutControl();
 			_preferredOwnerByItem.Clear();
 			_diagnosticLogTimestamps.Clear();
 			_dragOperationActive = false;

@@ -28,8 +28,10 @@ namespace Orbit.Models
 			private string? _activeScriptPath;
 			private string? _activeScriptId;
 			private string _scriptRuntimeStatus = "No script loaded";
-			private DateTime? _scriptLastChangedAt;
-			private bool _nativeDebugMenuVisible;
+		private DateTime? _scriptLastChangedAt;
+		private bool _nativeDebugMenuVisible;
+		private DateTime? _lastLifecycleChangedAt;
+		private DateTime? _lastInjectionChangedAt;
 
 		public SessionModel()
 		{
@@ -255,6 +257,30 @@ namespace Orbit.Models
 
 		public string StatusSummary => $"{State} / {InjectionState}";
 
+		public DateTime? LastLifecycleChangedAt
+		{
+			get => _lastLifecycleChangedAt;
+			private set
+			{
+				if (_lastLifecycleChangedAt == value)
+					return;
+				_lastLifecycleChangedAt = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public DateTime? LastInjectionChangedAt
+		{
+			get => _lastInjectionChangedAt;
+			private set
+			{
+				if (_lastInjectionChangedAt == value)
+					return;
+				_lastInjectionChangedAt = value;
+				OnPropertyChanged();
+			}
+		}
+
 		public bool IsInjectable => InjectionState == InjectionState.Ready || InjectionState == InjectionState.Failed;
 		public bool IsHealthy =>
 			State != SessionState.Failed &&
@@ -308,73 +334,113 @@ namespace Orbit.Models
 			}
 		}
 
-			public DateTime? ScriptLastChangedAt
+		public DateTime? ScriptLastChangedAt
+		{
+			get => _scriptLastChangedAt;
+			private set
 			{
-				get => _scriptLastChangedAt;
-				private set
-				{
 				if (_scriptLastChangedAt == value)
 					return;
 				_scriptLastChangedAt = value;
-					OnPropertyChanged();
-				}
+				OnPropertyChanged();
 			}
+		}
 
-			public bool NativeDebugMenuVisible
-			{
-				get => _nativeDebugMenuVisible;
-				set
-				{
-					if (_nativeDebugMenuVisible == value)
-						return;
-
-					_nativeDebugMenuVisible = value;
-					OnPropertyChanged();
-					OnPropertyChanged(nameof(NativeDebugMenuStatus));
-					OnPropertyChanged(nameof(NativeDebugMenuButtonText));
-				}
-			}
-
-			public string NativeDebugMenuStatus => NativeDebugMenuVisible ? "Visible" : "Hidden";
-
-			public string NativeDebugMenuButtonText => NativeDebugMenuVisible ? "Hide Menu" : "Show Menu";
-
-
-		public void UpdateState(SessionState state, bool clearError = true)
+		public bool NativeDebugMenuVisible
 		{
+			get => _nativeDebugMenuVisible;
+			private set
+			{
+				if (_nativeDebugMenuVisible == value)
+					return;
+
+				_nativeDebugMenuVisible = value;
+				OnPropertyChanged();
+				OnPropertyChanged(nameof(NativeDebugMenuStatus));
+				OnPropertyChanged(nameof(NativeDebugMenuButtonText));
+			}
+		}
+
+		public string NativeDebugMenuStatus => NativeDebugMenuVisible ? "Visible" : "Hidden";
+
+		public string NativeDebugMenuButtonText => NativeDebugMenuVisible ? "Hide Menu" : "Show Menu";
+
+
+		public void UpdateState(SessionState state, bool clearError = true, string? reason = null)
+		{
+			var previous = State;
+			if (previous == state)
+			{
+				return;
+			}
+
+			if (!IsExpectedStateTransition(previous, state))
+			{
+				LogSessionTransitionWarning("lifecycle", previous, state, reason);
+			}
+
 			if (clearError)
 			{
 				LastError = null;
 			}
+
 			State = state;
+			LastLifecycleChangedAt = DateTime.Now;
+			LogSessionTransition("lifecycle", previous, state, reason);
 		}
 
-			public void UpdateInjectionState(InjectionState state)
+		public void UpdateInjectionState(InjectionState state, string? reason = null)
+		{
+			var previous = InjectionState;
+			if (previous == state)
 			{
-				InjectionState = state;
-				if (state != InjectionState.Injected)
-				{
-					NativeDebugMenuVisible = false;
-				}
+				return;
 			}
+
+			if (!IsExpectedInjectionTransition(previous, state))
+			{
+				LogSessionTransitionWarning("injection", previous, state, reason);
+			}
+
+			InjectionState = state;
+			LastInjectionChangedAt = DateTime.Now;
+			LogSessionTransition("injection", previous, state, reason);
+			if (state != InjectionState.Injected)
+			{
+				SetNativeDebugMenuVisible(false, $"injection state changed to {state}");
+			}
+		}
+
+		public void SetNativeDebugMenuVisible(bool visible, string? reason = null)
+		{
+			var previous = NativeDebugMenuVisible;
+			if (previous == visible)
+			{
+				return;
+			}
+
+			NativeDebugMenuVisible = visible;
+			LogSessionTransition("native-menu", previous ? "Visible" : "Hidden", visible ? "Visible" : "Hidden", reason);
+		}
 
 		public void Fail(Exception exception)
 		{
 			LastError = exception?.Message ?? "Unknown error";
-			State = SessionState.Failed;
+			UpdateState(SessionState.Failed, clearError: false, reason: LastError);
 		}
 
 		public void RecordInjectionFailure(Exception exception)
 		{
 			LastError = exception?.Message ?? "Unknown error";
-			InjectionState = InjectionState.Failed;
-			UpdateState(SessionState.ClientReady, clearError: false);
+			UpdateInjectionState(InjectionState.Failed, LastError);
+			UpdateState(SessionState.ClientReady, clearError: false, reason: "recovering from injection failure");
 		}
 
 		public void SetScriptRuntimePending(string action)
 		{
 			ScriptRuntimeStatus = string.IsNullOrWhiteSpace(action) ? "Working..." : $"{action}...";
 			ScriptLastChangedAt = DateTime.Now;
+			LogSessionTransition("script", "Idle", ScriptRuntimeStatus, action);
 		}
 
 		public void SetScriptLoaded(string scriptPath, string? scriptId = null)
@@ -385,6 +451,7 @@ namespace Orbit.Models
 				? $"Loaded: {ActiveScriptName}"
 				: $"Loaded [{ActiveScriptId}]: {ActiveScriptName}";
 			ScriptLastChangedAt = DateTime.Now;
+			LogSessionTransition("script", "Pending", ScriptRuntimeStatus, scriptPath);
 		}
 
 		public void SetScriptStopped()
@@ -393,13 +460,73 @@ namespace Orbit.Models
 			ActiveScriptId = null;
 			ScriptRuntimeStatus = "No script loaded";
 			ScriptLastChangedAt = DateTime.Now;
+			LogSessionTransition("script", "Loaded", ScriptRuntimeStatus, null);
 		}
 
 		public void SetScriptRuntimeError(string message)
 		{
 			ScriptRuntimeStatus = string.IsNullOrWhiteSpace(message) ? "Script command failed" : $"Error: {message}";
 			ScriptLastChangedAt = DateTime.Now;
+			LogSessionTransition("script", "Pending", ScriptRuntimeStatus, message);
 		}
+
+		private static bool IsExpectedStateTransition(SessionState from, SessionState to)
+		{
+			if (from == to)
+			{
+				return true;
+			}
+
+			return from switch
+			{
+				SessionState.Initializing => to is SessionState.ClientReady or SessionState.Failed or SessionState.ShuttingDown or SessionState.Closed,
+				SessionState.ClientReady => to is SessionState.Injecting or SessionState.Failed or SessionState.ShuttingDown or SessionState.Closed,
+				SessionState.Injecting => to is SessionState.Injected or SessionState.ClientReady or SessionState.Failed or SessionState.ShuttingDown or SessionState.Closed,
+				SessionState.Injected => to is SessionState.ClientReady or SessionState.Failed or SessionState.ShuttingDown or SessionState.Closed,
+				SessionState.Failed => to is SessionState.ClientReady or SessionState.Injecting or SessionState.ShuttingDown or SessionState.Closed,
+				SessionState.ShuttingDown => to is SessionState.ClientReady or SessionState.Injected or SessionState.Failed or SessionState.Closed,
+				SessionState.Closed => false,
+				_ => false
+			};
+		}
+
+		private static bool IsExpectedInjectionTransition(InjectionState from, InjectionState to)
+		{
+			if (from == to)
+			{
+				return true;
+			}
+
+			return from switch
+			{
+				InjectionState.NotReady => to is InjectionState.Ready or InjectionState.Failed,
+				InjectionState.Ready => to is InjectionState.Injecting or InjectionState.NotReady or InjectionState.Failed,
+				InjectionState.Injecting => to is InjectionState.Injected or InjectionState.Ready or InjectionState.NotReady or InjectionState.Failed,
+				InjectionState.Injected => to is InjectionState.NotReady or InjectionState.Failed,
+				InjectionState.Failed => to is InjectionState.Ready or InjectionState.Injecting or InjectionState.NotReady,
+				_ => false
+			};
+		}
+
+		private void LogSessionTransitionWarning<TState>(string lane, TState from, TState to, string? reason)
+		{
+			Console.WriteLine($"[Orbit][Session:{GetLogIdentity()}][Warning] Unexpected {lane} transition {from} -> {to}{FormatReason(reason)}");
+		}
+
+		private void LogSessionTransition<TState>(string lane, TState from, TState to, string? reason)
+		{
+			Console.WriteLine($"[Orbit][Session:{GetLogIdentity()}] {lane} {from} -> {to}{FormatReason(reason)}");
+		}
+
+		private string GetLogIdentity()
+		{
+			var pid = RSProcess?.Id.ToString() ?? "n/a";
+			var handle = ExternalHandle == nint.Zero ? "n/a" : $"0x{ExternalHandle:X}";
+			return $"{Name ?? Id.ToString()} id={Id:N} pid={pid} hwnd={handle}";
+		}
+
+		private static string FormatReason(string? reason)
+			=> string.IsNullOrWhiteSpace(reason) ? string.Empty : $" ({reason.Trim()})";
 
 		public void KillProcess()
 		{

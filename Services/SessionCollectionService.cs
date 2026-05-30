@@ -1,6 +1,9 @@
 using Orbit.Models;
 using System;
+using System.Collections.Specialized;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 
 namespace Orbit.Services
 {
@@ -18,6 +21,7 @@ namespace Orbit.Services
 
 		private SessionCollectionService()
 		{
+			_sessions.CollectionChanged += OnSessionsCollectionChanged;
 		}
 
 		public static SessionCollectionService Instance => _lazy.Value;
@@ -41,6 +45,71 @@ namespace Orbit.Services
 		{
 			get => _globalHotReloadTargetSession;
 			set => SetProperty(ref _globalHotReloadTargetSession, value);
+		}
+
+		private void OnSessionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (e.OldItems != null)
+			{
+				foreach (SessionModel session in e.OldItems)
+				{
+					session.PropertyChanged -= OnSessionPropertyChanged;
+					LogSessionCollection("removed", session);
+					if (ReferenceEquals(GlobalSelectedSession, session))
+					{
+						GlobalSelectedSession = null;
+					}
+
+					if (ReferenceEquals(GlobalHotReloadTargetSession, session))
+					{
+						GlobalHotReloadTargetSession = null;
+					}
+				}
+			}
+
+			if (e.NewItems != null)
+			{
+				foreach (SessionModel session in e.NewItems)
+				{
+					session.PropertyChanged += OnSessionPropertyChanged;
+					LogSessionCollection("added", session);
+				}
+			}
+
+			ValidateSessionIdentity();
+		}
+
+		private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName is nameof(SessionModel.RSProcess) or nameof(SessionModel.State) or nameof(SessionModel.ExternalHandle))
+			{
+				ValidateSessionIdentity();
+			}
+		}
+
+		private void ValidateSessionIdentity()
+		{
+			var liveProcessGroups = Sessions
+				.Where(session =>
+					session.RSProcess != null &&
+					!session.RSProcess.HasExited &&
+					session.State != SessionState.Closed)
+				.GroupBy(session => session.RSProcess!.Id)
+				.Where(group => group.Count() > 1)
+				.ToList();
+
+			foreach (var group in liveProcessGroups)
+			{
+				var names = string.Join(", ", group.Select(session => $"{session.Name ?? session.Id.ToString()}[{session.Id:N}]"));
+				Console.WriteLine($"[Orbit][SessionCollection][Warning] PID {group.Key} is attached to multiple live sessions: {names}");
+			}
+		}
+
+		private static void LogSessionCollection(string action, SessionModel session)
+		{
+			var pid = session.RSProcess?.Id.ToString() ?? "n/a";
+			var handle = session.ExternalHandle == nint.Zero ? "n/a" : $"0x{session.ExternalHandle:X}";
+			Console.WriteLine($"[Orbit][SessionCollection] {action} session='{session.Name ?? session.Id.ToString()}' id={session.Id:N} type={session.SessionType} state={session.State} injection={session.InjectionState} pid={pid} hwnd={handle}");
 		}
 	}
 }

@@ -522,6 +522,15 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			return;
 		}
 
+		if (targetSession.RSProcess == null)
+		{
+			ConsoleLogService.Instance.Append(
+				$"[ScriptManager] Session '{targetSession.Name}' has no active process. Reload the session before loading scripts.",
+				ConsoleLogSource.Orbit,
+				ConsoleLogLevel.Warning);
+			return;
+		}
+
 		var pid = targetSession.RSProcess.Id;
 
 		var verb = isReload ? "reload" : "load";
