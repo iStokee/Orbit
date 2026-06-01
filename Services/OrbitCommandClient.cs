@@ -268,7 +268,7 @@ internal static class OrbitCommandClient
 			}
 
 			ConsoleLogService.Instance.Append(
-				$"[MESharpCmd] {operation} request failed for PID {processId.Value} (per-session pipe unavailable).",
+				$"[MESharpCmd] {operation} request failed for PID {processId.Value}: {DescribeFailure(response, "per-session pipe unavailable")}.",
 				ConsoleLogSource.Orbit,
 				ConsoleLogLevel.Warning);
 			return response;
@@ -281,11 +281,16 @@ internal static class OrbitCommandClient
 		}
 
 		ConsoleLogService.Instance.Append(
-			$"[MESharpCmd] {operation} request failed (pipe unavailable).",
+			$"[MESharpCmd] {operation} request failed: {DescribeFailure(sharedResponse, "pipe unavailable")}.",
 			ConsoleLogSource.Orbit,
 			ConsoleLogLevel.Warning);
 		return sharedResponse;
 	}
+
+	private static string DescribeFailure(OrbitCommandResponse response, string fallback)
+		=> string.IsNullOrWhiteSpace(response.ErrorMessage)
+			? fallback
+			: response.ErrorMessage;
 
 	private static async Task<OrbitCommandResponse> TrySendAsync(string pipeName, string payload, CancellationToken cancellationToken)
 	{
@@ -308,9 +313,21 @@ internal static class OrbitCommandClient
 		{
 			return new OrbitCommandResponse(false, ErrorMessage: "Command timed out or was canceled.");
 		}
+		catch (UnauthorizedAccessException ex)
+		{
+			return new OrbitCommandResponse(
+				false,
+				ErrorMessage: $"Access denied connecting to MESharp command pipe '{pipeName}'. Restart the injected session with the updated bridge, or run Orbit and the client at matching integrity/elevation. {ex.Message}");
+		}
+		catch (IOException ex)
+		{
+			return new OrbitCommandResponse(
+				false,
+				ErrorMessage: $"MESharp command pipe '{pipeName}' I/O failed: {ex.Message}");
+		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[MESharpCmd] Pipe '{pipeName}' request failed: {ex}");
+			Console.WriteLine($"[MESharpCmd] Pipe '{pipeName}' request failed: {ex.GetType().Name}: {ex.Message}");
 			return new OrbitCommandResponse(false, ErrorMessage: ex.Message);
 		}
 	}

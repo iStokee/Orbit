@@ -75,14 +75,14 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Policy" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                            <TextBlock Grid.Row="0" Text="Policy" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
 
                             <Controls:ToggleSwitch Grid.Row="1" Margin="0,10,0,0"
                                                    Header="Auto-start MCP runtime on inject"
                                                    IsOn="{Binding AutoStartRuntimeOnInject, Mode=TwoWay}" />
 
-                            <TextBlock Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap" Opacity="0.75"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            <TextBlock Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Style="{StaticResource Orbit.Workbench.HelperText}"
                                        Text="When enabled, Orbit sends START_RUNTIME after successful injection. Disable for manual runtime lifecycle control." />
 
                             <StackPanel Grid.Row="3" Margin="0,10,0,0">
@@ -120,28 +120,26 @@
                             </Grid.RowDefinitions>
 
                             <DockPanel Grid.Row="0" LastChildFill="False">
-                                <TextBlock Text="Sidecar Artifacts" FontSize="18" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                <TextBlock Text="Sidecar Artifacts" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
                                 <Button DockPanel.Dock="Right" Command="{Binding ValidateSidecarCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Revalidate" />
                             </DockPanel>
 
                             <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="{Binding SidecarPath}" FontFamily="Consolas"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" TextWrapping="Wrap" />
+                                       Style="{StaticResource Orbit.Workbench.MetaText}" TextWrapping="Wrap" />
 
                             <Border Grid.Row="2" Margin="0,10,0,0" Padding="10" CornerRadius="6"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                                     Background="{DynamicResource Orbit.Brushes.Surface.Subtle}">
                                 <TextBlock Text="{Binding SidecarArtifactsSummary}" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                           Style="{StaticResource Orbit.Workbench.HelperText}" />
                             </Border>
 
-                            <Separator Grid.Row="3" Margin="0,12,0,8" />
+                            <Border Grid.Row="3" Style="{StaticResource Orbit.Workbench.Separator}" />
 
                             <DockPanel Grid.Row="4" LastChildFill="False">
-                                <TextBlock Text="Native Injector MCP Settings" FontSize="16" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                <TextBlock Text="Native Injector MCP Settings" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
                                 <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding SaveInjectorSettingsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Save" />
                                 <Button DockPanel.Dock="Right" Command="{Binding ReloadInjectorSettingsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
@@ -157,7 +155,7 @@
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Text="{Binding InjectorSettingsPath}" FontFamily="Consolas"
-                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Opacity="0.8" TextWrapping="Wrap" />
+                                           Style="{StaticResource Orbit.Workbench.MetaText}" TextWrapping="Wrap" />
                                 <Controls:ToggleSwitch Grid.Row="1" Margin="0,8,0,0" Header="MCP_AUTOSTART"
                                                        IsOn="{Binding BasicInjectorAutoStart, Mode=TwoWay}" />
                                 <Controls:ToggleSwitch Grid.Row="2"
@@ -170,12 +168,10 @@
                                             Visibility="{Binding BasicInjectorServerPathOverrideEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <TextBlock Text="Optional explicit path for MCP server launch. Leave override OFF for default Orbit sidecar discovery."
                                                TextWrapping="Wrap"
-                                               Opacity="0.78"
-                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                               Style="{StaticResource Orbit.Workbench.HelperText}" />
                                     <TextBlock Margin="0,6,0,2"
                                                Text="MCP_SERVER_PATH"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                               Style="{StaticResource Orbit.Workbench.FieldLabel}" />
                                     <TextBox Text="{Binding BasicInjectorServerPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              ToolTip="Example: C:\Orbit\MESharp.McpServer.exe" />
                                 </StackPanel>
@@ -194,8 +190,7 @@
                             </Grid.RowDefinitions>
 
                             <DockPanel Grid.Row="0" LastChildFill="False">
-                                <TextBlock Text="Session Probes" FontSize="18" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                <TextBlock Text="Session Probes" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
                                 <Button DockPanel.Dock="Right" Command="{Binding RefreshSessionsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Refresh Sessions" />
                             </DockPanel>
@@ -215,8 +210,7 @@
                                        Margin="0,8,0,0"
                                        Text="{Binding SelectedSessionSummary}"
                                        TextWrapping="Wrap"
-                                       Opacity="0.82"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                                       Style="{StaticResource Orbit.Workbench.HelperText}" />
 
                             <WrapPanel Grid.Row="3" Margin="0,10,0,0">
                                 <Button Command="{Binding StartRuntimeCommand}" Content="Start Runtime" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
@@ -228,7 +222,7 @@
                             </WrapPanel>
 
                             <TextBlock Grid.Row="4" Margin="0,6,0,0" Text="{Binding StatusSummary}" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" Opacity="0.85" />
+                                       Style="{StaticResource Orbit.Workbench.HelperText}" />
                         </Grid>
                     </Border>
                 </StackPanel>
@@ -251,8 +245,7 @@
                         </Grid.RowDefinitions>
 
                         <DockPanel Grid.Row="0" LastChildFill="False">
-                            <TextBlock Text="Response Payload" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                            <TextBlock Text="Response Payload" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
                             <Button DockPanel.Dock="Right" Command="{Binding CopyResponseCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                     Content="Copy JSON" />
                         </DockPanel>
@@ -274,8 +267,7 @@
                         </Grid.RowDefinitions>
 
                         <DockPanel Grid.Row="0" LastChildFill="False">
-                            <TextBlock Text="Activity Log" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                            <TextBlock Text="Activity Log" Style="{StaticResource Orbit.Workbench.SectionTitle}" />
                             <Button DockPanel.Dock="Right" Command="{Binding ClearLogCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                     Content="Clear" />
                         </DockPanel>

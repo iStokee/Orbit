@@ -158,7 +158,7 @@
                         <TextBlock
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Thumbnail Size:" />
                         <Slider
                             Width="150"
@@ -173,13 +173,12 @@
                             Width="60"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding EffectiveThumbnailSize, StringFormat='{}{0}px'}" />
                         <TextBlock
                             Margin="18,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                            Opacity="0.6"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="|" />
                         <CheckBox
                             VerticalAlignment="Center"
@@ -201,7 +200,7 @@
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Auto-refresh:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AutoRefreshEnabled}"
@@ -211,7 +210,7 @@
                         <TextBlock
                             Margin="16,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Overrides:" />
                         <Controls:ToggleSwitch
                             IsOn="{Binding AllowSessionOverrides}"
@@ -221,7 +220,7 @@
                         <TextBlock
                             Margin="16,0,8,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Rate:" />
                         <Slider
                             Width="200"
@@ -235,7 +234,7 @@
                         <TextBlock
                             Margin="10,0,0,0"
                             VerticalAlignment="Center"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding GlobalRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
                     </WrapPanel>
 
@@ -258,8 +257,7 @@
                             <TextBlock
                                 Margin="0,0,8,0"
                                 VerticalAlignment="Center"
-                                FontSize="11"
-                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                 Text="Header:" />
                             <ToggleButton
                                 Margin="0,0,4,0"
@@ -384,9 +382,7 @@
 
                                                     <TextBlock
                                                         Grid.Row="0"
-                                                        FontSize="14"
-                                                        FontWeight="SemiBold"
-                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                        Style="{StaticResource Orbit.Workbench.SubsectionTitle}"
                                                         Text="{Binding DisplayName}"
                                                         TextTrimming="CharacterEllipsis" />
 
@@ -404,9 +400,7 @@
                                                             StrokeThickness="2" />
 
                                                         <TextBlock
-                                                            FontSize="10"
-                                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                            Opacity="0.8"
+                                                            Style="{StaticResource Orbit.Workbench.MetaText}"
                                                             Text="{Binding StatusSummary, FallbackValue='Unknown'}" />
                                                     </StackPanel>
                                                 </Grid>
@@ -437,7 +431,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                                 Text="Override global:" />
                                             <Controls:ToggleSwitch
                                                 Margin="8,0,0,0"
@@ -453,7 +447,7 @@
                                             Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                                 Text="Auto refresh:" />
                                             <Controls:ToggleSwitch
                                                 Margin="8,0,0,0"
@@ -469,7 +463,7 @@
                                             Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                                 Text="Custom rate:" />
                                             <Slider
                                                 Width="140"
@@ -483,28 +477,25 @@
                                             <TextBlock
                                                 Margin="8,0,0,0"
                                                 VerticalAlignment="Center"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                Style="{StaticResource Orbit.Workbench.MetaText}"
                                                 Text="{Binding GalleryRefreshIntervalSeconds, StringFormat='{}{0:0}s'}" />
                                         </StackPanel>
 
                                         <TextBlock
                                             Margin="0,6,0,0"
-                                            FontSize="10"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                                            Style="{StaticResource Orbit.Workbench.MetaText}"
                                             Text="Overrides disabled by global policy"
                                             Visibility="{Binding DataContext.AllowSessionOverrides, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
 
                                         <TextBlock
                                             Margin="0,6,0,0"
-                                            FontSize="10"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                                            Style="{StaticResource Orbit.Workbench.MetaText}"
                                             Text="Following global refresh rate"
                                             Visibility="{Binding UsesGlobalGallerySettings, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                                         <TextBlock
                                             Margin="0,2,0,0"
-                                            FontSize="10"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                                            Style="{StaticResource Orbit.Workbench.MetaText}"
                                             Text="Manual refresh only"
                                             Visibility="{Binding GalleryAutoRefreshEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}" />
                                     </StackPanel>

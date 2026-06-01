@@ -20,6 +20,12 @@ Orbit is the operational UI for automation workflows:
 - UI stack: WPF + MahApps + Dragablz
 - DI container: `Microsoft.Extensions.DependencyInjection`
 
+## UI Style Contract
+
+Orbit uses the **Orbit Workbench Console** style: a dark-first, theme-aware desktop workbench for sessions, scripts, plugins, logs, settings, and runtime control.
+
+The canonical UI contract lives in [docs/UI_STYLE_GUIDE.md](docs/UI_STYLE_GUIDE.md). New and refactored views should use shared `Orbit.Tool*` and `Orbit.Workbench.*` resources from `App.xaml` for page roots, headers, command bars, panels, repeated cards, section titles, helper text, metadata, badges, and buttons.
+
 ## Quick Start
 
 1. Launch `Orbit.exe`.

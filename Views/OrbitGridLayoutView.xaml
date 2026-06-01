@@ -17,7 +17,7 @@
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
         <Style
             x:Key="SessionToolbarButtonStyle"
-            BasedOn="{StaticResource MahApps.Styles.Button}"
+            BasedOn="{StaticResource Orbit.Workbench.Button}"
             TargetType="Button">
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="10,0" />
@@ -52,8 +52,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="OrbitRootGridStyle" TargetType="Grid">
-            <Setter Property="Margin" Value="{StaticResource Orbit.ToolPageMargin}" />
+        <Style x:Key="OrbitRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
                     <Setter Property="Margin" Value="6" />
@@ -197,9 +196,7 @@
                             Text="Live session grid - Drag to edges to split" />
                         <TextBlock
                             Margin="0,4,0,0"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                            Opacity="0.75"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding SuggestedGridLabel}" />
                     </StackPanel>
                 </Grid>
@@ -287,8 +284,7 @@
                                         <TextBlock
                                             Margin="0,0,6,0"
                                             VerticalAlignment="Center"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                             Text="Rows" />
                                         <Controls:NumericUpDown
                                             Width="70"
@@ -304,8 +300,7 @@
                                         <TextBlock
                                             Margin="0,0,6,0"
                                             VerticalAlignment="Center"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                             Text="Cols" />
                                         <Controls:NumericUpDown
                                             Width="70"
@@ -369,8 +364,7 @@
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Header:" />
                         <ToggleButton
                             Margin="0,0,4,0"
@@ -452,8 +446,7 @@
                                 <TextBlock
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                    Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                     Text="R" />
                                 <Controls:NumericUpDown
                                     Width="60"
@@ -464,8 +457,7 @@
                                 <TextBlock
                                     Margin="8,0,6,0"
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                    Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                     Text="C" />
                                 <Controls:NumericUpDown
                                     Width="60"
@@ -541,8 +533,7 @@
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Header:" />
                         <ToggleButton
                             Margin="0,0,4,0"

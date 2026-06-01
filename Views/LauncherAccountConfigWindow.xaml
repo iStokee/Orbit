@@ -10,7 +10,7 @@
     Height="520"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
-    <Grid Margin="16">
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -19,82 +19,86 @@
 
         <TextBlock
             Margin="0,0,0,10"
+            Style="{StaticResource Orbit.Workbench.HelperText}"
             Text="Manage Jagex launcher account entries used by Orbit (stored in %USERPROFILE%\MemoryError\env_vars.json)." />
 
-        <DataGrid
-            x:Name="AccountsGrid"
-            Grid.Row="1"
-            AutoGenerateColumns="False"
-            CanUserAddRows="False"
-            IsReadOnly="False"
-            SelectionMode="Single">
-            <DataGrid.Columns>
-                <DataGridCheckBoxColumn Width="70" Binding="{Binding IsSelected}" Header="Use" />
-                <DataGridTextColumn Width="2*" Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Header="Display Name" />
-                <DataGridTextColumn Width="2*" Binding="{Binding CharacterId, UpdateSourceTrigger=PropertyChanged}" Header="Character ID" />
-                <DataGridTextColumn Width="2*" Binding="{Binding SessionId, UpdateSourceTrigger=PropertyChanged}" Header="Session ID" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}" Padding="0">
+            <DataGrid
+                x:Name="AccountsGrid"
+                AutoGenerateColumns="False"
+                CanUserAddRows="False"
+                IsReadOnly="False"
+                SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Width="70" Binding="{Binding IsSelected}" Header="Use" />
+                    <DataGridTextColumn Width="2*" Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Header="Display Name" />
+                    <DataGridTextColumn Width="2*" Binding="{Binding CharacterId, UpdateSourceTrigger=PropertyChanged}" Header="Character ID" />
+                    <DataGridTextColumn Width="2*" Binding="{Binding SessionId, UpdateSourceTrigger=PropertyChanged}" Header="Session ID" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
 
-        <DockPanel Grid.Row="2" Margin="0,10,0,0">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Width="90" Margin="0,0,8,0" Click="AddRow_Click" Content="Add" />
-                <Button Width="90" Click="RemoveRow_Click" Content="Remove" />
-            </StackPanel>
-            <Border
-                Margin="12,0"
-                Padding="12,8"
-                Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
-                BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-                BorderThickness="1"
-                CornerRadius="8">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox
-                        x:Name="FullWaitCheckBox"
-                        VerticalAlignment="Center"
-                        Content="Full wait for dock"
-                        Margin="0,0,12,0" />
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        Margin="0,0,8,0"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                        Text="Delay" />
-                    <Slider
-                        x:Name="LaunchDelaySlider"
-                        Width="150"
-                        Minimum="5"
-                        Maximum="30"
-                        TickFrequency="1"
-                        IsSnapToTickEnabled="True"
-                        VerticalAlignment="Center">
-                        <Slider.Style>
-                            <Style TargetType="Slider">
-                                <Setter Property="IsEnabled" Value="True" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=FullWaitCheckBox}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Slider.Style>
-                    </Slider>
-                    <Border
-                        Margin="8,0,0,0"
-                        Padding="8,2"
-                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
-                        CornerRadius="10">
-                        <TextBlock
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
-                            Text="{Binding ElementName=LaunchDelaySlider, Path=Value, StringFormat={}{0:0}s}" />
-                    </Border>
+        <Border Grid.Row="2" Style="{StaticResource Orbit.Workbench.CommandBar}">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button Width="90" Click="AddRow_Click" Content="Add" Style="{StaticResource Orbit.Workbench.Button}" />
+                    <Button Width="90" Click="RemoveRow_Click" Content="Remove" Style="{StaticResource Orbit.Workbench.Button}" />
                 </StackPanel>
-            </Border>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                <Button Width="130" Margin="0,0,8,0" Click="LaunchSelected_Click" Content="Launch Selected" />
-                <Button Width="90" Margin="0,0,8,0" Click="Cancel_Click" Content="Cancel" />
-                <Button Width="90" Click="Save_Click" Content="Save" />
-            </StackPanel>
-        </DockPanel>
+                <Border
+                    Margin="12,0"
+                    Padding="12,8"
+                    Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
+                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <CheckBox
+                            x:Name="FullWaitCheckBox"
+                            VerticalAlignment="Center"
+                            Content="Full wait for dock"
+                            Margin="0,0,12,0" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
+                            Text="Delay" />
+                        <Slider
+                            x:Name="LaunchDelaySlider"
+                            Width="150"
+                            Minimum="5"
+                            Maximum="30"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            VerticalAlignment="Center">
+                            <Slider.Style>
+                                <Style TargetType="Slider">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked, ElementName=FullWaitCheckBox}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Slider.Style>
+                        </Slider>
+                        <Border
+                            Margin="8,0,0,0"
+                            Padding="8,2"
+                            Background="{DynamicResource Orbit.Brushes.Action.Primary}"
+                            CornerRadius="10">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
+                                Text="{Binding ElementName=LaunchDelaySlider, Path=Value, StringFormat={}{0:0}s}" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                    <Button Width="130" Click="LaunchSelected_Click" Content="Launch Selected" Style="{StaticResource Orbit.Workbench.Button.Primary}" />
+                    <Button Width="90" Click="Cancel_Click" Content="Cancel" Style="{StaticResource Orbit.Workbench.Button}" />
+                    <Button Width="90" Click="Save_Click" Content="Save" Style="{StaticResource Orbit.Workbench.Button}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
     </Grid>
 </Controls:MetroWindow>

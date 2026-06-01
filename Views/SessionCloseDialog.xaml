@@ -34,17 +34,13 @@
         </DataTemplate>
     </Controls:MetroWindow.IconTemplate>
 
-    <Controls:MetroWindow.Resources>
-        <Style x:Key="InfoLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Tertiary}" />
-            <Setter Property="Margin" Value="0,0,0,4" />
-        </Style>
-        <Style x:Key="InfoValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
-        </Style>
+	    <Controls:MetroWindow.Resources>
+	        <Style x:Key="InfoLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource Orbit.Workbench.MetaText}">
+	            <Setter Property="Margin" Value="0,0,0,4" />
+	        </Style>
+	        <Style x:Key="InfoValueStyle" TargetType="TextBlock" BasedOn="{StaticResource Orbit.Workbench.SubsectionTitle}">
+	            <Setter Property="FontSize" Value="13" />
+	        </Style>
     </Controls:MetroWindow.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -74,16 +70,13 @@
                     </Viewbox>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock
-                        FontSize="20"
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                        Text="Close this session?" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        FontSize="12"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                        Text="This action will terminate the session and close the game client." />
+	                    <TextBlock
+	                        Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                        Text="Close this session?" />
+	                    <TextBlock
+	                        Margin="0,4,0,0"
+	                        Style="{StaticResource Orbit.Workbench.HelperText}"
+	                        Text="This action will terminate the session and close the game client." />
                 </StackPanel>
             </StackPanel>
 
@@ -91,11 +84,7 @@
             <Border
                 Grid.Row="1"
                 Margin="0,24,0,0"
-                Padding="20"
-                Background="{DynamicResource Orbit.Brushes.Surface.Base}"
-                BorderBrush="{DynamicResource Orbit.Brushes.Surface.Muted}"
-                BorderThickness="1"
-                CornerRadius="8">
+	                Style="{StaticResource Orbit.Workbench.Panel}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -172,17 +161,16 @@
                 BorderThickness="1"
                 CornerRadius="6">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial
+	                    <iconPacks:PackIconMaterial
                         Width="16"
                         Height="16"
                         Margin="0,0,10,0"
                         VerticalAlignment="Top"
                         Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
                         Kind="InformationOutline" />
-                    <TextBlock
-                        FontSize="12"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                        TextWrapping="Wrap">
+	                    <TextBlock
+	                        Style="{StaticResource Orbit.Workbench.HelperText}"
+	                        TextWrapping="Wrap">
                         <Run FontWeight="SemiBold" Text="Important:" />
                         <Run Text="Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />
                     </TextBlock>

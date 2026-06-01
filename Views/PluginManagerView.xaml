@@ -60,64 +60,65 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <StackPanel
+                <Border
                     Grid.Row="0"
-                    Margin="0,0,0,16"
-                    Orientation="Horizontal">
-                    <Button
-                        Command="{Binding LoadPluginCommand}"
-                        Content="Load Plugin"
-                        Style="{DynamicResource Orbit.Workbench.Button.Primary}">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial
-                                        Width="16"
-                                        Height="16"
-                                        Margin="0,0,6,0"
-                                        Kind="FolderOpen" />
-                                    <TextBlock Text="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
+                    Style="{StaticResource Orbit.Workbench.CommandBar}">
+                    <WrapPanel Orientation="Horizontal">
+                        <Button
+                            Command="{Binding LoadPluginCommand}"
+                            Content="Load Plugin"
+                            Style="{DynamicResource Orbit.Workbench.Button.Primary}">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
+                                            Width="16"
+                                            Height="16"
+                                            Margin="0,0,6,0"
+                                            Kind="FolderOpen" />
+                                        <TextBlock Text="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
 
-                    <Button
-                        Command="{Binding AutoLoadAllCommand}"
-                        Content="Auto-Load All"
-                        Style="{DynamicResource Orbit.Workbench.Button}">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial
-                                        Width="16"
-                                        Height="16"
-                                        Margin="0,0,6,0"
-                                        Kind="PlaylistPlay" />
-                                    <TextBlock Text="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
+                        <Button
+                            Command="{Binding AutoLoadAllCommand}"
+                            Content="Auto-Load All"
+                            Style="{DynamicResource Orbit.Workbench.Button}">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
+                                            Width="16"
+                                            Height="16"
+                                            Margin="0,0,6,0"
+                                            Kind="PlaylistPlay" />
+                                        <TextBlock Text="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
 
-                    <Button
-                        Command="{Binding RefreshCommand}"
-                        Content="Refresh"
-                        Style="{DynamicResource Orbit.Workbench.Button}">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <iconPacks:PackIconMaterial
-                                        Width="16"
-                                        Height="16"
-                                        Margin="0,0,6,0"
-                                        Kind="Refresh" />
-                                    <TextBlock Text="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
-                    </Button>
-                </StackPanel>
+                        <Button
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh"
+                            Style="{DynamicResource Orbit.Workbench.Button}">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial
+                                            Width="16"
+                                            Height="16"
+                                            Margin="0,0,6,0"
+                                            Kind="Refresh" />
+                                        <TextBlock Text="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+                    </WrapPanel>
+                </Border>
 
                 <!--  Plugin List  -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -126,8 +127,8 @@
                             <DataTemplate>
                                 <Border
                                     Margin="0,0,0,10"
-                                    Padding="20"
-                                    Style="{StaticResource Orbit.Workbench.Panel}">
+                                    Padding="14"
+                                    Style="{StaticResource Orbit.Workbench.SelectableCard}">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
@@ -143,14 +144,11 @@
                                         <!--  Plugin Name and Version  -->
                                         <StackPanel Grid.Row="0" Grid.Column="0">
                                             <TextBlock
-                                                FontSize="16"
-                                                FontWeight="SemiBold"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                                Style="{StaticResource Orbit.Workbench.SectionTitle}"
                                                 Text="{Binding DisplayName}" />
                                             <TextBlock
                                                 Margin="0,4,0,0"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Opacity="0.75">
+                                                Style="{StaticResource Orbit.Workbench.MetaText}">
                                                 <Run Text="v" />
                                                 <Run Text="{Binding Version}" />
                                                 <Run Text=" by " />
@@ -209,8 +207,7 @@
                                             Grid.Column="0"
                                             Grid.ColumnSpan="2"
                                             Margin="0,8,0,0"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
+                                            Style="{StaticResource Orbit.Workbench.HelperText}"
                                             Text="{Binding Description}"
                                             TextWrapping="Wrap" />
 
@@ -220,18 +217,13 @@
                                             Grid.Column="0"
                                             Grid.ColumnSpan="2"
                                             Margin="0,8,0,0">
-                                            <TextBlock
-                                                FontSize="11"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Opacity="0.6">
+                                            <TextBlock Style="{StaticResource Orbit.Workbench.MetaText}">
                                                 <Run Text="Key:" />
                                                 <Run FontFamily="Consolas" Text="{Binding Key}" />
                                             </TextBlock>
                                             <TextBlock
                                                 Margin="0,2,0,0"
-                                                FontSize="11"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Opacity="0.6">
+                                                Style="{StaticResource Orbit.Workbench.MetaText}">
                                                 <Run Text="Loaded:" />
                                                 <Run Text="{Binding LoadedAt}" />
                                             </TextBlock>
@@ -248,9 +240,7 @@
                                             <TextBlock
                                                 Margin="0,4,0,0"
                                                 FontFamily="Consolas"
-                                                FontSize="11"
-                                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                                Opacity="0.6"
+                                                Style="{StaticResource Orbit.Workbench.MetaText}"
                                                 Text="{Binding PluginPath}"
                                                 TextWrapping="Wrap" />
                                         </Expander>
@@ -280,15 +270,11 @@
                             Kind="PuzzleRemove" />
                         <TextBlock
                             HorizontalAlignment="Center"
-                            FontSize="16"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
                             Text="No plugins loaded yet." />
                         <TextBlock
                             HorizontalAlignment="Center"
-                            FontSize="12"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                            Opacity="0.75"
+                            Style="{StaticResource Orbit.Workbench.HelperText}"
                             Text="Use 'Load Plugin' to add a new tool or 'Auto-Load All' to import plugins from your library."
                             TextWrapping="Wrap" />
                     </StackPanel>
@@ -305,8 +291,7 @@
             <Grid>
                 <TextBlock
                     VerticalAlignment="Center"
-                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                    Opacity="0.75"
+                    Style="{StaticResource Orbit.Workbench.MetaText}"
                     Text="{Binding StatusMessage}" />
 
                 <Controls:ProgressRing

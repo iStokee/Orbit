@@ -61,13 +61,10 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ChipStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
-            <Setter Property="BorderThickness" Value="1" />
+        <Style x:Key="ChipStyle" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.SelectableCard}">
             <Setter Property="Padding" Value="8,7" />
             <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Cursor" Value="Arrow" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Padding" Value="7,6" />
@@ -123,8 +120,7 @@
                     <StackPanel Grid.Column="0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock
-                                FontSize="14"
-                                FontWeight="SemiBold"
+                                Style="{StaticResource Orbit.Workbench.SubsectionTitle}"
                                 Text="{Binding Name}" />
                             <Border
                                 Margin="8,0,0,0"
@@ -132,8 +128,7 @@
                                 Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
                                 CornerRadius="8">
                                 <TextBlock
-                                    FontSize="10"
-                                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                                    Style="{StaticResource Orbit.Workbench.MetaText}"
                                     Text="{Binding FileName}" />
                             </Border>
                             <Border
@@ -143,15 +138,14 @@
                                 CornerRadius="8"
                                 Opacity="0.9">
                                 <TextBlock
-                                    FontSize="10"
+                                    Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}"
                                     Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
                                     Text="{Binding ScriptId}" />
                             </Border>
                         </StackPanel>
                         <TextBlock
                             Margin="0,2,0,0"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding Description}"
                             TextTrimming="CharacterEllipsis" />
                     </StackPanel>
@@ -229,16 +223,14 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock
-                        FontSize="14"
-                        FontWeight="SemiBold"
+                        Style="{StaticResource Orbit.Workbench.SubsectionTitle}"
                         Text="{Binding Name}"
                         TextTrimming="CharacterEllipsis" />
 
                     <TextBlock
                         Grid.Row="1"
                         Margin="0,4,0,0"
-                        FontSize="11"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                        Style="{StaticResource Orbit.Workbench.MetaText}"
                         Text="{Binding Description}"
                         TextWrapping="Wrap"
                         TextTrimming="CharacterEllipsis" />
@@ -250,8 +242,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock
                             VerticalAlignment="Center"
-                            FontSize="10"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding ScriptId}"
                             TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -354,9 +345,7 @@
                                     Kind="CrosshairsGps" />
                                 <TextBlock
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
+                                    Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}"
                                     Text="Target Session" />
                             </StackPanel>
                         </Border>
@@ -402,7 +391,7 @@
                                     Kind="ViewColumnOutline" />
                                 <TextBlock
                                     VerticalAlignment="Center"
-                                    FontSize="11"
+                                    Style="{StaticResource Orbit.Workbench.MetaText}"
                                     Text="Embed Script UI" />
                             </StackPanel>
                         </CheckBox>
@@ -520,8 +509,7 @@
                         <TextBlock
                             Margin="0,0,8,0"
                             VerticalAlignment="Center"
-                            FontSize="11"
-                            FontWeight="SemiBold"
+                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Script ID:" />
                         <TextBox
                             Width="220"
@@ -536,7 +524,7 @@
                         Margin="10,0,0,0"
                         VerticalAlignment="Center"
                         FontSize="11"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                        Style="{StaticResource Orbit.Workbench.MetaText}"
                         Text="{Binding DiagnosticsStatus}"
                         TextTrimming="CharacterEllipsis"
                         Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -546,7 +534,8 @@
                         Width="160"
                         Height="36"
                         Margin="10,0,0,0"
-                        Command="{Binding RefreshDiagnosticsCommand}"
+                            Command="{Binding RefreshDiagnosticsCommand}"
+                            Style="{StaticResource Orbit.Workbench.Button}"
                         ToolTip="Pull script.list and script.get_state from MCP bridge"
                         Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal">
@@ -571,7 +560,8 @@
                         <Button
                             Width="140"
                             Height="36"
-                            Command="{Binding AddScriptCommand}">
+                            Command="{Binding AddScriptCommand}"
+                            Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
                                     Width="16"
@@ -585,7 +575,8 @@
                             Width="160"
                             Height="36"
                             Margin="8,0,0,0"
-                            Command="{Binding ClearMissingCommand}">
+                            Command="{Binding ClearMissingCommand}"
+                            Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
                                     Width="16"
@@ -599,7 +590,8 @@
                             Width="120"
                             Height="36"
                             Margin="8,0,0,0"
-                            Command="{Binding StopScriptCommand}">
+                            Command="{Binding StopScriptCommand}"
+                            Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
                                     Width="16"
@@ -632,20 +624,17 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock
-                        FontSize="12"
-                        FontWeight="SemiBold"
+                        Style="{StaticResource Orbit.Workbench.SectionTitle}"
                         Text="Runtime Scripts (MCP Bridge)" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <TextBlock
                             VerticalAlignment="Center"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="{Binding DiagnosticsStatus}" />
                         <TextBlock
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
-                            FontSize="11"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                            Style="{StaticResource Orbit.Workbench.MetaText}"
                             Text="Refreshing..."
                             Visibility="{Binding IsDiagnosticsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </StackPanel>
@@ -681,8 +670,7 @@
                     <TextBlock
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        FontSize="12"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
+                        Style="{StaticResource Orbit.Workbench.HelperText}"
                         Text="No runtime scripts reported by MCP."
                         Visibility="{Binding HasNoRuntimeScripts, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>
@@ -754,8 +742,7 @@
                 <TextBlock
                     Grid.Row="1"
                     Margin="0,8,0,0"
-                    FontSize="11"
-                    Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                    Style="{StaticResource Orbit.Workbench.MetaText}"
                     Text="{Binding LibraryDirectoryPath}"
                     TextWrapping="Wrap" />
 
@@ -789,8 +776,7 @@
                     <TextBlock
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        FontSize="12"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
+                        Style="{StaticResource Orbit.Workbench.HelperText}"
                         Text="No scripts match the selected filter."
                         Visibility="{Binding BrowserScriptsView.IsEmpty, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>

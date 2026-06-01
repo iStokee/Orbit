@@ -524,6 +524,49 @@
                 <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             </Style>
 
+            <Style x:Key="Orbit.Workbench.SectionTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.SubsectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Orbit.Workbench.SectionTitle}">
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.HelperText" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                <Setter Property="Opacity" Value="0.86" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.MetaText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Tertiary}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.FieldLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.Separator" TargetType="Border">
+                <Setter Property="Height" Value="1" />
+                <Setter Property="Margin" Value="0,10,0,10" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                <Setter Property="Opacity" Value="0.8" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.InlineGroup" TargetType="StackPanel">
+                <Setter Property="Orientation" Value="Horizontal" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
             <Style x:Key="Orbit.Workbench.EmptyState" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
                 <Setter Property="Padding" Value="20" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />

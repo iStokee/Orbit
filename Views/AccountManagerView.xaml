@@ -63,9 +63,7 @@
                 <StackPanel>
                     <TextBlock
                         Text="Target Session"
-                        FontSize="13"
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                        Style="{StaticResource Orbit.Workbench.FieldLabel}" />
                     <ComboBox
                         Margin="0,6,0,8"
                         ItemsSource="{Binding Sessions}"
@@ -85,18 +83,14 @@
                                     <TextBlock
                                         Margin="8,0,0,0"
                                         Text="{Binding InjectionState}"
-                                        FontSize="11"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                                        Style="{StaticResource Orbit.Workbench.MetaText}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <TextBlock
-                        FontSize="11"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Tertiary}"
-                        Text="No active sessions are docked.">
+                    <TextBlock Text="No active sessions are docked.">
                         <TextBlock.Style>
-                            <Style TargetType="TextBlock">
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Orbit.Workbench.MetaText}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding HasSessions}" Value="False">
@@ -108,8 +102,7 @@
                     </TextBlock>
                     <TextBlock
                         Margin="0,4,0,0"
-                        FontSize="12"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
+                        Style="{StaticResource Orbit.Workbench.HelperText}"
                         Text="{Binding LoginStatusMessage}"
                         TextWrapping="Wrap" />
                 </StackPanel>
@@ -251,16 +244,12 @@
                         <TextBlock
                             Margin="0,16,0,0"
                             HorizontalAlignment="Center"
-                            FontSize="18"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
                             Text="No accounts yet" />
                         <TextBlock
                             Margin="0,8,0,0"
                             HorizontalAlignment="Center"
-                            FontSize="13"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                            Opacity="0.75"
+                            Style="{StaticResource Orbit.Workbench.HelperText}"
                             TextAlignment="Center"
                             TextWrapping="Wrap"
                             Text="Add your first RuneScape account to enable auto-login and quick session management." />
@@ -276,6 +265,10 @@
             BorderBrush="{DynamicResource Orbit.Brushes.Action.Primary}">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <Grid MinWidth="640">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
@@ -284,7 +277,15 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
+                <TextBlock
+                    Grid.Row="0"
+                    Grid.ColumnSpan="5"
+                    Margin="0,0,0,10"
+                    Style="{StaticResource Orbit.Workbench.SectionTitle}"
+                    Text="Add Account" />
+
                 <TextBox
+                    Grid.Row="1"
                     Grid.Column="0"
                     Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}"
                     Controls:TextBoxHelper.Watermark="Username"
@@ -292,6 +293,7 @@
                     Margin="0,0,8,0" />
 
                 <TextBox
+                    Grid.Row="1"
                     Grid.Column="1"
                     Text="{Binding NewNickname, UpdateSourceTrigger=PropertyChanged}"
                     Controls:TextBoxHelper.Watermark="Nickname (optional)"
@@ -299,6 +301,7 @@
                     Margin="0,0,8,0" />
 
                 <PasswordBox
+                    Grid.Row="1"
                     Grid.Column="2"
                     Controls:TextBoxHelper.Watermark="Password (min 5 chars)"
                     Controls:PasswordBoxHelper.CapsLockWarningToolTip="Caps Lock is ON"
@@ -307,13 +310,14 @@
                     PasswordChanged="NewPasswordBox_PasswordChanged" />
 
                 <Controls:NumericUpDown
+                    Grid.Row="1"
                     Grid.Column="3"
                     Value="{Binding NewPreferredWorld}"
                     Minimum="1"
                     Maximum="200"
                     Margin="0,0,8,0" />
 
-                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal">
                     <Button
                         Command="{Binding AddAccountCommand}"
                         Style="{StaticResource Orbit.Workbench.IconButton}"

@@ -199,11 +199,10 @@
                     </TabItem.HeaderTemplate>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16">
-                            <TextBlock
-                                FontSize="16"
-                                FontWeight="SemiBold"
-                                Text="Log Sources"
-                                Margin="0,0,0,10" />
+	                            <TextBlock
+	                                Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                Text="Log Sources"
+	                                Margin="0,0,0,10" />
                             <ItemsControl ItemsSource="{Binding Sources}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -276,15 +275,13 @@
 
                                                 <!--  Info  -->
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock
-                                                        FontSize="15"
-                                                        FontWeight="SemiBold"
-                                                        Text="{Binding DisplayName}" />
-                                                    <TextBlock
-                                                        Margin="0,2,0,0"
-                                                        FontSize="12"
-                                                        Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                                                        Text="{Binding Description}" />
+	                                                    <TextBlock
+	                                                        Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                                        Text="{Binding DisplayName}" />
+	                                                    <TextBlock
+	                                                        Margin="0,2,0,0"
+	                                                        Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                                        Text="{Binding Description}" />
                                                 </StackPanel>
 
                                                 <!--  Statistics  -->

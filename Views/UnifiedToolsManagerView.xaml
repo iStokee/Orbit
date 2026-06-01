@@ -195,11 +195,9 @@
 
                                     <!--  Name and Type  -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="{Binding DisplayName}" />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="{Binding DisplayName}" />
                                         <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
                                             <Border
                                                 Padding="6,2"
@@ -329,10 +327,10 @@
             Padding="20,10"
             Style="{StaticResource Orbit.Workbench.Panel}">
             <Grid>
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                    Text="{Binding StatusMessage}" />
+	                <TextBlock
+	                    VerticalAlignment="Center"
+	                    Style="{StaticResource Orbit.Workbench.MetaText}"
+	                    Text="{Binding StatusMessage}" />
 
                 <mah:ProgressRing
                     Width="20"

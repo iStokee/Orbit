@@ -16,13 +16,12 @@
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
-        <DataTemplate x:Key="Orbit.ToggleSwitchHeaderTemplate">
-            <TextBlock
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                Text="{Binding}"
-                TextWrapping="Wrap" />
-        </DataTemplate>
+	        <DataTemplate x:Key="Orbit.ToggleSwitchHeaderTemplate">
+	            <TextBlock
+	                Style="{StaticResource Orbit.Workbench.FieldLabel}"
+	                Text="{Binding}"
+	                TextWrapping="Wrap" />
+	        </DataTemplate>
         <Style BasedOn="{StaticResource MahApps.Styles.ToggleSwitch}" TargetType="Controls:ToggleSwitch">
             <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
             <Setter Property="HeaderTemplate" Value="{StaticResource Orbit.ToggleSwitchHeaderTemplate}" />
@@ -106,33 +105,25 @@
                                             Kind="PlayCircleOutline" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Client Launch" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Choose how Orbit starts clients and configure launcher account variables." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Client Launch" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Choose how Orbit starts clients and configure launcher account variables." />
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
-                                    <TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                        Text="Client Launch Mode" />
-                                    <TextBlock
-                                        Margin="0,4,0,8"
-                                        FontSize="11"
-                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                        Opacity="0.7"
-                                        Text="Choose how Orbit starts RuneScape clients for new sessions." />
+	                                    <TextBlock
+	                                        Style="{StaticResource Orbit.Workbench.SubsectionTitle}"
+	                                        Text="Client Launch Mode" />
+	                                    <TextBlock
+	                                        Margin="0,4,0,8"
+	                                        Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                        Text="Choose how Orbit starts RuneScape clients for new sessions." />
                                     <StackPanel Orientation="Horizontal">
                                         <ComboBox
                                             Width="260"
@@ -149,7 +140,7 @@
                                             Content="Config" />
                                     </StackPanel>
 
-                                    <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                    <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                     <TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
@@ -249,17 +240,13 @@
                                         </TextBlock>
                                     </Grid>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Software Updates" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Keep Orbit up to date with the latest features and fixes." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Software Updates" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Keep Orbit up to date with the latest features and fixes." />
                                     </StackPanel>
                                 </StackPanel>
 
@@ -506,17 +493,13 @@
                                             Kind="ChartTimelineVariant" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Automation" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Configure automatic behaviors and welcome messages" />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Automation" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Configure automatic behaviors and welcome messages" />
                                     </StackPanel>
                                 </StackPanel>
 
@@ -537,7 +520,7 @@
                                     Opacity="0.75"
                                     Text="Applies the inject-time native menu suppression step. Turning this off immediately tries to restore the native menu for injected sessions." />
 
-                                <Separator Margin="0,20,0,12" Opacity="0.35" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
 
                                 <TextBlock
                                     FontSize="14"
@@ -591,17 +574,13 @@
                                             Kind="BorderAllVariant" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Snap zones &amp; guides" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Preview and fine tune the areas Orbit uses when docking the floating launcher." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Snap zones &amp; guides" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Preview and fine tune the areas Orbit uses when docking the floating launcher." />
                                     </StackPanel>
                                 </StackPanel>
 
@@ -849,17 +828,13 @@
                                             Kind="TuneVariant" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Behavior" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Dial in fade timing, handle translucency, and background blending." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Behavior" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Dial in fade timing, handle translucency, and background blending." />
                                     </StackPanel>
                                 </StackPanel>
 
@@ -979,17 +954,13 @@
                                             Kind="CrosshairsGps" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Placement and visibility" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Choose how the radial menu expands and which surfaces it follows." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Placement and visibility" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Choose how the radial menu expands and which surfaces it follows." />
                                     </StackPanel>
                                 </StackPanel>
 
@@ -1046,7 +1017,7 @@
                                     Opacity="0.85"
                                     Text="Choose which input snaps the launcher back if it hides or won't wake." />
 
-                                <Separator Margin="0,20,0,14" Opacity="0.35" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
 
                                 <TextBlock
                                     FontSize="12"
@@ -1132,22 +1103,18 @@
                                             Kind="ViewGrid" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Orbit View" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.7"
-                                            Text="Customize session grid layout and UI density" />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Orbit View" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Customize session grid layout and UI density" />
                                     </StackPanel>
                                 </StackPanel>
 
                                 <!--  Grid Density  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1184,7 +1151,7 @@
                                 </StackPanel>
 
                                 <!--  UI Compactness  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1221,7 +1188,7 @@
                                 </StackPanel>
 
                                 <!--  Tab Header Size  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1258,7 +1225,7 @@
                                 </StackPanel>
 
                                 <!--  Border Thickness  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
                                     <TextBlock
                                         FontSize="14"
@@ -1295,7 +1262,7 @@
                                 </StackPanel>
 
                                 <!--  Auto-Open on Startup  -->
-                                <Separator Margin="0,16,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
                                 <StackPanel>
                                     <Controls:ToggleSwitch Header="Auto-open Orbit View on Startup" IsOn="{Binding AutoOpenOrbitViewOnStartup, Mode=TwoWay}" />
                                     <TextBlock
@@ -1366,21 +1333,17 @@
                                             Kind="FileCodeOutline" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Injector DLL" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Select which DLL Orbit injects. Leave blank to use default XInput1_4_inject.dll." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Injector DLL" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Select which DLL Orbit injects. Leave blank to use default XInput1_4_inject.dll." />
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Separator Margin="0,12,0,12" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                                <Border Style="{StaticResource Orbit.Workbench.Separator}" />
 
                                 <ComboBox
                                     Height="30"
@@ -1464,17 +1427,13 @@
                                             Kind="ChartTimelineVariant" />
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Text="Theme Diagnostics" />
-                                        <TextBlock
-                                            Margin="0,2,0,0"
-                                            FontSize="12"
-                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                                            Opacity="0.75"
-                                            Text="Surface theme insights when you need them." />
+	                                        <TextBlock
+	                                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
+	                                            Text="Theme Diagnostics" />
+	                                        <TextBlock
+	                                            Margin="0,2,0,0"
+	                                            Style="{StaticResource Orbit.Workbench.HelperText}"
+	                                            Text="Surface theme insights when you need them." />
                                     </StackPanel>
                                 </StackPanel>
 
