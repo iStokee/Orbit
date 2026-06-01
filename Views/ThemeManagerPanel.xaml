@@ -45,7 +45,7 @@
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+        <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -89,7 +89,7 @@
                     Grid.Column="0"
                     Margin="0,0,10,0"
                     VerticalAlignment="Top"
-                    Style="{StaticResource Orbit.ToolCard}">
+                    Style="{StaticResource Orbit.Workbench.Panel}">
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -545,7 +545,7 @@
                                 Width="130"
                                 MinHeight="32"
                                 Command="{Binding SaveCustomThemeCommand}"
-                                Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                                Style="{StaticResource Orbit.Workbench.Button.Primary}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial
                                         Width="14"
@@ -573,7 +573,7 @@
                     <Border
                         Grid.Row="0"
                         Margin="10,0,0,0"
-                        Style="{StaticResource Orbit.ToolCard}">
+                        Style="{StaticResource Orbit.Workbench.Panel}">
                         <StackPanel>
                             <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial
@@ -596,7 +596,7 @@
                                     MinHeight="30"
                                     Margin="0,0,8,0"
                                     Content="Primary"
-                                    Style="{StaticResource MahApps.Styles.Button.Square.Accent}" />
+                                    Style="{StaticResource Orbit.Workbench.Button.Primary}" />
                                 <Button
                                     Width="96"
                                     MinHeight="30"
@@ -707,7 +707,7 @@
                     <Border
                         Grid.Row="1"
                         Margin="10,10,0,0"
-                        Style="{StaticResource Orbit.ToolCard}">
+                        Style="{StaticResource Orbit.Workbench.Panel}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -741,7 +741,7 @@
                                     MinHeight="32"
                                     HorizontalAlignment="Right">
                                     <Button.Style>
-                                        <Style BasedOn="{StaticResource MahApps.Styles.Button.Square.Accent}" TargetType="Button">
+                                        <Style BasedOn="{StaticResource Orbit.Workbench.Button.Primary}" TargetType="Button">
                                             <Setter Property="Command" Value="{Binding ApplyThemeCommand}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsSelected, ElementName=CustomThemesTab}" Value="True">

@@ -14,8 +14,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
 
-        <Style x:Key="ScriptManagerRootGridStyle" TargetType="Grid">
-            <Setter Property="Margin" Value="{StaticResource Orbit.ToolPageMargin}" />
+        <Style x:Key="ScriptManagerRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="16" />
@@ -38,7 +37,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ScriptManagerCardStyle" TargetType="Border" BasedOn="{StaticResource Orbit.ToolCard}">
+        <Style x:Key="ScriptManagerCardStyle" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
             <Setter Property="Padding" Value="14" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
@@ -169,7 +168,7 @@
                             Margin="0,0,4,0"
                             Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
-                            Style="{StaticResource MahApps.Styles.Button.Circle}">
+                            Style="{StaticResource Orbit.Workbench.IconButton}">
                             <iconPacks:PackIconMaterial
                                 Width="14"
                                 Height="14"
@@ -182,7 +181,7 @@
                             Margin="0,0,4,0"
                             Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
-                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Style="{StaticResource Orbit.Workbench.IconButton}"
                             ToolTip="Toggle favorite">
                             <iconPacks:PackIconMaterial Width="14" Height="14">
                                 <iconPacks:PackIconMaterial.Style>
@@ -204,7 +203,7 @@
                             Height="28"
                             Command="{Binding DataContext.RemoveScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
-                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Style="{StaticResource Orbit.Workbench.IconButton}"
                             ToolTip="Remove">
                             <iconPacks:PackIconMaterial
                                 Width="14"
@@ -262,7 +261,7 @@
                                 Margin="0,0,4,0"
                                 Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Style="{StaticResource MahApps.Styles.Button.Circle}">
+                                Style="{StaticResource Orbit.Workbench.IconButton}">
                                 <iconPacks:PackIconMaterial Width="12" Height="12" Kind="Play" />
                             </Button>
                             <Button
@@ -270,7 +269,7 @@
                                 Height="26"
                                 Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Style="{StaticResource MahApps.Styles.Button.Circle}"
+                                Style="{StaticResource Orbit.Workbench.IconButton}"
                                 ToolTip="Toggle favorite">
                                 <iconPacks:PackIconMaterial Width="12" Height="12">
                                     <iconPacks:PackIconMaterial.Style>
@@ -481,7 +480,7 @@
                         Margin="0,0,8,0"
                         Command="{Binding LoadScriptCommand}"
                         CommandParameter="{Binding SelectedScript}"
-                        Style="{StaticResource MahApps.Styles.Button.Square.Accent}"
+                        Style="{StaticResource Orbit.Workbench.Button.Primary}"
                         ToolTip="Load or reload script with hot-reload">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
@@ -501,7 +500,7 @@
                         Command="{Binding ReloadScriptCommand}"
                         CommandParameter="{Binding SelectedScript}"
                         ToolTip="Quick reload"
-                        Style="{StaticResource MahApps.Styles.Button.Circle}">
+                        Style="{StaticResource Orbit.Workbench.IconButton}">
                         <iconPacks:PackIconMaterial
                             Width="18"
                             Height="18"

@@ -12,17 +12,6 @@
     d:DesignWidth="1200"
     mc:Ignorable="d">
     <UserControl.Resources>
-        <LinearGradientBrush x:Key="GuideHeaderBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Offset="0" Color="{DynamicResource Orbit.Colors.Action.Primary}" />
-            <GradientStop Offset="1" Color="{DynamicResource Orbit.Colors.Action.Tertiary}" />
-        </LinearGradientBrush>
-
-        <DropShadowEffect
-            x:Key="GuideCardShadow"
-            BlurRadius="12"
-            Opacity="0.18"
-            ShadowDepth="4" />
-
         <Style x:Key="GuideChapterItemContainerStyle" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="0,0,0,12" />
             <Setter Property="Padding" Value="0" />
@@ -30,15 +19,10 @@
             <Setter Property="BorderThickness" Value="0" />
         </Style>
 
-        <Style x:Key="GuideChapterBorderStyle" TargetType="Border">
+        <Style x:Key="GuideChapterBorderStyle" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.SelectableCard}">
             <Setter Property="Padding" Value="16" />
-            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
-            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Effect" Value="{StaticResource GuideCardShadow}" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Muted}" />
@@ -51,7 +35,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -84,9 +68,9 @@
                     DockPanel.Dock="Right"
                     Orientation="Horizontal">
                     <Button
-                        Padding="16,8"
+                        Margin="0,0,8,0"
                         Command="{Binding RefreshCommand}"
-                        Style="{StaticResource MahApps.Styles.Button}"
+                        Style="{StaticResource Orbit.Workbench.Button}"
                         ToolTip="Reload the current document">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Refresh" />
@@ -95,9 +79,8 @@
                     </Button>
                     <Button
                         Margin="10,0,0,0"
-                        Padding="16,8"
                         Command="{Binding OpenDocsFolderCommand}"
-                        Style="{StaticResource MahApps.Styles.Button}"
+                        Style="{StaticResource Orbit.Workbench.Button}"
                         ToolTip="Open docs folder in Explorer">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="FolderInformationOutline" />
@@ -120,9 +103,7 @@
             <Border
                 Grid.Column="0"
                 Padding="20"
-                Background="{DynamicResource Orbit.Brushes.Surface.Card}"
-                CornerRadius="12"
-                Effect="{StaticResource GuideCardShadow}">
+                Style="{StaticResource Orbit.Workbench.Panel}">
                 <StackPanel>
                     <Expander
                         IsExpanded="True"
@@ -215,9 +196,7 @@
             <Border
                 Grid.Column="2"
                 Padding="0"
-                Background="{DynamicResource Orbit.Brushes.Surface.Card}"
-                CornerRadius="12"
-                Effect="{StaticResource GuideCardShadow}">
+                Style="{StaticResource Orbit.Workbench.Panel}">
                 <Grid>
                     <FlowDocumentScrollViewer
                         x:Name="DocumentViewer"
@@ -253,9 +232,7 @@
             Grid.Row="2"
             Margin="0,16,0,0"
             Padding="16,12"
-            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
-            CornerRadius="12"
-            Effect="{StaticResource GuideCardShadow}">
+            Style="{StaticResource Orbit.Workbench.Panel}">
             <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial
                     Width="18"

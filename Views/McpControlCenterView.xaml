@@ -10,7 +10,7 @@
              d:DesignHeight="860"
              d:DesignWidth="1460">
 
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -66,7 +66,7 @@
 
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,10,0">
                 <StackPanel>
-                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,10">
+                    <Border Style="{StaticResource Orbit.Workbench.Panel}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -108,7 +108,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource Orbit.ToolCard}" Margin="0,0,0,10">
+                    <Border Style="{StaticResource Orbit.Workbench.Panel}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -122,7 +122,7 @@
                             <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Sidecar Artifacts" FontSize="18" FontWeight="SemiBold"
                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                                <Button DockPanel.Dock="Right" Command="{Binding ValidateSidecarCommand}" Padding="10,4"
+                                <Button DockPanel.Dock="Right" Command="{Binding ValidateSidecarCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Revalidate" />
                             </DockPanel>
 
@@ -142,9 +142,9 @@
                             <DockPanel Grid.Row="4" LastChildFill="False">
                                 <TextBlock Text="Native Injector MCP Settings" FontSize="16" FontWeight="SemiBold"
                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding SaveInjectorSettingsCommand}" Padding="10,4"
+                                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding SaveInjectorSettingsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Save" />
-                                <Button DockPanel.Dock="Right" Command="{Binding ReloadInjectorSettingsCommand}" Padding="10,4"
+                                <Button DockPanel.Dock="Right" Command="{Binding ReloadInjectorSettingsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Reload" />
                             </DockPanel>
 
@@ -183,7 +183,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource Orbit.ToolCard}">
+                    <Border Style="{StaticResource Orbit.Workbench.Panel}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -196,7 +196,7 @@
                             <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Session Probes" FontSize="18" FontWeight="SemiBold"
                                            Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                                <Button DockPanel.Dock="Right" Command="{Binding RefreshSessionsCommand}" Padding="10,4"
+                                <Button DockPanel.Dock="Right" Command="{Binding RefreshSessionsCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                         Content="Refresh Sessions" />
                             </DockPanel>
 
@@ -219,12 +219,12 @@
                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
 
                             <WrapPanel Grid.Row="3" Margin="0,10,0,0">
-                                <Button Command="{Binding StartRuntimeCommand}" Content="Start Runtime" Margin="0,0,8,8" MinWidth="154" />
-                                <Button Command="{Binding ProbeStatusCommand}" Content="Probe Status" Margin="0,0,8,8" MinWidth="154" />
-                                <Button Command="{Binding ProbeCapabilitiesCommand}" Content="Capabilities" Margin="0,0,8,8" MinWidth="154" />
-                                <Button Command="{Binding ProbeQuickSnapshotCommand}" Content="Quick Snapshot" Margin="0,0,8,8" MinWidth="154" />
-                                <Button Command="{Binding ProbeDungeoneeringSnapshotCommand}" Content="DG Snapshot" Margin="0,0,8,8" MinWidth="154" />
-                                <Button Command="{Binding ProbeDoActionSignalsCommand}" Content="DoAction Signals" Margin="0,0,8,8" MinWidth="154" />
+                                <Button Command="{Binding StartRuntimeCommand}" Content="Start Runtime" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
+                                <Button Command="{Binding ProbeStatusCommand}" Content="Probe Status" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
+                                <Button Command="{Binding ProbeCapabilitiesCommand}" Content="Capabilities" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
+                                <Button Command="{Binding ProbeQuickSnapshotCommand}" Content="Quick Snapshot" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
+                                <Button Command="{Binding ProbeDungeoneeringSnapshotCommand}" Content="DG Snapshot" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
+                                <Button Command="{Binding ProbeDoActionSignalsCommand}" Content="DoAction Signals" MinWidth="154" Style="{StaticResource Orbit.Workbench.Button}" />
                             </WrapPanel>
 
                             <TextBlock Grid.Row="4" Margin="0,6,0,0" Text="{Binding StatusSummary}" TextWrapping="Wrap"
@@ -243,7 +243,7 @@
                     <RowDefinition Height="1.1*" MinHeight="220" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Style="{StaticResource Orbit.ToolCard}">
+                <Border Grid.Row="0" Style="{StaticResource Orbit.Workbench.Panel}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -253,7 +253,7 @@
                         <DockPanel Grid.Row="0" LastChildFill="False">
                             <TextBlock Text="Response Payload" FontSize="18" FontWeight="SemiBold"
                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                            <Button DockPanel.Dock="Right" Command="{Binding CopyResponseCommand}" Padding="10,4"
+                            <Button DockPanel.Dock="Right" Command="{Binding CopyResponseCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                     Content="Copy JSON" />
                         </DockPanel>
 
@@ -266,7 +266,7 @@
 
                 <GridSplitter Grid.Row="1" Height="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Orbit.Brushes.Border.Subtle}" />
 
-                <Border Grid.Row="2" Style="{StaticResource Orbit.ToolCard}" Margin="0,10,0,0">
+                <Border Grid.Row="2" Style="{StaticResource Orbit.Workbench.Panel}" Margin="0,10,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -276,7 +276,7 @@
                         <DockPanel Grid.Row="0" LastChildFill="False">
                             <TextBlock Text="Activity Log" FontSize="18" FontWeight="SemiBold"
                                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}" />
-                            <Button DockPanel.Dock="Right" Command="{Binding ClearLogCommand}" Padding="10,4"
+                            <Button DockPanel.Dock="Right" Command="{Binding ClearLogCommand}" Style="{StaticResource Orbit.Workbench.Button}"
                                     Content="Clear" />
                         </DockPanel>
 

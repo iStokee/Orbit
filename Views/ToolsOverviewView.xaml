@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              d:DesignHeight="800" d:DesignWidth="1000">
 
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
@@ -34,7 +34,7 @@
                 </Border>
 
                 <!-- Tools Grid -->
-                <Border Style="{StaticResource Orbit.ToolCard}">
+                <Border Style="{StaticResource Orbit.Workbench.Panel}">
                     <StackPanel>
                         <TextBlock Text="Registered Tools"
                                   FontSize="18"
@@ -55,10 +55,7 @@
                                 <DataTemplate>
                                     <Border Margin="0,0,0,10"
                                            Padding="20"
-                                           Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
-                                           BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-                                           BorderThickness="1"
-                                           CornerRadius="8">
+                                           Style="{StaticResource Orbit.Workbench.Panel}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
@@ -124,7 +121,7 @@
                     Header="About Tools"
                     IsExpanded="False">
                     <Border
-                        Style="{StaticResource Orbit.ToolCard}"
+                        Style="{StaticResource Orbit.Workbench.Panel}"
                         Margin="0,8,0,0"
                         Background="{DynamicResource Orbit.Brushes.Action.Primary}"
                         BorderBrush="{DynamicResource Orbit.Brushes.Action.Secondary}">

@@ -85,13 +85,33 @@ public partial class App : Application
 		services.AddSingleton<ConsoleLogService>(_ => ConsoleLogService.Instance);
 		services.AddSingleton<ConsolePipeServer>();
 		services.AddSingleton<OrbitApiPipeServer>();
+		services.AddSingleton<FloatingMenuGeometryService>();
+		services.AddSingleton<FloatingMenuVisibilityService>();
 
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
+		services.AddSingleton<SessionAutoRelaunchService>();
+		services.AddSingleton<SessionLaunchCoordinatorService>();
+		services.AddSingleton<SessionLifecycleCoordinatorService>();
+		services.AddSingleton<SessionNameService>();
 		services.AddSingleton<SessionPlacementService>();
+		services.AddSingleton<SessionRenameService>();
 		services.AddSingleton<SessionReconciliationService>();
+		services.AddSingleton<SessionStartupService>();
+		services.AddSingleton<SessionTargetResolverService>();
 		services.AddSingleton<SessionUiCoordinatorService>();
+		services.AddSingleton<ShellPresentationPolicyService>();
+		services.AddSingleton<ShellSessionCloseService>();
+		services.AddSingleton<ShellSessionFocusService>();
+		services.AddSingleton<ShellSessionRecoveryService>();
+		services.AddSingleton<ShellSessionSelectionService>();
+		services.AddSingleton<ShellTabCollectionCoordinatorService>();
+		services.AddSingleton<ShellTabSelectionService>();
+		services.AddSingleton<ShellToolHostService>();
 		services.AddSingleton<OrbitLayoutStateService>();
 		services.AddSingleton<ScriptIntegrationService>();
+		services.AddSingleton<IOrbitCommandClient, OrbitCommandClientAdapter>();
+		services.AddSingleton<MesharpSessionCommandService>();
+		services.AddSingleton<ScriptOrchestrationService>();
 		services.AddSingleton<SessionManagerService>();
 		services.AddSingleton<McpPreferencesStore>();
 		services.AddSingleton<McpBridgeClientService>();
@@ -102,6 +122,7 @@ public partial class App : Application
 		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<TearOffHostRegistry>();
 		services.AddSingleton<InterTabClient>();
+		services.AddSingleton<MesharpHotkeyService>();
 
 			services.AddSingleton<SettingsViewModel>();
 		services.AddTransient<SettingsView>(sp => new SettingsView(

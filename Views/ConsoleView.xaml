@@ -85,7 +85,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -112,17 +112,11 @@
                             Text="Console Output" />
                         <Border
                             Margin="12,2,0,0"
-                            Padding="6,2"
-                            CornerRadius="8">
-                            <Border.Background>
-                                <SolidColorBrush Color="{DynamicResource MahApps.Colors.IdealForeground}" Opacity="0.15" />
-                            </Border.Background>
+                            Style="{StaticResource Orbit.Workbench.Badge}">
                             <TextBlock
                                 VerticalAlignment="Center"
                                 TextAlignment="Center"
-                                FontSize="11"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+                                Style="{StaticResource Orbit.Workbench.BadgeText}"
                                 Text="{Binding ConsoleLog.Entries.Count, FallbackValue='0'}" />
                         </Border>
                     </StackPanel>
@@ -158,7 +152,7 @@
                         Margin="0,0,8,0"
                         Click="CopySelected_Click"
                         ToolTip="Copy selected log lines to the clipboard"
-                        Style="{StaticResource MahApps.Styles.Button.Square}">
+                        Style="{StaticResource Orbit.Workbench.Button}">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="14"
@@ -173,7 +167,7 @@
                         Width="90"
                         Height="28"
                         Command="{Binding ClearCommand}"
-                        Style="{StaticResource MahApps.Styles.Button.Square.Accent}">
+                        Style="{StaticResource Orbit.Workbench.Button.Primary}">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial
                                 Width="14"
@@ -188,7 +182,7 @@
         </Border>
 
         <!--  Tabbed Console Content  -->
-        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}" Padding="0">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}" Padding="0">
             <Controls:MetroTabControl
                 SelectedIndex="{Binding SelectedTabIndex}"
                 TabStripPlacement="Top">
@@ -216,27 +210,13 @@
                                         <Border
                                             Margin="0,0,0,10"
                                             Padding="16"
-                                            Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
-                                            BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Cursor="Hand">
+                                            Style="{StaticResource Orbit.Workbench.SelectableCard}">
                                             <Border.InputBindings>
                                                 <MouseBinding
                                                     Command="{Binding DataContext.OpenSourceTabCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     MouseAction="LeftClick" />
                                             </Border.InputBindings>
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
-                                                            <Setter Property="BorderThickness" Value="2" />
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />

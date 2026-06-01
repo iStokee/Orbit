@@ -5,11 +5,9 @@ using Orbit.Logging;
 using Orbit.Models;
 using Orbit.Services;
 using Orbit.Tooling;
-using Orbit.Views;
 using Orbit;
 using Orbit.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -28,7 +26,6 @@ using MahApps.Metro.IconPacks;
 using MahApps.Metro.Controls.Dialogs;
 using MahApps.Metro.Controls;
 using FlowDirection = System.Windows.FlowDirection;
-using System.Collections.Concurrent;
 
 namespace Orbit.ViewModels
 {
@@ -55,16 +52,35 @@ namespace Orbit.ViewModels
 	private readonly ThemeService themeService;
 	private readonly ScriptIntegrationService scriptIntegrationService;
 	private readonly ScriptManagerService scriptManagerService;
+	private readonly ScriptOrchestrationService scriptOrchestrationService;
 	private readonly AccountService accountService;
 	private readonly AutoLoginService autoLoginService;
 	private readonly SessionCollectionService sessionCollectionService;
+	private readonly SessionAutoRelaunchService sessionAutoRelaunchService;
+	private readonly SessionLaunchCoordinatorService sessionLaunchCoordinator;
+	private readonly SessionLifecycleCoordinatorService sessionLifecycleCoordinator;
 	private readonly SessionPlacementService sessionPlacementService;
+	private readonly SessionRenameService sessionRenameService;
 	private readonly SessionReconciliationService sessionReconciliationService;
+	private readonly SessionStartupService sessionStartupService;
+	private readonly SessionTargetResolverService sessionTargetResolver;
 	private readonly SessionUiCoordinatorService sessionUiCoordinator;
+	private readonly ShellPresentationPolicyService shellPresentationPolicyService;
+	private readonly ShellSessionCloseService shellSessionCloseService;
+	private readonly ShellSessionFocusService shellSessionFocusService;
+	private readonly ShellSessionRecoveryService shellSessionRecoveryService;
+	private readonly ShellSessionSelectionService shellSessionSelectionService;
+	private readonly ShellTabCollectionCoordinatorService shellTabCollectionCoordinatorService;
+	private readonly ShellTabSelectionService shellTabSelectionService;
+	private readonly ShellToolHostService shellToolHostService;
 	private readonly OrbitLayoutStateService orbitLayoutState;
 	private readonly ConsoleLogService consoleLogService;
+	private readonly FloatingMenuGeometryService floatingMenuGeometryService;
+	private readonly FloatingMenuVisibilityService floatingMenuVisibilityService;
 	private readonly IToolRegistry toolRegistry;
 	private readonly InterTabClient interTabClient;
+	private readonly MesharpHotkeyService mesharpHotkeyService;
+	private readonly MesharpSessionCommandService mesharpSessionCommandService;
 	private readonly SettingsViewModel settingsViewModel;
 	private SessionModel selectedSession;
 	private SessionModel? hotReloadTargetSession;
@@ -88,17 +104,8 @@ namespace Orbit.ViewModels
 	public double hostViewportHeight = 900;
 	private bool autoInjectOnReady;
 	private bool isFloatingMenuClipping;
-	private readonly object sessionCloseSync = new();
-	private static readonly object sessionNameSync = new();
-	private readonly SemaphoreSlim orbitSessionLaunchGate = new(1, 1);
-	private readonly HashSet<Guid> closingSessionIds = new();
-	private readonly HashSet<Guid> pendingOrphanValidationSessionIds = new();
-	private static readonly ConcurrentDictionary<Guid, byte> relaunchingSessionIds = new();
-	private static int nextSessionOrdinal = 1;
 	private readonly DispatcherTimer sessionCrashWatchTimer;
-	private bool isLauncherBatchLaunchInProgress;
 	private bool isApplicationShuttingDown;
-	private bool sessionCrashCheckRunning;
 	private bool hasUpdateNotification;
 	private bool isFloatingMenuDragging;
 
@@ -111,15 +118,34 @@ namespace Orbit.ViewModels
 		ThemeService themeService,
 		ScriptIntegrationService scriptIntegrationService,
 		ScriptManagerService scriptManagerService,
+		ScriptOrchestrationService scriptOrchestrationService,
 		AccountService accountService,
 		AutoLoginService autoLoginService,
 		SessionCollectionService sessionCollectionService,
+		SessionAutoRelaunchService sessionAutoRelaunchService,
+		SessionLaunchCoordinatorService sessionLaunchCoordinator,
+		SessionLifecycleCoordinatorService sessionLifecycleCoordinator,
 		SessionPlacementService sessionPlacementService,
+		SessionRenameService sessionRenameService,
 		SessionReconciliationService sessionReconciliationService,
+		SessionStartupService sessionStartupService,
+		SessionTargetResolverService sessionTargetResolver,
 		SessionUiCoordinatorService sessionUiCoordinator,
+		ShellPresentationPolicyService shellPresentationPolicyService,
+		ShellSessionCloseService shellSessionCloseService,
+		ShellSessionFocusService shellSessionFocusService,
+		ShellSessionRecoveryService shellSessionRecoveryService,
+		ShellSessionSelectionService shellSessionSelectionService,
+		ShellTabCollectionCoordinatorService shellTabCollectionCoordinatorService,
+		ShellTabSelectionService shellTabSelectionService,
+		ShellToolHostService shellToolHostService,
 		OrbitLayoutStateService orbitLayoutStateService,
 		ConsoleLogService consoleLogService,
+		FloatingMenuGeometryService floatingMenuGeometryService,
+		FloatingMenuVisibilityService floatingMenuVisibilityService,
 		InterTabClient interTabClient,
+		MesharpHotkeyService mesharpHotkeyService,
+		MesharpSessionCommandService mesharpSessionCommandService,
 		SettingsViewModel settingsViewModel,
 		IToolRegistry toolRegistry)
 	{
@@ -127,15 +153,34 @@ namespace Orbit.ViewModels
 		this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 		this.scriptIntegrationService = scriptIntegrationService ?? throw new ArgumentNullException(nameof(scriptIntegrationService));
 		this.scriptManagerService = scriptManagerService ?? throw new ArgumentNullException(nameof(scriptManagerService));
+		this.scriptOrchestrationService = scriptOrchestrationService ?? throw new ArgumentNullException(nameof(scriptOrchestrationService));
 		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
 		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+		this.sessionAutoRelaunchService = sessionAutoRelaunchService ?? throw new ArgumentNullException(nameof(sessionAutoRelaunchService));
+		this.sessionLaunchCoordinator = sessionLaunchCoordinator ?? throw new ArgumentNullException(nameof(sessionLaunchCoordinator));
+		this.sessionLifecycleCoordinator = sessionLifecycleCoordinator ?? throw new ArgumentNullException(nameof(sessionLifecycleCoordinator));
 		this.sessionPlacementService = sessionPlacementService ?? throw new ArgumentNullException(nameof(sessionPlacementService));
+		this.sessionRenameService = sessionRenameService ?? throw new ArgumentNullException(nameof(sessionRenameService));
 		this.sessionReconciliationService = sessionReconciliationService ?? throw new ArgumentNullException(nameof(sessionReconciliationService));
+		this.sessionStartupService = sessionStartupService ?? throw new ArgumentNullException(nameof(sessionStartupService));
+		this.sessionTargetResolver = sessionTargetResolver ?? throw new ArgumentNullException(nameof(sessionTargetResolver));
 		this.sessionUiCoordinator = sessionUiCoordinator ?? throw new ArgumentNullException(nameof(sessionUiCoordinator));
+		this.shellPresentationPolicyService = shellPresentationPolicyService ?? throw new ArgumentNullException(nameof(shellPresentationPolicyService));
+		this.shellSessionCloseService = shellSessionCloseService ?? throw new ArgumentNullException(nameof(shellSessionCloseService));
+		this.shellSessionFocusService = shellSessionFocusService ?? throw new ArgumentNullException(nameof(shellSessionFocusService));
+		this.shellSessionRecoveryService = shellSessionRecoveryService ?? throw new ArgumentNullException(nameof(shellSessionRecoveryService));
+		this.shellSessionSelectionService = shellSessionSelectionService ?? throw new ArgumentNullException(nameof(shellSessionSelectionService));
+		this.shellTabCollectionCoordinatorService = shellTabCollectionCoordinatorService ?? throw new ArgumentNullException(nameof(shellTabCollectionCoordinatorService));
+		this.shellTabSelectionService = shellTabSelectionService ?? throw new ArgumentNullException(nameof(shellTabSelectionService));
+		this.shellToolHostService = shellToolHostService ?? throw new ArgumentNullException(nameof(shellToolHostService));
 			this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
 			this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
+			this.floatingMenuGeometryService = floatingMenuGeometryService ?? throw new ArgumentNullException(nameof(floatingMenuGeometryService));
+			this.floatingMenuVisibilityService = floatingMenuVisibilityService ?? throw new ArgumentNullException(nameof(floatingMenuVisibilityService));
 			this.interTabClient = interTabClient ?? throw new ArgumentNullException(nameof(interTabClient));
+			this.mesharpHotkeyService = mesharpHotkeyService ?? throw new ArgumentNullException(nameof(mesharpHotkeyService));
+			this.mesharpSessionCommandService = mesharpSessionCommandService ?? throw new ArgumentNullException(nameof(mesharpSessionCommandService));
 			this.settingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
 			this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 
@@ -358,13 +403,13 @@ namespace Orbit.ViewModels
 			// Sync with global selected session so tear-off windows can access it
 			sessionCollectionService.GlobalSelectedSession = value;
 
-			if (value != null && (hotReloadTargetSession == null || !Sessions.Contains(hotReloadTargetSession)))
+			var resolvedHotReloadTarget = shellSessionSelectionService.ResolveHotReloadTargetAfterSelectionChanged(
+				Sessions,
+				value,
+				hotReloadTargetSession);
+			if (!ReferenceEquals(hotReloadTargetSession, resolvedHotReloadTarget))
 			{
-				HotReloadTargetSession = value;
-			}
-			else if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
-			{
-				HotReloadTargetSession = Sessions.FirstOrDefault();
+				HotReloadTargetSession = resolvedHotReloadTarget;
 			}
 
 			OnPropertyChanged(nameof(SelectedSession));
@@ -444,239 +489,23 @@ namespace Orbit.ViewModels
 		/// </summary>
 		private async Task AddSessionAsync()
 		{
-			if (TryGetLauncherBatchLaunchCount(out var batchCount))
-			{
-				if (isLauncherBatchLaunchInProgress)
-				{
-					Console.WriteLine("[Orbit][Launcher] Batch launch request ignored because a batch is already in progress.");
-					return;
-				}
-
-				isLauncherBatchLaunchInProgress = true;
-				await LaunchSelectedBatchAsync(batchCount);
-				return;
-			}
-
-			await AddSingleSessionAsync();
-		}
-
-		private async Task LaunchSelectedBatchAsync(int batchCount)
-		{
-			try
-			{
-				Console.WriteLine($"[Orbit][Launcher] Batch launch requested for {batchCount} selected account(s).");
-				LauncherAccountStore.BeginSelectedLaunchBatch();
-				var fullWaitForDock = Settings.Default.LauncherBatchWaitForDockBeforeNext;
-				var launchDelaySeconds = Math.Clamp(Settings.Default.LauncherBatchLaunchDelaySeconds, 5, 30);
-				var launchBehavior = NormalizeSessionLaunchBehavior(Settings.Default.SessionLaunchBehavior);
-				var serializeBatchLaunch = fullWaitForDock || string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal);
-
-				if (serializeBatchLaunch)
-				{
-					if (!fullWaitForDock && string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
-					{
-						Console.WriteLine("[Orbit][Launcher] Serializing batch launch because Orbit View workspace updates are not safe under concurrent session creation.");
-					}
-
-					for (var i = 0; i < batchCount; i++)
-					{
-						var docked = await AddSingleSessionAsync();
-						if (!docked)
-						{
-							Console.WriteLine($"[Orbit][Launcher] Batch launch stopped after slot {i + 1}: session did not dock successfully.");
-							break;
-						}
-					}
-				}
-				else
-				{
-					var launches = new List<Task>(batchCount);
-					for (var i = 0; i < batchCount; i++)
-					{
-						launches.Add(AddSingleSessionAsync());
-						if (i < batchCount - 1)
-						{
-							await Task.Delay(TimeSpan.FromSeconds(launchDelaySeconds));
-						}
-					}
-
-					await Task.WhenAll(launches);
-				}
-			}
-			finally
-			{
-				isLauncherBatchLaunchInProgress = false;
-				CommandManager.InvalidateRequerySuggested();
-			}
-		}
-
-		private static bool TryGetLauncherBatchLaunchCount(out int batchCount)
-		{
-			batchCount = 0;
-			if (!string.Equals(Settings.Default.ClientLaunchMode, "Launcher", StringComparison.OrdinalIgnoreCase))
-			{
-				return false;
-			}
-
-			var selected = LauncherAccountStore.LoadSelected();
-			if (selected.Count <= 1)
-			{
-				return false;
-			}
-
-			batchCount = selected.Count;
-			return true;
+			await sessionLaunchCoordinator.AddSessionAsync(
+				() => AddSingleSessionAsync(),
+				CommandManager.InvalidateRequerySuggested).ConfigureAwait(true);
 		}
 
 		private async Task<bool> AddSingleSessionAsync(string? preferredName = null)
 		{
-			var launchBehavior = NormalizeSessionLaunchBehavior(Settings.Default.SessionLaunchBehavior);
-			var gateHeld = false;
-
-			if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
-			{
-				await orbitSessionLaunchGate.WaitAsync().ConfigureAwait(true);
-				gateHeld = true;
-			}
-
-			var hostControl = new ChildClientView();
-			var initialized = false;
-
-			var resolvedName = ResolveSessionName(preferredName);
-			var session = new SessionModel
-			{
-				Id = Guid.NewGuid(),
-				Name = resolvedName,
-				CreatedAt = DateTime.Now,
-				HostControl = hostControl,
-				RequireInjectionBeforeDock = AutoInjectOnReady
-			};
-
-			hostControl.DataContext = session;
-
-			// Always add to Sessions collection
-			Sessions.Add(session);
-
-			if (string.Equals(launchBehavior, "OrbitView", StringComparison.Ordinal))
-			{
-				// Don't add to Tabs - add to Orbit View workspace explicitly.
-				sessionUiCoordinator.MoveItemToOrbit(session, HandleTabRemoval, this, "launch-session-to-orbit");
-				SelectedSession = session;
-				// If Orbit View isn't open, open it
-				if (!Tabs.OfType<Models.ToolTabItem>().Any(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal)))
-				{
-					OpenOrbitViewCommand?.Execute(null);
-				}
-			}
-			else if (launchBehavior == "Ask")
-			{
-				// TODO: Show dialog asking user where to dock
-				// For now, default to individual tabs
-				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs);
-				Tabs.Add(session);
-				SelectedSession = session;
-				SelectedTab = session;
-			}
-			else // IndividualTabs or default
-			{
-				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs);
-				Tabs.Add(session);
-				SelectedSession = session;
-				SelectedTab = session; // Auto-focus the new tab
-			}
-
-		try
-		{
-			await sessionManager.InitializeSessionAsync(session);
-			initialized = true;
-
-			// Auto-inject as soon as the session is ready (if enabled)
-			if (AutoInjectOnReady && session.InjectionState == InjectionState.Ready)
-			{
-				Console.WriteLine($"[Orbit] Session '{session.Name}' is ready, auto-injecting...");
-				await InjectSessionInternalAsync(session);
-			}
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"[Orbit] Session initialization/injection failed: {ex.Message}");
-			// SessionManager already marks the failure on the model.
-		}
-			finally
-			{
-				if (gateHeld)
-				{
-					orbitSessionLaunchGate.Release();
-				}
-
-				CommandManager.InvalidateRequerySuggested();
-			}
-
-			return initialized;
-		}
-
-		private string ResolveSessionName(string? preferredName)
-		{
-			if (!string.IsNullOrWhiteSpace(preferredName))
-			{
-				var requested = preferredName.Trim();
-				if (!Sessions.Any(s => string.Equals(s?.Name, requested, StringComparison.OrdinalIgnoreCase)))
-				{
-					return requested;
-				}
-			}
-
-			lock (sessionNameSync)
-			{
-				var maxObserved = Sessions
-					.Select(s => TryParseDefaultSessionOrdinal(s?.Name))
-					.Where(v => v.HasValue)
-					.Select(v => v!.Value)
-					.DefaultIfEmpty(0)
-					.Max();
-
-				if (nextSessionOrdinal <= maxObserved)
-				{
-					nextSessionOrdinal = maxObserved + 1;
-				}
-
-				while (true)
-				{
-					var candidate = $"RuneScape Session {nextSessionOrdinal++}";
-					if (!Sessions.Any(s => string.Equals(s?.Name, candidate, StringComparison.OrdinalIgnoreCase)))
-					{
-						return candidate;
-					}
-				}
-			}
-		}
-
-		private static int? TryParseDefaultSessionOrdinal(string? name)
-		{
-			const string prefix = "RuneScape Session ";
-			if (string.IsNullOrWhiteSpace(name) || !name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-			{
-				return null;
-			}
-
-			var suffix = name.Substring(prefix.Length).Trim();
-			return int.TryParse(suffix, out var parsed) && parsed > 0 ? parsed : null;
-		}
-
-		private static string NormalizeSessionLaunchBehavior(string? launchBehavior)
-		{
-			if (string.IsNullOrWhiteSpace(launchBehavior))
-			{
-				return "OrbitView";
-			}
-
-			// Legacy value from older builds: route to regular tabs, not Orbit workspace.
-			if (string.Equals(launchBehavior, "SessionsTabbed", StringComparison.OrdinalIgnoreCase))
-			{
-				return "IndividualTabs";
-			}
-
-			return launchBehavior;
+			return await sessionStartupService.AddSingleSessionAsync(
+				Sessions,
+				Tabs,
+				preferredName,
+				AutoInjectOnReady,
+				HandleTabRemoval,
+				this,
+				session => SelectedSession = session,
+				tab => SelectedTab = tab,
+				() => OpenOrbitViewCommand?.Execute(null)).ConfigureAwait(true);
 		}
 
 		private async Task InjectAsync()
@@ -794,7 +623,7 @@ namespace Orbit.ViewModels
 				if (removedItem is SessionModel session)
 				{
 					args.Cancel();
-					if (IsSessionCloseInProgress(session))
+					if (sessionLifecycleCoordinator.IsCloseInProgress(session))
 					{
 						return;
 					}
@@ -820,24 +649,12 @@ namespace Orbit.ViewModels
 
 	private SessionModel? ResolveHotReloadTarget()
 	{
-		var sharedTarget = sessionCollectionService.GlobalHotReloadTargetSession;
-		if (sharedTarget != null && Sessions.Contains(sharedTarget))
-		{
-			return sharedTarget;
-		}
-
-		if (hotReloadTargetSession != null && Sessions.Contains(hotReloadTargetSession))
-		{
-			return hotReloadTargetSession;
-		}
-
-		var fallback = SelectedSession ?? sessionCollectionService.GlobalSelectedSession;
-		if (fallback != null && Sessions.Contains(fallback))
-		{
-			return fallback;
-		}
-
-		return Sessions.FirstOrDefault();
+		return sessionTargetResolver.ResolveHotReloadTarget(
+			Sessions,
+			sessionCollectionService.GlobalHotReloadTargetSession,
+			hotReloadTargetSession,
+			SelectedSession,
+			sessionCollectionService.GlobalSelectedSession);
 	}
 
 	private bool CanLoadScript()
@@ -864,11 +681,7 @@ namespace Orbit.ViewModels
 
 	public void BeginSessionRename(SessionModel session)
 	{
-		if (session == null)
-			return;
-
-		session.EditableName = session.Name ?? string.Empty;
-		session.IsRenaming = true;
+		sessionRenameService.BeginRename(session);
 	}
 
 	private void CommitSessionRename(object parameter)
@@ -881,24 +694,7 @@ namespace Orbit.ViewModels
 
 	public void CommitSessionRename(SessionModel session)
 	{
-		if (session == null)
-			return;
-
-		var proposed = session.EditableName?.Trim();
-		session.IsRenaming = false;
-
-		if (string.IsNullOrEmpty(proposed))
-		{
-			session.EditableName = session.Name ?? string.Empty;
-			return;
-		}
-
-		if (!string.Equals(session.Name, proposed, StringComparison.Ordinal))
-		{
-			session.Name = proposed;
-		}
-
-		session.EditableName = session.Name ?? string.Empty;
+		sessionRenameService.CommitRename(session);
 	}
 
 	private void CancelSessionRename(object parameter)
@@ -911,11 +707,7 @@ namespace Orbit.ViewModels
 
 	public void CancelSessionRename(SessionModel session)
 	{
-		if (session == null)
-			return;
-
-		session.IsRenaming = false;
-		session.EditableName = session.Name ?? string.Empty;
+		sessionRenameService.CancelRename(session);
 	}
 
 	public double FloatingMenuLeft
@@ -1026,7 +818,7 @@ namespace Orbit.ViewModels
 
 	private void OpenOrbitViewWorkspace()
 	{
-		TryOpenToolByKey("OrbitView");
+		TryOpenToolByKey(ShellPresentationPolicyService.OrbitViewToolKey);
 		AdoptSessionsIntoOrbitWorkspace();
 	}
 
@@ -1057,101 +849,19 @@ namespace Orbit.ViewModels
 	/// we create a new host control and wire the main view model as DataContext.
 	/// </summary>
 	private void OpenOrFocusToolTab(string key, string name, Func<System.Windows.FrameworkElement> controlFactory, PackIconMaterialKind icon = PackIconMaterialKind.Tools)
-    {
-        // Find existing
-        foreach (var item in Tabs)
-        {
-            if (item is Models.ToolTabItem tool && string.Equals(tool.Key, key, StringComparison.Ordinal))
-            {
-                SelectedTab = tool;
-                return;
-            }
-        }
-
-        if (TryAdoptToolFromOtherWindow(key, out var adoptedTool))
-        {
-	        Tabs.Add(adoptedTool);
-	        SelectedTab = adoptedTool;
-	        return;
-        }
-
-        var ctrl = controlFactory();
-        if (ctrl.DataContext == null)
-        {
-            // Most tool tabs bind to the main window VM; set if not already set by control
-            ctrl.DataContext = this;
-        }
-        var newTool = new Models.ToolTabItem(key, name, ctrl, icon);
-        Tabs.Add(newTool);
-        SelectedTab = newTool;
-    }
-
-	/// <summary>
-	/// Tries to reuse a tool tab that currently lives in another Orbit window instead of spinning up a duplicate
-	/// instance. This keeps singleton tooling (theme manager, console, etc.) consistent across tear-off windows.
-	/// </summary>
-	private bool TryAdoptToolFromOtherWindow(string key, out Models.ToolTabItem? adopted)
-	{
-		adopted = null;
-		if (string.Equals(key, "OrbitView", StringComparison.Ordinal))
-		{
-			// Orbit View carries window-specific callbacks in its view model.
-			// Recreate it per window rather than adopting a live instance from another shell.
-			return false;
-		}
-
-		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-		foreach (var window in windows)
-		{
-			if (window.DataContext is not MainWindowViewModel otherVm || ReferenceEquals(otherVm, this))
-			{
-				continue;
-			}
-
-			var existingTool = otherVm.Tabs.OfType<Models.ToolTabItem>()
-				.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.Ordinal));
-			if (existingTool == null)
-			{
-				continue;
-			}
-
-			otherVm.Tabs.Remove(existingTool);
-			if (ReferenceEquals(otherVm.SelectedTab, existingTool))
-			{
-				otherVm.SelectedTab = otherVm.Tabs.FirstOrDefault();
-			}
-
-			if (existingTool.HostControl != null && ReferenceEquals(existingTool.HostControl.DataContext, otherVm))
-			{
-				existingTool.HostControl.DataContext = this;
-			}
-
-			adopted = existingTool;
-			return true;
-		}
-
-		return false;
-	}
+		=> shellToolHostService.OpenOrFocusToolTab(
+			Tabs,
+			this,
+			key,
+			name,
+			controlFactory,
+			tab => SelectedTab = tab,
+			icon);
 
 	private bool CanMoveTabToOrbit(object parameter)
 	{
 		var target = parameter ?? SelectedTab;
-		if (target is SessionModel session)
-		{
-			return session != null;
-		}
-
-		if (target is Models.ToolTabItem tool)
-		{
-			if (string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal))
-			{
-				return false;
-			}
-
-			return !orbitLayoutState.Items.Contains(tool);
-		}
-
-		return false;
+		return shellPresentationPolicyService.CanMoveTabToOrbit(target, orbitLayoutState.Items.Cast<object?>());
 	}
 
 	private void MoveTabToOrbit(object parameter)
@@ -1172,9 +882,8 @@ namespace Orbit.ViewModels
 			sessionUiCoordinator.MoveItemToOrbit(tool, HandleTabRemoval, this, "move-tool-to-orbit");
 		}
 
-		TryOpenToolByKey("OrbitView");
-		var orbitTab = Tabs.OfType<Models.ToolTabItem>()
-			.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
+		TryOpenToolByKey(ShellPresentationPolicyService.OrbitViewToolKey);
+		var orbitTab = shellPresentationPolicyService.FindToolTab(Tabs.Cast<object?>(), ShellPresentationPolicyService.OrbitViewToolKey);
 		if (orbitTab != null)
 		{
 			SelectedTab = orbitTab;
@@ -1201,8 +910,7 @@ namespace Orbit.ViewModels
 			SelectedSession = firstMoved;
 		}
 
-		var orbitTab = Tabs.OfType<Models.ToolTabItem>()
-			.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
+		var orbitTab = shellPresentationPolicyService.FindToolTab(Tabs.Cast<object?>(), ShellPresentationPolicyService.OrbitViewToolKey);
 		if (orbitTab != null)
 		{
 			SelectedTab = orbitTab;
@@ -1216,7 +924,7 @@ namespace Orbit.ViewModels
 	private bool CanMoveSessionToIndividualTabs(object parameter)
 	{
 		var target = parameter ?? SelectedSession;
-		return target is SessionModel session && session != null && !Tabs.Contains(session);
+		return shellPresentationPolicyService.CanMoveSessionToIndividualTabs(target, Tabs.Cast<object?>());
 	}
 
 	private void MoveSessionToIndividualTabs(object parameter)
@@ -1372,12 +1080,12 @@ namespace Orbit.ViewModels
 
 	public PlacementMode FloatingMenuPopupPlacement
 		=> FloatingMenuAutoDirection
-			? OppositeToPlacement(FloatingMenuActiveSide)
-			: ToPlacement(FloatingMenuDirection);
+			? floatingMenuGeometryService.OppositeToPlacement(FloatingMenuActiveSide)
+			: floatingMenuGeometryService.ToPlacement(FloatingMenuDirection);
 
 	public FloatingMenuDirection FloatingMenuExpansionDirection
 		=> FloatingMenuAutoDirection
-			? OppositeOf(FloatingMenuActiveSide)
+			? floatingMenuGeometryService.OppositeOf(FloatingMenuActiveSide)
 			: FloatingMenuDirection;
 
 	/// <summary>
@@ -1610,17 +1318,10 @@ namespace Orbit.ViewModels
 	}
 
 	public CornerRadius FloatingMenuDockCornerRadius
-	{
-		get
-		{
-			var cornerWidth = Math.Clamp(Settings.Default.FloatingMenuDockCornerThreshold, 60d, 250d);
-			var cornerHeight = Math.Clamp(Settings.Default.FloatingMenuDockCornerHeight, 60d, 250d);
-			var extent = Math.Min(cornerWidth, cornerHeight);
-			var roundness = Math.Clamp(Settings.Default.FloatingMenuDockCornerRoundness, 0d, 1d);
-			var radius = Math.Max(0d, extent * roundness);
-			return new CornerRadius(radius);
-		}
-	}
+		=> floatingMenuGeometryService.BuildDockCornerRadius(
+			Settings.Default.FloatingMenuDockCornerThreshold,
+			Settings.Default.FloatingMenuDockCornerHeight,
+			Settings.Default.FloatingMenuDockCornerRoundness);
 
 	// Menu Button Visibility Properties
 	public bool ShowMenuAddSession
@@ -1830,32 +1531,6 @@ namespace Orbit.ViewModels
 
 	private void UpdateFloatingMenuVisibilityForCurrentTab()
 	{
-		if (SelectedTab == null)
-		{
-			if (Tabs.Count == 0)
-			{
-				if (ShowFloatingMenuOnHome || ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs)
-				{
-					IsFloatingMenuVisible = true;
-				}
-				else
-				{
-					HideFloatingMenu();
-				}
-				return;
-			}
-
-			if (ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs)
-			{
-				IsFloatingMenuVisible = true;
-			}
-			else
-			{
-				HideFloatingMenu();
-			}
-			return;
-		}
-
 		if (!ShouldShowFloatingMenuForCurrentTab())
 		{
 			HideFloatingMenu();
@@ -1893,68 +1568,23 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		const double edgeMargin = 24d;
+		var position = floatingMenuGeometryService.ComputeDockPosition(
+			region,
+			FloatingMenuLeft,
+			FloatingMenuTop,
+			handleWidth,
+			handleHeight,
+			hostViewportWidth,
+			hostViewportHeight);
 
-		var usableWidth = Math.Max(0, hostViewportWidth - handleWidth);
-		var usableHeight = Math.Max(0, hostViewportHeight - handleHeight);
-		var centerLeft = usableWidth / 2;
-		var centerTop = usableHeight / 2;
-		var leftEdge = Math.Max(0, edgeMargin);
-		var topEdge = Math.Max(0, edgeMargin);
-		var rightEdge = Math.Max(0, hostViewportWidth - handleWidth - edgeMargin);
-		var bottomEdge = Math.Max(0, hostViewportHeight - handleHeight - edgeMargin);
-
-		double newLeft = FloatingMenuLeft;
-		double newTop = FloatingMenuTop;
-
-		switch (region)
-		{
-			case FloatingMenuDockRegion.Left:
-				newLeft = leftEdge;
-				newTop = centerTop;
-				break;
-			case FloatingMenuDockRegion.Right:
-				newLeft = rightEdge;
-				newTop = centerTop;
-				break;
-			case FloatingMenuDockRegion.Top:
-				newLeft = centerLeft;
-				newTop = topEdge;
-				break;
-			case FloatingMenuDockRegion.Bottom:
-				newLeft = centerLeft;
-				newTop = bottomEdge;
-				break;
-			case FloatingMenuDockRegion.TopLeft:
-				newLeft = leftEdge;
-				newTop = topEdge;
-				break;
-			case FloatingMenuDockRegion.TopRight:
-				newLeft = rightEdge;
-				newTop = topEdge;
-				break;
-			case FloatingMenuDockRegion.BottomLeft:
-				newLeft = leftEdge;
-				newTop = bottomEdge;
-				break;
-			case FloatingMenuDockRegion.BottomRight:
-				newLeft = rightEdge;
-				newTop = bottomEdge;
-				break;
-			case FloatingMenuDockRegion.Center:
-				newLeft = centerLeft;
-				newTop = centerTop;
-				break;
-		}
-
-		FloatingMenuLeft = Math.Clamp(newLeft, 0, usableWidth);
-		FloatingMenuTop = Math.Clamp(newTop, 0, usableHeight);
+		FloatingMenuLeft = position.Left;
+		FloatingMenuTop = position.Top;
 
 		ComputeAutoActiveSide();
 
 		if (!FloatingMenuAutoDirection)
 		{
-			FloatingMenuDirection = DetermineDirectionForRegion(region);
+			FloatingMenuDirection = floatingMenuGeometryService.DetermineDirectionForRegion(region);
 		}
 	}
 
@@ -1967,22 +1597,6 @@ namespace Orbit.ViewModels
 		hostViewportHeight = height;
 
 		ComputeAutoActiveSide();
-	}
-
-	private static FloatingMenuDirection DetermineDirectionForRegion(FloatingMenuDockRegion region)
-	{
-		return region switch
-		{
-			FloatingMenuDockRegion.Left => FloatingMenuDirection.Right,
-			FloatingMenuDockRegion.Right => FloatingMenuDirection.Left,
-			FloatingMenuDockRegion.Top => FloatingMenuDirection.Down,
-			FloatingMenuDockRegion.Bottom => FloatingMenuDirection.Up,
-			FloatingMenuDockRegion.TopLeft => FloatingMenuDirection.Right,
-			FloatingMenuDockRegion.TopRight => FloatingMenuDirection.Left,
-			FloatingMenuDockRegion.BottomLeft => FloatingMenuDirection.Right,
-			FloatingMenuDockRegion.BottomRight => FloatingMenuDirection.Left,
-			_ => FloatingMenuDirection.Right
-		};
 	}
 
 	public bool ShowFloatingMenu(bool force = false)
@@ -2005,19 +1619,12 @@ namespace Orbit.ViewModels
 
 	public bool ShouldShowFloatingMenuForCurrentTab()
 	{
-		if (SelectedTab == null)
-		{
-			if (Tabs.Count == 0)
-			{
-				return ShowFloatingMenuOnHome || ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs;
-			}
-
-			return ShowFloatingMenuOnSessionTabs || ShowFloatingMenuOnToolTabs;
-		}
-
-		return SelectedTab is SessionModel
-			? ShowFloatingMenuOnSessionTabs
-			: ShowFloatingMenuOnToolTabs;
+		return floatingMenuVisibilityService.ShouldShowForCurrentTab(
+			SelectedTab,
+			Tabs.Count,
+			ShowFloatingMenuOnHome,
+			ShowFloatingMenuOnSessionTabs,
+			ShowFloatingMenuOnToolTabs);
 	}
 
 	private static FloatingMenuQuickToggleMode ParseFloatingMenuQuickToggleMode(string value)
@@ -2032,33 +1639,12 @@ namespace Orbit.ViewModels
 
 	private void ComputeAutoActiveSide()
 	{
-		if (hostViewportWidth <= 0 || hostViewportHeight <= 0)
-			return;
-
-		const double handleRadius = 24;
-		var centerX = FloatingMenuLeft + handleRadius;
-		var centerY = FloatingMenuTop + handleRadius;
-
-		var distances = new Dictionary<FloatingMenuDirection, double>
-		{
-			{ FloatingMenuDirection.Left, Math.Max(0, centerX) },
-			{ FloatingMenuDirection.Right, Math.Max(0, hostViewportWidth - centerX) },
-			{ FloatingMenuDirection.Up, Math.Max(0, centerY) },
-			{ FloatingMenuDirection.Down, Math.Max(0, hostViewportHeight - centerY) }
-		};
-
-		var best = FloatingMenuDirection;
-		var bestDistance = double.MaxValue;
-		foreach (var pair in distances)
-		{
-			if (pair.Value < bestDistance)
-			{
-				bestDistance = pair.Value;
-				best = pair.Key;
-			}
-		}
-
-		autoActiveSide = best;
+		autoActiveSide = floatingMenuGeometryService.ComputeAutoActiveSide(
+			FloatingMenuLeft,
+			FloatingMenuTop,
+			hostViewportWidth,
+			hostViewportHeight,
+			FloatingMenuDirection);
 		OnPropertyChanged(nameof(FloatingMenuActiveSide));
 		OnPropertyChanged(nameof(FloatingMenuExpansionDirection));
 		OnPropertyChanged(nameof(FloatingMenuPopupPlacement));
@@ -2066,58 +1652,19 @@ namespace Orbit.ViewModels
 		OnPropertyChanged(nameof(FloatingMenuPopupVerticalOffset));
 	}
 
-	private static PlacementMode ToPlacement(FloatingMenuDirection side) => side switch
+	private async Task LoadScriptAsync()
 	{
-		FloatingMenuDirection.Left => PlacementMode.Left,
-		FloatingMenuDirection.Right => PlacementMode.Right,
-		FloatingMenuDirection.Up => PlacementMode.Top,
-		FloatingMenuDirection.Down => PlacementMode.Bottom,
-		_ => PlacementMode.Right
-	};
-
-	private static PlacementMode OppositeToPlacement(FloatingMenuDirection side) => side switch
-	{
-		FloatingMenuDirection.Left => PlacementMode.Right,
-		FloatingMenuDirection.Right => PlacementMode.Left,
-		FloatingMenuDirection.Up => PlacementMode.Bottom,
-		FloatingMenuDirection.Down => PlacementMode.Top,
-		_ => PlacementMode.Right
-	};
-
-	private static FloatingMenuDirection OppositeOf(FloatingMenuDirection side) => side switch
-	{
-		FloatingMenuDirection.Left => FloatingMenuDirection.Right,
-		FloatingMenuDirection.Right => FloatingMenuDirection.Left,
-		FloatingMenuDirection.Up => FloatingMenuDirection.Down,
-		FloatingMenuDirection.Down => FloatingMenuDirection.Up,
-		_ => FloatingMenuDirection.Right
-	};
-
-		private async Task LoadScriptAsync()
+		if (!CanLoadScript())
 		{
-			if (!CanLoadScript())
+			if (!Settings.Default.MesharpIntegrationEnabled)
 			{
-				if (!Settings.Default.MesharpIntegrationEnabled)
-				{
-					ConsoleLog.Append(
-						"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script load is unavailable.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-				}
-				return;
+				ConsoleLog.Append(
+					"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script load is unavailable.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
 			}
-
-			var path = hotReloadScriptPath;
-			if (!File.Exists(path))
-			{
-				ConsoleLog.Append($"[OrbitCmd] Script not found: {path}", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-				return;
-			}
-
-			var scriptId = ScriptManagerService.DeriveScriptIdFromPath(path);
-
-			// Track script usage
-			ScriptManager.AddOrUpdateScript(path, null, null, scriptId);
+			return;
+		}
 
 		var targetSession = ResolveHotReloadTarget();
 		if (targetSession == null)
@@ -2126,52 +1673,8 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		if (targetSession.InjectionState != InjectionState.Injected)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' is not injected; load aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			return;
-		}
-
-		if (targetSession.RSProcess == null)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' has no active process; load aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			return;
-		}
-
-		var activePath = targetSession.ActiveScriptPath;
-		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
-			!string.Equals(activePath, path, StringComparison.OrdinalIgnoreCase);
-		if (switchingScripts)
-		{
-			var unloaded = await TryUnloadActiveScriptBeforeLoadAsync(targetSession, path).ConfigureAwait(false);
-			if (!unloaded)
-			{
-				targetSession.SetScriptRuntimeError("Failed to unload previous script before loading a new one.");
-				return;
-			}
-		}
-
-		var pid = targetSession.RSProcess.Id;
-		ConsoleLog.Append($"[OrbitCmd] Requesting load for '{path}' as scriptId '{scriptId}' (session '{targetSession.Name}' PID {pid})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
-		// Use RELOAD for both initial and subsequent loads to avoid legacy runtime restart; send to selected session
-		var runtimeReady = await OrbitCommandClient
-			.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-			.ConfigureAwait(false);
-		if (!runtimeReady)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Unable to start ME .NET runtime for '{targetSession.Name}'. Load may fail.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
-
-		var success = await OrbitCommandClient.SendReloadWithRetryAsync(path, scriptId, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
-			if (!success)
-			{
-				ConsoleLog.Append("[OrbitCmd] Failed to send load command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-				targetSession.SetScriptRuntimeError($"Failed to load '{Path.GetFileNameWithoutExtension(path)}'.");
-				return;
-			}
-
-		targetSession.SetScriptLoaded(path, scriptId);
-		}
+		await scriptOrchestrationService.LoadAsync(targetSession, hotReloadScriptPath).ConfigureAwait(false);
+	}
 
 		private void ApplyThemeFromSettings()
 			=> themeService.ApplySavedTheme();
@@ -2204,31 +1707,19 @@ namespace Orbit.ViewModels
 			}
 		}
 
-		private async Task ReloadScriptAsync()
+	private async Task ReloadScriptAsync()
+	{
+		if (!CanReloadScript())
 		{
-			if (!CanReloadScript())
+			if (!Settings.Default.MesharpIntegrationEnabled)
 			{
-				if (!Settings.Default.MesharpIntegrationEnabled)
-				{
-					ConsoleLog.Append(
-						"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script reload is unavailable.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-				}
-				return;
+				ConsoleLog.Append(
+					"[OrbitCmd] MESharp integration is disabled in Settings -> Advanced. Script reload is unavailable.",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
 			}
-
-			var path = hotReloadScriptPath;
-			if (!File.Exists(path))
-			{
-				ConsoleLog.Append($"[OrbitCmd] Script not found: {path}", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-				return;
-			}
-
-		var scriptId = ScriptManagerService.DeriveScriptIdFromPath(path);
-
-		// Track script usage
-		ScriptManager.AddOrUpdateScript(path, null, null, scriptId);
+			return;
+		}
 
 		var targetSession = ResolveHotReloadTarget();
 		if (targetSession == null)
@@ -2237,84 +1728,7 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		if (targetSession.InjectionState != InjectionState.Injected)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' is not injected; reload aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			return;
-		}
-
-		if (targetSession.RSProcess == null)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Session '{targetSession.Name}' has no active process; reload aborted.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-			return;
-		}
-
-		var activePath = targetSession.ActiveScriptPath;
-		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
-			!string.Equals(activePath, path, StringComparison.OrdinalIgnoreCase);
-		if (switchingScripts)
-		{
-			var unloaded = await TryUnloadActiveScriptBeforeLoadAsync(targetSession, path).ConfigureAwait(false);
-			if (!unloaded)
-			{
-				targetSession.SetScriptRuntimeError("Failed to unload previous script before reloading a new one.");
-				return;
-			}
-		}
-
-		var pid = targetSession.RSProcess.Id;
-		ConsoleLog.Append($"[OrbitCmd] Requesting reload for '{path}' as scriptId '{scriptId}' (session '{targetSession.Name}' PID {pid})", ConsoleLogSource.Orbit, ConsoleLogLevel.Info);
-		var runtimeReady = await OrbitCommandClient
-			.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-			.ConfigureAwait(false);
-		if (!runtimeReady)
-		{
-			ConsoleLog.Append($"[OrbitCmd] Unable to start ME .NET runtime for '{targetSession.Name}'. Reload may fail.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
-
-		var success = await OrbitCommandClient.SendReloadWithRetryAsync(path, scriptId, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None);
-			if (!success)
-			{
-				ConsoleLog.Append("[OrbitCmd] Failed to send reload command.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-				targetSession.SetScriptRuntimeError($"Failed to reload '{Path.GetFileNameWithoutExtension(path)}'.");
-				return;
-			}
-
-		targetSession.SetScriptLoaded(path, scriptId);
-		}
-
-	private async Task<bool> TryUnloadActiveScriptBeforeLoadAsync(SessionModel targetSession, string nextPath)
-	{
-		if (targetSession.RSProcess == null)
-		{
-			return false;
-		}
-
-		ConsoleLog.Append(
-			$"[OrbitCmd] Unloading active script '{targetSession.ActiveScriptName}' before loading '{Path.GetFileNameWithoutExtension(nextPath)}' in session '{targetSession.Name}'.",
-			ConsoleLogSource.Orbit,
-			ConsoleLogLevel.Info);
-
-		var scriptIdToUnload = !string.IsNullOrWhiteSpace(targetSession.ActiveScriptId)
-			? targetSession.ActiveScriptId!
-			: ScriptManagerService.DeriveScriptIdFromPath(targetSession.ActiveScriptPath);
-
-		var unloaded = await OrbitCommandClient
-			.SendUnloadScriptWithRetryAsync(scriptIdToUnload, targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-			.ConfigureAwait(false);
-
-		if (!unloaded)
-		{
-			ConsoleLog.Append(
-				$"[OrbitCmd] Failed to unload previous script in session '{targetSession.Name}'.",
-				ConsoleLogSource.Orbit,
-				ConsoleLogLevel.Warning);
-			return false;
-		}
-
-		targetSession.SetScriptStopped();
-		await Task.Delay(250).ConfigureAwait(false);
-		return true;
+		await scriptOrchestrationService.ReloadAsync(targetSession, hotReloadScriptPath).ConfigureAwait(false);
 	}
 
 		private void OnSessionPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -2370,165 +1784,37 @@ namespace Orbit.ViewModels
 			return;
 
 		var ownerVm = ResolveOwningShellForSession(session);
-		ownerVm.RevealSession(session, requestFocus: false);
+		shellSessionFocusService.RevealSession(ownerVm, session, requestFocus: false);
 		ownerVm.TryActivateOwningWindow();
 	}
 
 	private MainWindowViewModel ResolveOwningShellForSession(SessionModel session)
-	{
-		if (Tabs.Contains(session))
-		{
-			return this;
-		}
-
-		var hostWindow = session.HostControl != null ? Window.GetWindow(session.HostControl) : null;
-		if (hostWindow?.DataContext is MainWindowViewModel hostVm)
-		{
-			return hostVm;
-		}
-
-		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-		foreach (var window in windows)
-		{
-			if (window.DataContext is not MainWindowViewModel candidate)
-			{
-				continue;
-			}
-
-			if (candidate.Tabs.Contains(session))
-			{
-				return candidate;
-			}
-		}
-
-		return this;
-	}
+		=> shellSessionFocusService.ResolveOwningShellForSession(this, session);
 
 	private void RevealSession(SessionModel session, bool requestFocus)
-	{
-		SelectedSession = session;
-
-		if (Tabs.Contains(session))
-		{
-			SelectedTab = session;
-		}
-		else
-		{
-			var orbitTab = Tabs.OfType<Models.ToolTabItem>()
-				.FirstOrDefault(t => string.Equals(t.Key, "OrbitView", StringComparison.Ordinal));
-			if (orbitTab != null)
-			{
-				SelectedTab = orbitTab;
-			}
-		}
-
-		var dispatcher = session.HostControl?.Dispatcher ?? Application.Current?.Dispatcher;
-		_ = dispatcher?.InvokeAsync(() =>
-		{
-			try
-			{
-				session.HostControl?.EnsureActiveAfterLayout();
-				if (requestFocus)
-				{
-					session.HostControl?.FocusEmbeddedClient();
-					session.SetFocus();
-				}
-			}
-			catch
-			{
-				// Best effort.
-			}
-		}, DispatcherPriority.Input);
-	}
+		=> shellSessionFocusService.RevealSession(this, session, requestFocus);
 
 	private void TryActivateOwningWindow()
-	{
-		try
-		{
-			var owningWindow = Application.Current?.Windows
-				?.OfType<Window>()
-				.FirstOrDefault(window => ReferenceEquals(window.DataContext, this));
-			owningWindow?.Activate();
-			owningWindow?.Focus();
-		}
-		catch
-		{
-			// Best effort.
-		}
-	}
+		=> shellSessionFocusService.ActivateOwningWindow(this);
 
 	/// <summary>
 	/// Reasserts MESharp input passthrough and focus spoof state for injected sessions.
 	/// This mirrors the WPF debug app behavior so Orbit can reliably accept keyboard input.
 	/// </summary>
 	public Task ReassertInputPassthroughAsync(bool orbitActive)
-	{
-		var targets = Sessions
-			.OfType<SessionModel>()
-			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
-			.ToList();
-
-		if (targets.Count == 0)
-		{
-			return Task.CompletedTask;
-		}
-
-		var focusSpoofEnabled = false;
-
-		return Task.Run(async () =>
-		{
-			foreach (var session in targets)
-			{
-				try
-				{
-					var process = session.RSProcess;
-					if (process == null || process.HasExited)
-					{
-						continue;
-					}
-
-						var targetDebugMenuVisible = session.NativeDebugMenuVisible;
-
-						if (!targetDebugMenuVisible)
-					{
-						await OrbitCommandClient
-							.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-							.ConfigureAwait(false);
-					}
-
-					await OrbitCommandClient
-						.SendDebugMenuVisibleWithRetryAsync(targetDebugMenuVisible, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-						.ConfigureAwait(false);
-
-					await OrbitCommandClient
-						.SendFocusSpoofWithRetryAsync(focusSpoofEnabled, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-						.ConfigureAwait(false);
-				}
-				catch
-				{
-					// Best-effort only; individual sessions may be shutting down.
-				}
-			}
-		});
-	}
+		=> mesharpSessionCommandService.ReassertInputPassthroughAsync(Sessions.Cast<SessionModel?>());
 
 	public bool IsMesharpDebugMenuHotkeyEnabled
 		=> Settings.Default.MesharpIntegrationEnabled && Settings.Default.MesharpDebugMenuHotkeyEnabled;
 
 	public bool MatchesMesharpDebugMenuHotkey(Key key, ModifierKeys modifiers)
 	{
-		if (!IsMesharpDebugMenuHotkeyEnabled)
-		{
-			return false;
-		}
-
-		if (!HotkeySerializer.TryParse(Settings.Default.MesharpDebugMenuHotkey, out var configuredKey, out var configuredModifiers))
-		{
-			HotkeySerializer.TryParse(HotkeySerializer.DefaultMesharpDebugMenuHotkey, out configuredKey, out configuredModifiers);
-		}
-
-		var normalized = HotkeySerializer.NormalizeKey(key);
-		return normalized == configuredKey && modifiers == configuredModifiers;
+		return mesharpHotkeyService.MatchesDebugMenuHotkey(
+			Settings.Default.MesharpIntegrationEnabled,
+			Settings.Default.MesharpDebugMenuHotkeyEnabled,
+			Settings.Default.MesharpDebugMenuHotkey,
+			key,
+			modifiers);
 	}
 
 	public Task ToggleNativeDebugMenuAsync()
@@ -2545,111 +1831,25 @@ namespace Orbit.ViewModels
 	}
 
 	public bool CanToggleNativeDebugMenu(SessionModel? session)
-		=> Settings.Default.MesharpIntegrationEnabled &&
-		   session != null &&
-		   session.InjectionState == InjectionState.Injected &&
-		   session.RSProcess != null &&
-		   !session.RSProcess.HasExited;
+		=> mesharpSessionCommandService.CanToggleNativeDebugMenu(Settings.Default.MesharpIntegrationEnabled, session);
 
-	public async Task SetNativeDebugMenuVisibleAsync(bool visible)
-	{
-		var targets = Sessions
-			.OfType<SessionModel>()
-			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
-			.ToList();
+	public Task SetNativeDebugMenuVisibleAsync(bool visible)
+		=> mesharpSessionCommandService.SetNativeDebugMenuVisibleAsync(Sessions.Cast<SessionModel?>(), visible);
 
-		foreach (var session in targets)
-		{
-			await SetNativeDebugMenuVisibleAsync(session, visible).ConfigureAwait(false);
-		}
-	}
-
-	public async Task SetNativeDebugMenuVisibleAsync(SessionModel session, bool visible)
-	{
-		if (session == null)
-		{
-			return;
-		}
-
-		var process = session.RSProcess;
-		if (process == null || process.HasExited)
-		{
-			session.SetNativeDebugMenuVisible(false, "process unavailable");
-			return;
-		}
-
-		var previousVisible = session.NativeDebugMenuVisible;
-		session.SetNativeDebugMenuVisible(visible, "native menu command pending");
-
-		try
-		{
-			if (visible)
+	public Task SetNativeDebugMenuVisibleAsync(SessionModel session, bool visible)
+		=> mesharpSessionCommandService.SetNativeDebugMenuVisibleAsync(
+			session,
+			visible,
+			revealAndFocusAsync: target =>
 			{
-				var ownerVm = ResolveOwningShellForSession(session);
-				ownerVm.RevealSession(session, requestFocus: true);
+				var ownerVm = ResolveOwningShellForSession(target);
+				ownerVm.RevealSession(target, requestFocus: true);
 				ownerVm.TryActivateOwningWindow();
-			}
+				return Task.CompletedTask;
+			});
 
-			var applied = false;
-			if (visible)
-			{
-				await OrbitCommandClient
-					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(120))
-					.ConfigureAwait(false);
-
-				await OrbitCommandClient
-					.SendInputModeWithRetryAsync(0, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				applied = await OrbitCommandClient
-					.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await OrbitCommandClient
-					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-			}
-			else
-			{
-				applied = await OrbitCommandClient
-					.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await OrbitCommandClient
-					.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await OrbitCommandClient
-					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-			}
-			if (applied)
-			{
-				session.SetNativeDebugMenuVisible(visible, "native menu command applied");
-			}
-			else
-			{
-				session.SetNativeDebugMenuVisible(previousVisible, "native menu command failed");
-			}
-		}
-		catch
-		{
-			session.SetNativeDebugMenuVisible(previousVisible, "native menu command threw");
-		}
-	}
-
-	public async Task ApplyNativeDebugMenuInjectionPreferenceAsync(bool hideOnInject)
-	{
-		var targets = Sessions
-			.OfType<SessionModel>()
-			.Where(s => s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
-			.ToList();
-
-		foreach (var session in targets)
-		{
-			await SetNativeDebugMenuVisibleAsync(session, !hideOnInject).ConfigureAwait(false);
-		}
-	}
+	public Task ApplyNativeDebugMenuInjectionPreferenceAsync(bool hideOnInject)
+		=> mesharpSessionCommandService.ApplyNativeDebugMenuInjectionPreferenceAsync(Sessions.Cast<SessionModel?>(), hideOnInject);
 
 	public void FocusSession(SessionModel session)
 	{
@@ -2691,115 +1891,19 @@ namespace Orbit.ViewModels
 		}
 
 		public Task ShutdownTrackedProcessesAsync(bool forceKillOnTimeout = false, CancellationToken cancellationToken = default)
-			=> sessionManager.ShutdownManagedProcessesAsync(forceKillOnTimeout, cancellationToken);
+			=> shellSessionCloseService.ShutdownTrackedProcessesAsync(forceKillOnTimeout, cancellationToken);
 
 		private async Task CloseSessionInternalAsync(SessionModel session, bool skipConfirmation, bool forceKillOnTimeout = false)
 		{
-			if (session == null)
-			{
-				return;
-			}
-
-			if (!TryMarkSessionCloseStarted(session))
-			{
-				return;
-			}
-
-			try
-			{
-				if (!skipConfirmation)
-				{
-					var confirmed = await ConfirmSessionCloseAsync(session).ConfigureAwait(true);
-					if (!confirmed)
-					{
-						return;
-					}
-				}
-
-				sessionPlacementService.SetPlacement(session, SessionPlacementKind.Closing);
-				sessionReconciliationService.LogDecision(
-					"close-start",
-					sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "close-start"));
-				var removeFromUiCollections = false;
-				var removedFromTabShell = false;
-				try
-				{
-					var pid = session.RSProcess?.Id;
-					ConsoleLog.Append(
-						$"[Orbit] Requesting shutdown for session '{session.Name}'{(pid.HasValue ? $" (PID {pid.Value})" : string.Empty)}.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Info);
-
-					// Remove the visible tab/workspace shell immediately so close feels instant,
-					// while the process shutdown continues in the background.
-					removedFromTabShell = RemoveSessionFromTabShell(session);
-					sessionReconciliationService.LogDecision(
-						"close-removed-visible-shell",
-						sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "close-visible-remove"),
-						$"removedFromTabShell={removedFromTabShell}");
-
-					await sessionManager.ShutdownSessionAsync(session, forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
-					removeFromUiCollections = true;
-				}
-				catch (Exception ex)
-				{
-					ConsoleLog.Append(
-						$"[Orbit] Failed to shutdown session '{session.Name}': {ex.Message}",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Error);
-
-					removeFromUiCollections = !IsSessionProcessStillRunning(session);
-					if (!removeFromUiCollections)
-					{
-						var recoveryState = session.InjectionState == InjectionState.Injected
-							? SessionState.Injected
-							: SessionState.ClientReady;
-						session.UpdateState(recoveryState, clearError: false);
-						sessionReconciliationService.LogDecision(
-							"close-recover-running-session",
-							sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "shutdown-failed"),
-							ex.Message);
-						ConsoleLog.Append(
-							$"[Orbit] Session '{session.Name}' is still running after shutdown failure; keeping it in UI for manual recovery.",
-							ConsoleLogSource.Orbit,
-							ConsoleLogLevel.Warning);
-					}
-				}
-				finally
-				{
-					if (removeFromUiCollections)
-					{
-						sessionReconciliationService.LogDecision(
-							"close-final-remove",
-							sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "shutdown-complete"));
-
-						if (Sessions.Contains(session))
-						{
-							Sessions.Remove(session);
-						}
-
-						sessionPlacementService.Remove(session);
-
-						if (!removedFromTabShell)
-						{
-							RemoveSessionFromTabShell(session);
-						}
-					}
-					else
-					{
-						if (sessionPlacementService.GetPlacement(session) == SessionPlacementKind.Closing)
-						{
-							sessionPlacementService.SetPlacement(session, SessionPlacementKind.Unknown, "close-aborted-or-failed");
-						}
-
-						EnsureSessionRemainsVisible(session);
-					}
-				}
-			}
-			finally
-			{
-				MarkSessionCloseCompleted(session);
-			}
+			await shellSessionCloseService.CloseSessionAsync(
+				session,
+				skipConfirmation,
+				forceKillOnTimeout,
+				Sessions,
+				() => orbitLayoutState.Items.Cast<object>(),
+				ConfirmSessionCloseAsync,
+				RemoveSessionFromTabShell,
+				EnsureSessionRemainsVisible).ConfigureAwait(true);
 		}
 
 		private bool RemoveSessionFromTabShell(SessionModel session)
@@ -2814,66 +1918,20 @@ namespace Orbit.ViewModels
 			return removedAny;
 		}
 
-		private static bool IsSessionProcessStillRunning(SessionModel session)
-		{
-			var process = session?.RSProcess;
-			if (process == null)
-			{
-				return false;
-			}
-
-			try
-			{
-				return !process.HasExited;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
 		private void EnsureSessionRemainsVisible(SessionModel session)
 		{
-			if (session == null || !Sessions.Contains(session))
-			{
-				return;
-			}
-
-			if (sessionPlacementService.GetPlacement(session) == SessionPlacementKind.Closing)
-			{
-				return;
-			}
-
-			var snapshot = sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "ensure-visible");
-			if (!snapshot.HasAnyUiReference)
-			{
-				sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs, "restore-visible-session");
-				Tabs.Add(session);
-			}
-
-			SelectedSession = session;
-			if (Tabs.Contains(session))
-			{
-				SelectedTab = session;
-			}
-		}
-
-		private static bool ShouldConfirmSessionClose(SessionModel session)
-		{
-			if (session == null || !session.IsRuneScapeClient)
-			{
-				return false;
-			}
-
-			return session.State == SessionState.ClientReady ||
-				   session.State == SessionState.Injecting ||
-				   session.State == SessionState.Injected ||
-				   session.InjectionState == InjectionState.Injected;
+			shellSessionRecoveryService.EnsureSessionRemainsVisible(
+				session,
+				Sessions,
+				Tabs,
+				orbitLayoutState.Items.Cast<object>(),
+				selected => SelectedSession = selected,
+				selected => SelectedTab = selected);
 		}
 
 	private async Task<bool> ConfirmSessionCloseAsync(SessionModel session)
 	{
-		if (!ShouldConfirmSessionClose(session))
+		if (!sessionLifecycleCoordinator.ShouldConfirmClose(session))
 		{
 			return true;
 		}
@@ -2909,30 +1967,6 @@ namespace Orbit.ViewModels
 			return await dispatcher.InvokeAsync(ShowDialogOnUi).Task.ConfigureAwait(true);
 		}
 
-		private bool IsSessionCloseInProgress(SessionModel session)
-		{
-			lock (sessionCloseSync)
-			{
-				return closingSessionIds.Contains(session.Id);
-			}
-		}
-
-		private bool TryMarkSessionCloseStarted(SessionModel session)
-		{
-			lock (sessionCloseSync)
-			{
-				return closingSessionIds.Add(session.Id);
-			}
-		}
-
-		private void MarkSessionCloseCompleted(SessionModel session)
-		{
-			lock (sessionCloseSync)
-			{
-				closingSessionIds.Remove(session.Id);
-			}
-		}
-
 		private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 		{
 		if (e == null)
@@ -2941,63 +1975,29 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Reset)
+		var result = shellTabCollectionCoordinatorService.HandleCollectionChanged(
+			Tabs.Cast<object?>(),
+			SelectedTab,
+			e.Action,
+			e.OldItems?.Cast<object?>(),
+			e.NewItems?.Cast<object?>(),
+			IsOrbitViewTearOffWindow(),
+			ReferenceEquals(Application.Current?.MainWindow?.DataContext, this));
+
+		if (!ReferenceEquals(SelectedTab, result.SelectedTab))
 		{
-			if (Tabs.Count == 0)
-			{
-				SelectedTab = null;
-				SelectedSession = null;
-			}
-			else if (SelectedTab == null || (e.OldItems != null && e.OldItems.Contains(SelectedTab)))
-			{
-				SelectedTab = Tabs.FirstOrDefault();
-			}
-		}
-		else if (e.Action == NotifyCollectionChangedAction.Replace && e.OldItems != null && e.OldItems.Contains(SelectedTab))
-		{
-			SelectedTab = e.NewItems?.Cast<object>().FirstOrDefault() ?? Tabs.FirstOrDefault();
+			SelectedTab = result.SelectedTab;
 		}
 
-			if (e.OldItems != null)
-			{
-				foreach (var removedSession in e.OldItems.OfType<SessionModel>())
-				{
-					if (!sessionPlacementService.IsMoveInProgress(removedSession) &&
-						sessionPlacementService.GetPlacement(removedSession) is not SessionPlacementKind.OrbitWorkspace and not SessionPlacementKind.Closing)
-					{
-						ScheduleOrphanedSessionValidation(removedSession);
-					}
-				}
-			}
+		if (result.ClearSelectedSession)
+		{
+			SelectedSession = null;
+		}
 
-				if (e.NewItems != null)
-				{
-					var isOrbitTearOffWindow = IsOrbitViewTearOffWindow();
-					foreach (var added in e.NewItems.Cast<object>())
-					{
-						switch (added)
-						{
-							case SessionModel session:
-								if (isOrbitTearOffWindow)
-								{
-									sessionPlacementService.SetPlacement(session, SessionPlacementKind.OrbitWorkspace, "orbit-tearoff-tab-add");
-								}
-								else
-								{
-									sessionPlacementService.SetPlacement(
-										session,
-										ReferenceEquals(Application.Current?.MainWindow?.DataContext, this)
-											? SessionPlacementKind.MainTabs
-											: SessionPlacementKind.TearOffWindow);
-									orbitLayoutState.RemoveItem(session);
-								}
-								break;
-							case Models.ToolTabItem tool when !isOrbitTearOffWindow && !string.Equals(tool.Key, "OrbitView", StringComparison.Ordinal):
-								orbitLayoutState.RemoveItem(tool);
-								break;
-						}
-				}
-			}
+		foreach (var removedSession in result.SessionsNeedingOrphanValidation)
+		{
+			ScheduleOrphanedSessionValidation(removedSession);
+		}
 
 			UpdateFloatingMenuVisibilityForCurrentTab();
 		}
@@ -3025,17 +2025,7 @@ namespace Orbit.ViewModels
 			return;
 		}
 
-		var shouldSchedule = false;
-		lock (sessionCloseSync)
-		{
-			if (!pendingOrphanValidationSessionIds.Contains(session.Id))
-			{
-				pendingOrphanValidationSessionIds.Add(session.Id);
-				shouldSchedule = true;
-			}
-		}
-
-		if (!shouldSchedule)
+		if (!sessionLifecycleCoordinator.TryBeginOrphanValidation(session))
 		{
 			return;
 		}
@@ -3054,51 +2044,16 @@ namespace Orbit.ViewModels
 
 	private void ValidateOrphanedSession(SessionModel session)
 	{
-		try
-		{
-			if (_disposed || session == null || IsSessionCloseInProgress(session))
-			{
-				return;
-			}
-
-			var snapshot = sessionReconciliationService.Capture(session, orbitLayoutState.Items.Cast<object>(), "orphan-validation");
-			if (snapshot.HasConflictingUiOwnership)
-			{
-				sessionReconciliationService.LogDecision(
-					"orphan-conflicting-ownership",
-					snapshot,
-					"session is visible in both orbit and non-orbit owners; leaving ownership cleanup to workspace reconciliation");
-			}
-
-			if (!sessionReconciliationService.ShouldRestoreOrphan(snapshot))
-			{
-				if (snapshot.InSessionCollection && !snapshot.HasAnyUiReference)
-				{
-					sessionReconciliationService.LogDecision("orphan-ignore", snapshot);
-				}
-				return;
-			}
-
-			sessionReconciliationService.LogDecision("orphan-restore", snapshot);
-			ConsoleLog.Append(
-				$"[Orbit] Session '{session.Name}' temporarily lost all UI references; restoring it to tabs instead of closing the process.",
-				ConsoleLogSource.Orbit,
-				ConsoleLogLevel.Warning);
-
-			EnsureSessionRemainsVisible(session);
-		}
-		finally
-		{
-			lock (sessionCloseSync)
-			{
-				pendingOrphanValidationSessionIds.Remove(session.Id);
-			}
-		}
+		shellSessionRecoveryService.ValidateOrphanedSession(
+			session,
+			_disposed,
+			orbitLayoutState.Items.Cast<object>(),
+			EnsureSessionRemainsVisible);
 	}
 
 		private async void SessionCrashWatchTimer_Tick(object? sender, EventArgs e)
 		{
-			if (_disposed || isApplicationShuttingDown || sessionCrashCheckRunning)
+			if (_disposed || isApplicationShuttingDown)
 			{
 				return;
 			}
@@ -3108,106 +2063,12 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			if (!Settings.Default.AutoRelaunchOnUnexpectedExit)
-			{
-				return;
-			}
-
-			sessionCrashCheckRunning = true;
-			try
-			{
-				var snapshot = Sessions.OfType<SessionModel>().ToList();
-				foreach (var session in snapshot)
-				{
-					if (!IsUnexpectedSessionExit(session))
-					{
-						continue;
-					}
-
-					await TryAutoRelaunchSessionAsync(session).ConfigureAwait(true);
-				}
-			}
-			finally
-			{
-				sessionCrashCheckRunning = false;
-			}
-		}
-
-		private bool IsUnexpectedSessionExit(SessionModel session)
-		{
-			if (session == null || !session.IsRuneScapeClient)
-			{
-				return false;
-			}
-
-			if (session.State == SessionState.Closed || session.State == SessionState.ShuttingDown)
-			{
-				return false;
-			}
-
-			if (IsSessionCloseInProgress(session))
-			{
-				return false;
-			}
-
-			var process = session.RSProcess;
-			if (process == null)
-			{
-				return false;
-			}
-
-			try
-			{
-				return process.HasExited;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
-		private async Task TryAutoRelaunchSessionAsync(SessionModel session)
-		{
-			if (!relaunchingSessionIds.TryAdd(session.Id, 0))
-			{
-				return;
-			}
-
-			var originalName = session.Name;
-			try
-			{
-				ConsoleLog.Append(
-					$"[Orbit] Session '{session.Name}' exited unexpectedly. Auto-relaunching.",
-					ConsoleLogSource.Orbit,
-					ConsoleLogLevel.Warning);
-
-				await CloseSessionInternalAsync(session, skipConfirmation: true, forceKillOnTimeout: false).ConfigureAwait(true);
-
-				if (_disposed || isApplicationShuttingDown || !Settings.Default.AutoRelaunchOnUnexpectedExit)
-				{
-					return;
-				}
-
-				var relaunched = await AddSingleSessionAsync(originalName).ConfigureAwait(true);
-				if (!relaunched)
-				{
-					ConsoleLog.Append(
-						$"[Orbit] Auto-relaunch failed for session '{originalName}'.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-				}
-			}
-			catch (Exception ex)
-			{
-				ConsoleLog.Append(
-					$"[Orbit] Auto-relaunch error for session '{originalName}': {ex.Message}",
-					ConsoleLogSource.Orbit,
-					ConsoleLogLevel.Error);
-			}
-			finally
-			{
-				relaunchingSessionIds.TryRemove(session.Id, out _);
-			}
+			await sessionAutoRelaunchService.CheckAndRelaunchAsync(
+				Sessions.Cast<SessionModel?>(),
+				isApplicationShuttingDown,
+				Settings.Default.AutoRelaunchOnUnexpectedExit,
+				session => CloseSessionInternalAsync(session, skipConfirmation: true, forceKillOnTimeout: false),
+				AddSingleSessionAsync).ConfigureAwait(true);
 		}
 
 		public void MarkApplicationShuttingDown()
@@ -3218,42 +2079,22 @@ namespace Orbit.ViewModels
 
 		private void HandleTabRemoval(object removedItem)
 		{
-		if (Tabs.Count == 0)
-		{
-				SelectedTab = null;
+			var selection = shellTabSelectionService.ResolveAfterTabRemoval(Tabs.Cast<object?>(), SelectedTab, removedItem);
+			if (!ReferenceEquals(SelectedTab, selection.SelectedTab))
+			{
+				SelectedTab = selection.SelectedTab;
+			}
+
+			if (selection.ClearSelectedSession)
+			{
 				SelectedSession = null;
-				UpdateFloatingMenuVisibilityForCurrentTab();
-				return;
-			}
-
-			if (SelectedTab == null || (removedItem != null && ReferenceEquals(removedItem, SelectedTab)))
-			{
-				SelectedTab = Tabs[0];
 			}
 
 				UpdateFloatingMenuVisibilityForCurrentTab();
 			}
 
-		private static void DisposeToolItem(object? item)
-		{
-			if (item is not Models.ToolTabItem tool || tool.HostControl == null)
-			{
-				return;
-			}
-
-			try
-			{
-				if (tool.HostControl.DataContext is IDisposable disposable &&
-					disposable is not MainWindowViewModel)
-				{
-					disposable.Dispose();
-				}
-			}
-			catch
-			{
-				// Best effort cleanup.
-			}
-		}
+		private void DisposeToolItem(object? item)
+			=> shellToolHostService.DisposeToolItem(item, this);
 
 		private void RestoreOrbitWorkspaceToTabs()
 		{
@@ -3279,25 +2120,19 @@ namespace Orbit.ViewModels
 				}
 			}
 
-		if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Reset)
+		var selection = shellSessionSelectionService.ResolveAfterSessionsChanged(
+			Sessions,
+			e.Action,
+			SelectedSession,
+			hotReloadTargetSession);
+		if (!ReferenceEquals(hotReloadTargetSession, selection.HotReloadTargetSession))
 		{
-			if (hotReloadTargetSession != null && !Sessions.Contains(hotReloadTargetSession))
-			{
-				HotReloadTargetSession = Sessions.FirstOrDefault();
-			}
-		}
-		else if ((e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace) && HotReloadTargetSession == null)
-		{
-			HotReloadTargetSession = Sessions.FirstOrDefault();
+			HotReloadTargetSession = selection.HotReloadTargetSession;
 		}
 
-		if (SelectedSession != null && !Sessions.Contains(SelectedSession))
+		if (!ReferenceEquals(SelectedSession, selection.SelectedSession))
 		{
-			SelectedSession = Sessions.FirstOrDefault();
-		}
-		else if (SelectedSession == null && Sessions.Count > 0 && (e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace))
-		{
-			SelectedSession = Sessions.FirstOrDefault();
+			SelectedSession = selection.SelectedSession;
 		}
 
 		OnPropertyChanged(nameof(HasSessions));
@@ -3330,10 +2165,7 @@ namespace Orbit.ViewModels
 				Sessions.CollectionChanged -= OnSessionsCollectionChanged;
 					sessionCollectionService.PropertyChanged -= OnGlobalSessionChanged;
 					settingsViewModel.PropertyChanged -= OnSettingsViewModelPropertyChanged;
-					lock (sessionCloseSync)
-				{
-					pendingOrphanValidationSessionIds.Clear();
-				}
+					sessionLifecycleCoordinator.ClearPendingOrphanValidations();
 				sessionCrashWatchTimer.Stop();
 				sessionCrashWatchTimer.Tick -= SessionCrashWatchTimer_Tick;
 			}

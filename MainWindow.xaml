@@ -267,7 +267,7 @@
                             ShowDefaultCloseButton="True"
                             Style="{StaticResource Orbit.TabablzControlStyle}">
                             <dragablz:TabablzControl.InterTabController>
-                                <dragablz:InterTabController InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType=Controls:MetroWindow}}" Partition="OrbitMainShell" />
+                                <dragablz:InterTabController InterTabClient="{Binding DataContext.InterTabClient, RelativeSource={RelativeSource AncestorType={x:Type Controls:MetroWindow}}}" Partition="OrbitMainShell" />
                             </dragablz:TabablzControl.InterTabController>
                         </dragablz:TabablzControl>
                     </DataTemplate>

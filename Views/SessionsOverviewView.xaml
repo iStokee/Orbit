@@ -14,8 +14,7 @@
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
 
-        <Style x:Key="SessionsRootGridStyle" TargetType="Grid">
-            <Setter Property="Margin" Value="16" />
+        <Style x:Key="SessionsRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="12" />
@@ -38,10 +37,9 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="SessionCardStyle" TargetType="Border" BasedOn="{StaticResource Orbit.ToolCard}">
+        <Style x:Key="SessionCardStyle" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.SelectableCard}">
             <Setter Property="Margin" Value="0,0,0,10" />
             <Setter Property="Padding" Value="12" />
-            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
@@ -58,13 +56,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="SessionListItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-        </Style>
+        <Style x:Key="SessionListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource Orbit.Workbench.ListItem}" />
     </UserControl.Resources>
 
     <Grid Style="{StaticResource SessionsRootGridStyle}">
@@ -87,20 +79,20 @@
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Session Manager" />
                         <WrapPanel Margin="0,4,0,0" VerticalAlignment="Center">
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Surface.Muted}" CornerRadius="3">
-                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.OnMuted}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
+                            <Border Style="{StaticResource Orbit.Workbench.Badge}">
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText}" Text="{Binding SessionCount, StringFormat='Sessions: {0}'}" />
                             </Border>
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Action.Primary}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
+                            <Border Style="{StaticResource Orbit.Workbench.Badge.Primary}">
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}" Text="{Binding InjectedSessionCount, StringFormat='Injected: {0}'}" />
                             </Border>
-                            <Border Margin="0,0,6,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Action.Secondary}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts: {0}'}" />
+                            <Border Style="{StaticResource Orbit.Workbench.Badge.Secondary}">
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}" Text="{Binding ScriptLoadedCount, StringFormat='Scripts: {0}'}" />
                             </Border>
-                            <Border Padding="8,2" Background="{DynamicResource Orbit.Brushes.Status.Error}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Error}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
+                            <Border Style="{StaticResource Orbit.Workbench.Badge.Error}">
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Error}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
                             </Border>
-                            <Border Margin="6,0,0,0" Padding="8,2" Background="{DynamicResource Orbit.Brushes.Status.Warning}" CornerRadius="3">
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnStatus.Warning}" Text="{Binding ConflictingUiOwnershipCount, StringFormat='UI Conflicts: {0}'}" />
+                            <Border Style="{StaticResource Orbit.Workbench.Badge.Warning}">
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Warning}" Text="{Binding ConflictingUiOwnershipCount, StringFormat='UI Conflicts: {0}'}" />
                             </Border>
                         </WrapPanel>
                         <TextBlock
@@ -117,7 +109,7 @@
                         Margin="0,0,10,0"
                         Command="{Binding DumpDiagnosticsCommand}"
                         Content="Dump Diagnostics"
-                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                        Style="{StaticResource Orbit.Workbench.Button}" />
                     <TextBlock Margin="0,0,8,0" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Density:" />
                     <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Full"
                                   IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
@@ -132,7 +124,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource Orbit.ToolCard}">
+        <Border Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource Orbit.Workbench.Panel}">
             <ListBox
                 BorderThickness="0"
                 Background="Transparent"
@@ -167,14 +159,14 @@
                                     <StackPanel Grid.Column="1">
                                         <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding DisplayName}" />
 	                                        <WrapPanel Margin="0,4,0,0">
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Surface.Muted}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.OnMuted}" Text="{Binding State}" />
+	                                            <Border Style="{StaticResource Orbit.Workbench.Badge}">
+	                                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText}" Text="{Binding State}" />
 	                                            </Border>
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Action.Primary}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}" Text="{Binding InjectionState}" />
+	                                            <Border Style="{StaticResource Orbit.Workbench.Badge.Primary}">
+	                                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}" Text="{Binding InjectionState}" />
 	                                            </Border>
-	                                            <Border Margin="0,0,6,0" Padding="6,2" Background="{DynamicResource Orbit.Brushes.Surface.Hover}" CornerRadius="3">
-	                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Orbit.Brushes.Text.OnHover}" Text="{Binding NativeDebugMenuStatus, StringFormat='Menu: {0}'}" />
+	                                            <Border Style="{StaticResource Orbit.Workbench.Badge}">
+	                                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText}" Text="{Binding NativeDebugMenuStatus, StringFormat='Menu: {0}'}" />
 	                                            </Border>
 	                                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}" Text="{Binding CreatedAt, StringFormat='Created {0:g}'}" />
 	                                        </WrapPanel>
@@ -202,44 +194,44 @@
                                         Command="{Binding DataContext.SetActiveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Set Active"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                                        Style="{StaticResource Orbit.Workbench.Button}" />
 	                                    <Button
 	                                        Margin="0,0,6,6"
 	                                        Command="{Binding DataContext.FocusCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
 	                                        CommandParameter="{Binding}"
 	                                        Content="Focus"
-	                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+	                                        Style="{StaticResource Orbit.Workbench.Button}" />
 	                                    <Button
 	                                        Margin="0,0,6,6"
 	                                        Command="{Binding DataContext.ToggleNativeDebugMenuCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
 	                                        CommandParameter="{Binding}"
 	                                        Content="{Binding NativeDebugMenuButtonText}"
-	                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+	                                        Style="{StaticResource Orbit.Workbench.Button}" />
 	                                    <Button
 	                                        Margin="0,0,6,6"
 	                                        Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Load Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                                        Style="{StaticResource Orbit.Workbench.Button}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.ReloadScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Reload Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                                        Style="{StaticResource Orbit.Workbench.Button}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.StopScriptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Stop Script"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                                        Style="{StaticResource Orbit.Workbench.Button}" />
                                     <Button
                                         Margin="0,0,6,6"
                                         Command="{Binding DataContext.CloseCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Content="Close"
                                         Foreground="{DynamicResource Orbit.Brushes.Status.Error}"
-                                        Style="{StaticResource MahApps.Styles.Button.Square}" />
+                                        Style="{StaticResource Orbit.Workbench.Button}" />
                                 </WrapPanel>
                             </StackPanel>
                         </Border>

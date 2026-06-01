@@ -202,7 +202,7 @@
                     Click="CancelButton_Click"
                     Content="Keep Session"
                     IsCancel="True"
-                    Style="{DynamicResource MahApps.Styles.Button.Square}">
+                    Style="{DynamicResource Orbit.Workbench.Button}">
                     <Button.ContentTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
@@ -223,7 +223,7 @@
                     Click="CloseButton_Click"
                     Content="Close session"
                     IsDefault="True"
-                    Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                    Style="{DynamicResource Orbit.Workbench.Button.Primary}">
                     <Button.ContentTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">

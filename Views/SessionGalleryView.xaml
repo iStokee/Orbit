@@ -22,8 +22,7 @@
         <converters:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
 
-        <Style x:Key="GalleryRootGridStyle" TargetType="Grid">
-            <Setter Property="Margin" Value="16" />
+        <Style x:Key="GalleryRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="12" />
@@ -73,23 +72,10 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="SessionCardStyle" TargetType="Border">
+        <Style x:Key="SessionCardStyle" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
             <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="8" />
             <Setter Property="Margin" Value="8" />
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect
-                        BlurRadius="8"
-                        Direction="270"
-                        Opacity="0.2"
-                        ShadowDepth="2"
-                        Color="Black" />
-                </Setter.Value>
-            </Setter>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=GalleryHeaderDensity}" Value="1">
                     <Setter Property="Padding" Value="6" />
@@ -103,12 +89,8 @@
         </Style>
 
         <!--  Thumbnail card style  -->
-        <Style x:Key="ThumbnailCard" TargetType="Border">
+        <Style x:Key="ThumbnailCard" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.SelectableCard}">
             <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Base}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
@@ -265,7 +247,7 @@
                             Height="36"
                             Margin="0,0,8,0"
                             Command="{Binding RefreshThumbnailsCommand}"
-                            Style="{StaticResource MahApps.Styles.Button.Circle}"
+                            Style="{StaticResource Orbit.Workbench.IconButton}"
                             ToolTip="Refresh All Thumbnails">
                             <iconPacks:PackIconMaterial
                                 Width="18"
@@ -303,7 +285,7 @@
         </Border>
 
         <!--  Gallery Grid  -->
-        <Border Grid.Row="1" Style="{StaticResource Orbit.ToolCard}">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}">
             <ScrollViewer
                 Padding="8,6,16,8"
                 HorizontalScrollBarVisibility="Disabled"

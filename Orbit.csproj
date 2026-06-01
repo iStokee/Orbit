@@ -51,6 +51,7 @@
     <Compile Remove="Classes\CustomTheme.cs" />
     <Compile Remove="Classes\MyLibraryThemeProvider.cs" />
     <Compile Remove="FloatingWindow.xaml.cs" />
+    <Compile Remove="Orbit.Tests\**" />
     <Compile Remove="ThemeManagement.cs" />
     <Compile Remove="WinformHost.cs" />
   </ItemGroup>
@@ -117,9 +118,15 @@
 
   <ItemGroup>
     <Compile Remove="bin\**" />
+    <Compile Remove="obj\**" />
     <EmbeddedResource Remove="bin\**" />
+    <EmbeddedResource Remove="obj\**" />
     <None Remove="bin\**" />
+    <None Remove="obj\**" />
+    <None Remove="Orbit.Tests\**" />
     <Page Remove="bin\**" />
+    <Page Remove="obj\**" />
+    <Page Remove="Orbit.Tests\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -127,5 +134,4 @@
   </ItemGroup>
 
 </Project>
-
 

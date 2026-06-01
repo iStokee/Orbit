@@ -1,7 +1,9 @@
 using System.Windows;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 
 [assembly: SupportedOSPlatform("windows")]
+[assembly: InternalsVisibleTo("Orbit.Tests")]
 
 [assembly: ThemeInfo(
 	ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located

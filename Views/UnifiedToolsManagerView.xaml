@@ -16,7 +16,7 @@
         <converters:BooleanToAccentBrushConverter x:Key="BooleanToAccentBrushConverter" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
-    <Grid Margin="{StaticResource Orbit.ToolPageMargin}">
+    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -50,10 +50,7 @@
         <!--  Toolbar  -->
         <Border
             Grid.Row="1"
-            Padding="20,12"
-            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
-            BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-            BorderThickness="0,0,0,1">
+            Style="{StaticResource Orbit.Workbench.CommandBar}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -63,11 +60,9 @@
                 <!--  Action Buttons  -->
                 <WrapPanel Grid.Row="0" Orientation="Horizontal">
                     <Button
-                        Margin="0,0,8,0"
-                        Padding="16,8"
                         Command="{Binding ImportPluginCommand}"
                         Content="Import Plugin"
-                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                        Style="{DynamicResource Orbit.Workbench.Button.Primary}">
                         <Button.ContentTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -83,11 +78,9 @@
                     </Button>
 
                     <Button
-                        Margin="0,0,8,0"
-                        Padding="16,8"
                         Command="{Binding AutoLoadAllCommand}"
                         Content="Auto-Load Plugins"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        Style="{DynamicResource Orbit.Workbench.Button}">
                         <Button.ContentTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -103,10 +96,9 @@
                     </Button>
 
                     <Button
-                        Padding="16,8"
                         Command="{Binding RefreshCommand}"
                         Content="Refresh"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                        Style="{DynamicResource Orbit.Workbench.Button}">
                         <Button.ContentTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -157,7 +149,7 @@
                             Margin="0,0,16,16"
                             Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource Orbit.ToolCard}">
+                                <Style TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.SelectableCard}">
                                     <Setter Property="Margin" Value="0,0,16,16" />
                                     <Setter Property="Width" Value="380" />
                                     <Setter Property="Padding" Value="16" />
@@ -290,7 +282,7 @@
                                         Command="{Binding ReloadCommand}"
                                         Content="Hot Reload"
                                         FontSize="12"
-                                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}">
+                                        Style="{DynamicResource Orbit.Workbench.Button.Primary}">
                                         <Button.ContentTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -306,11 +298,10 @@
                                     </Button>
 
                                     <Button
-                                        Padding="12,6"
                                         Command="{Binding UnloadCommand}"
                                         Content="Unload"
                                         FontSize="12"
-                                        Style="{DynamicResource MahApps.Styles.Button.Square}">
+                                        Style="{DynamicResource Orbit.Workbench.Button}">
                                         <Button.ContentTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -336,9 +327,7 @@
         <Border
             Grid.Row="3"
             Padding="20,10"
-            Background="{DynamicResource Orbit.Brushes.Surface.Card}"
-            BorderBrush="{DynamicResource Orbit.Brushes.Text.Secondary}"
-            BorderThickness="0,1,0,0">
+            Style="{StaticResource Orbit.Workbench.Panel}">
             <Grid>
                 <TextBlock
                     VerticalAlignment="Center"

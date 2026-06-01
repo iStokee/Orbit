@@ -118,7 +118,7 @@ namespace Orbit.Services
 			// Orbit View no longer auto-synchronizes sessions, so without this the tab could be "registered but invisible".
 				try
 				{
-					var launchBehavior = NormalizeSessionLaunchBehavior(Orbit.Settings.Default.SessionLaunchBehavior);
+					var launchBehavior = SessionLaunchCoordinatorService.NormalizeSessionLaunchBehavior(Orbit.Settings.Default.SessionLaunchBehavior);
 					var mainVm = Application.Current?.Windows
 						.OfType<Orbit.MainWindow>()
 						.FirstOrDefault()
@@ -150,21 +150,6 @@ namespace Orbit.Services
 				}
 
 				return session.Id;
-			}
-
-			private static string NormalizeSessionLaunchBehavior(string? launchBehavior)
-			{
-				if (string.IsNullOrWhiteSpace(launchBehavior))
-				{
-					return "OrbitView";
-				}
-
-				if (string.Equals(launchBehavior, "SessionsTabbed", StringComparison.OrdinalIgnoreCase))
-				{
-					return "IndividualTabs";
-				}
-
-				return launchBehavior;
 			}
 
 		/// <summary>

@@ -120,8 +120,33 @@ namespace Orbit.Services.Updates
 
 			Directory.CreateDirectory(extractDir);
 
-			ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
+			using var archive = ZipFile.OpenRead(zipPath);
+			ValidateArchiveEntries(archive, extractDir);
+			archive.ExtractToDirectory(extractDir, overwriteFiles: true);
 			return extractDir;
+		}
+
+		private static void ValidateArchiveEntries(ZipArchive archive, string extractDir)
+		{
+			var root = Path.GetFullPath(extractDir);
+			if (!root.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+			{
+				root += Path.DirectorySeparatorChar;
+			}
+
+			foreach (var entry in archive.Entries)
+			{
+				if (string.IsNullOrWhiteSpace(entry.FullName))
+				{
+					throw new InvalidDataException("Update archive contains an empty entry name.");
+				}
+
+				var destinationPath = Path.GetFullPath(Path.Combine(root, entry.FullName));
+				if (!destinationPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+				{
+					throw new InvalidDataException($"Update archive contains an unsafe path: {entry.FullName}");
+				}
+			}
 		}
 
 		/// <summary>
