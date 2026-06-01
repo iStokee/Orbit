@@ -15,7 +15,6 @@ namespace Orbit.Services
 {
 	public class SessionManagerService
 	{
-		private const string DefaultInjectorDll = "XInput1_4_inject.dll";
 		private const uint WM_CLOSE = 0x0010;
 		private const int SW_HIDE = 0;
 		private const int SW_MINIMIZE = 6;
@@ -28,6 +27,7 @@ namespace Orbit.Services
 		private static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(3);
 		private static bool IsMesharpIntegrationEnabled => Settings.Default.MesharpIntegrationEnabled;
 		private static bool HideNativeDebugMenuOnInject => Settings.Default.HideNativeDebugMenuOnInject;
+		private readonly InjectorPathResolver injectorPathResolver;
 
 		private enum ProcessRole
 		{
@@ -36,6 +36,16 @@ namespace Orbit.Services
 		}
 
 		private readonly ConcurrentDictionary<int, ManagedProcessRecord> _managedProcesses = new();
+
+		public SessionManagerService()
+			: this(new InjectorPathResolver())
+		{
+		}
+
+		public SessionManagerService(InjectorPathResolver injectorPathResolver)
+		{
+			this.injectorPathResolver = injectorPathResolver ?? throw new ArgumentNullException(nameof(injectorPathResolver));
+		}
 
 		private record struct ManagedProcessRecord(
 			int ProcessId,
@@ -880,49 +890,7 @@ namespace Orbit.Services
 			}
 		}
 
-		private static string ResolveInjectorPath()
-		{
-			var baseDirectory = AppContext.BaseDirectory;
-			var configuredPath = (Settings.Default.InjectorDllPath ?? string.Empty).Trim();
-			var candidate = string.IsNullOrWhiteSpace(configuredPath)
-				? Path.GetFullPath(Path.Combine(baseDirectory, DefaultInjectorDll))
-				: Path.GetFullPath(Path.IsPathRooted(configuredPath)
-					? configuredPath
-					: Path.Combine(baseDirectory, configuredPath));
-			if (File.Exists(candidate) && IsValidInjectorDirectory(Path.GetDirectoryName(candidate)))
-			{
-				return candidate;
-			}
-
-			var runtimeConfig = Path.Combine(baseDirectory, "ME.runtimeconfig.json");
-			var interop = Path.Combine(baseDirectory, "csharp_interop.dll");
-			var sourceLabel = string.IsNullOrWhiteSpace(configuredPath) ? "default" : "configured";
-			var message = IsMesharpIntegrationEnabled
-				? $"{sourceLabel} injector DLL must exist and be valid. Expected files: '{candidate}', '{runtimeConfig}', '{interop}'."
-				: $"{sourceLabel} injector DLL must exist and be valid. Missing: '{candidate}'.";
-			throw new FileNotFoundException(message, candidate);
-		}
-
-		private static bool IsValidInjectorDirectory(string? directory)
-		{
-			if (!IsMesharpIntegrationEnabled)
-			{
-				return !string.IsNullOrWhiteSpace(directory);
-			}
-
-			if (string.IsNullOrWhiteSpace(directory))
-			{
-				return false;
-			}
-
-			var runtimeConfig = Path.Combine(directory, "ME.runtimeconfig.json");
-			var interop = Path.Combine(directory, "csharp_interop.dll");
-			if (File.Exists(runtimeConfig) && File.Exists(interop))
-			{
-				return true;
-			}
-
-			return false;
-		}
+		private string ResolveInjectorPath()
+			=> injectorPathResolver.Resolve(AppContext.BaseDirectory, Settings.Default.InjectorDllPath, IsMesharpIntegrationEnabled);
 	}
 }

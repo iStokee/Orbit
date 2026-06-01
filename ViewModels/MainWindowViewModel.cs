@@ -53,8 +53,6 @@ namespace Orbit.ViewModels
 	private readonly ScriptIntegrationService scriptIntegrationService;
 	private readonly ScriptManagerService scriptManagerService;
 	private readonly ScriptOrchestrationService scriptOrchestrationService;
-	private readonly AccountService accountService;
-	private readonly AutoLoginService autoLoginService;
 	private readonly SessionCollectionService sessionCollectionService;
 	private readonly SessionAutoRelaunchService sessionAutoRelaunchService;
 	private readonly SessionLaunchCoordinatorService sessionLaunchCoordinator;
@@ -119,8 +117,6 @@ namespace Orbit.ViewModels
 		ScriptIntegrationService scriptIntegrationService,
 		ScriptManagerService scriptManagerService,
 		ScriptOrchestrationService scriptOrchestrationService,
-		AccountService accountService,
-		AutoLoginService autoLoginService,
 		SessionCollectionService sessionCollectionService,
 		SessionAutoRelaunchService sessionAutoRelaunchService,
 		SessionLaunchCoordinatorService sessionLaunchCoordinator,
@@ -154,8 +150,6 @@ namespace Orbit.ViewModels
 		this.scriptIntegrationService = scriptIntegrationService ?? throw new ArgumentNullException(nameof(scriptIntegrationService));
 		this.scriptManagerService = scriptManagerService ?? throw new ArgumentNullException(nameof(scriptManagerService));
 		this.scriptOrchestrationService = scriptOrchestrationService ?? throw new ArgumentNullException(nameof(scriptOrchestrationService));
-		this.accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
-		this.autoLoginService = autoLoginService ?? throw new ArgumentNullException(nameof(autoLoginService));
 		this.sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
 		this.sessionAutoRelaunchService = sessionAutoRelaunchService ?? throw new ArgumentNullException(nameof(sessionAutoRelaunchService));
 		this.sessionLaunchCoordinator = sessionLaunchCoordinator ?? throw new ArgumentNullException(nameof(sessionLaunchCoordinator));
@@ -185,7 +179,6 @@ namespace Orbit.ViewModels
 			this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 
 		ScriptManager = this.scriptManagerService;
-		AccountService = this.accountService;
 		ConsoleLog = this.consoleLogService;
 
 		Sessions = this.sessionCollectionService.Sessions;
@@ -290,7 +283,6 @@ namespace Orbit.ViewModels
 	public IRelayCommand<object?> CancelSessionRenameCommand { get; }
 	public IRelayCommand FloatingMenuWelcomeCommand { get; }
 	public ConsoleLogService ConsoleLog { get; }
-	public AccountService AccountService { get; }
 	public IRelayCommand OpenAccountManagerCommand { get; }
 	public IRelayCommand OpenGuideCommand { get; }
 	public IRelayCommand OpenSettingsCommand { get; }

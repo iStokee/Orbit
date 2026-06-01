@@ -58,6 +58,16 @@ Behavior mapping relative to BasicInjector button model:
 Orbit launches selected accounts in round-robin order per new session launch.
 When multiple accounts are selected and launch mode is `Jagex Launcher URI`, a single **Add Session** action launches one Orbit session per selected account.
 
+## Account Password Storage
+
+Account Manager passwords are stored with Windows DPAPI current-user protection before being written to Orbit's AppData account file. Existing plaintext `password` entries are migrated to `encryptedPassword` the next time Orbit loads the account file.
+
+Important security model:
+
+- Orbit does not ship or hide an encryption key.
+- The encrypted account file is bound to the current Windows user profile.
+- A process already running as the same Windows user can still ask Windows to decrypt the data, so this protects against offline file disclosure, not a compromised account/session.
+
 ## Multi-Session Injection Notes
 
 For launcher mode, Orbit now protects against common multi-launch issues by:
@@ -135,8 +145,10 @@ dotnet run -c Debug
 
 - `SessionCollectionService`: active session registry/state
 - `SessionManagerService`: launch/inject/cleanup pipeline
+- `InjectorPathResolver`: injector DLL and runtime asset validation
 - `OrbitLayoutStateService`: shared layout state for Orbit View
 - `ScriptManagerService`: script load/reload coordination
+- `AccountService`: account persistence with DPAPI credential protection
 - `OrbitCommandClient`: command channel to ME runtime
 - `ConsolePipeServer`: incoming log/pipe integration
 - `OrbitApiPipeServer`: OrbitAPI IPC endpoint

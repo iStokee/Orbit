@@ -87,6 +87,7 @@ public partial class App : Application
 		services.AddSingleton<OrbitApiPipeServer>();
 		services.AddSingleton<FloatingMenuGeometryService>();
 		services.AddSingleton<FloatingMenuVisibilityService>();
+		services.AddSingleton<FloatingMenuQuickToggleService>();
 
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
 		services.AddSingleton<SessionAutoRelaunchService>();
@@ -112,6 +113,7 @@ public partial class App : Application
 		services.AddSingleton<IOrbitCommandClient, OrbitCommandClientAdapter>();
 		services.AddSingleton<MesharpSessionCommandService>();
 		services.AddSingleton<ScriptOrchestrationService>();
+		services.AddSingleton<InjectorPathResolver>();
 		services.AddSingleton<SessionManagerService>();
 		services.AddSingleton<McpPreferencesStore>();
 		services.AddSingleton<McpBridgeClientService>();

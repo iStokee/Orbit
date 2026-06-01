@@ -20,7 +20,7 @@ namespace Orbit.Models
 			set => SetProperty(ref _username, value);
 		}
 
-		[JsonPropertyName("password")]
+		[JsonIgnore]
 		public string Password
 		{
 			get => _password;
