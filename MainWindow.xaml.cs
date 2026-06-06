@@ -16,12 +16,9 @@ using MahApps.Metro.Controls;
 using Orbit.API;
 using Orbit.Models;
 using Orbit.ViewModels;
-using Orbit.Views;
-using Color = System.Windows.Media.Color;
 using ComboBox = System.Windows.Controls.ComboBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
-using Pen = System.Windows.Media.Pen;
 using Point = System.Windows.Point;
 using Rect = System.Windows.Rect;
 using Size = System.Windows.Size;
@@ -38,9 +35,11 @@ namespace Orbit
 	private readonly DispatcherTimer floatingMenuWakeTimer;
 	private readonly DispatcherTimer windowPlacementPersistTimer;
 	private readonly Services.FloatingMenuQuickToggleService floatingMenuQuickToggleService;
+	private readonly Services.FloatingMenuGeometryService floatingMenuGeometryService;
+	private readonly Services.ShellClientResizeService shellClientResizeService;
+	private readonly Services.ShellWindowPlacementService windowPlacementService;
+	private readonly Services.TaskbarOrbitIconService taskbarOrbitIconService;
 	private readonly NotifyCollectionChangedEventHandler sessionsCollectionChangedHandler;
-	private static readonly Geometry TaskbarOrbitBodyGeometry = CreateOrbitGeometry("M256.25,20.656c-32.78,0-64.03,6.79-92.438,19-8.182-10.618-20.994-17.468-35.437-17.468-24.716,0-44.78,20.033-44.78,44.75,0,8.356,2.324,16.18,6.31,22.874-42.638,42.655-69.093,101.49-69.093,166.282,0,129.617,105.823,234.72,235.438,234.72,129.615-.002,234.72-105.103,234.72-234.72,0-129.618-105.105-235.438-234.72-235.438Zm0,19.313c119.515,0,216.094,96.607,216.094,216.124s-96.58,216.094-216.094,216.094c-119.515,0-216.813-96.577-216.813-216.094,0-59.568,24.176-113.438,63.22-152.5,7.273,5.113,16.15,8.094,25.718,8.094,24.716,0,44.75-20.034,44.75-44.75,0-3.453-.385-6.804-1.125-10.032C197.91,46,226.396,39.97,256.25,39.97Zm-.125,51.81c-91.3,0-165.875,74.575-165.875,165.876,0,91.3,74.576,165.406,165.875,165.406,35.12,0,67.708-10.965,94.5-29.656,7.13,4.23,15.45,6.656,24.344,6.656,26.396,0,47.81-21.384,47.81-47.78,0-12.763-5.005-24.366-13.155-32.938,7.677-19.067,11.906-39.884,11.906-61.688,0-91.3-74.106-165.875-165.405-165.875Zm0,19.126c81.2,0,146.78,65.55,146.78,146.75,0,17.833-3.172,34.924-8.967,50.72-5.81-2.513-12.237-3.907-18.97-3.907-26.396,0-47.78,21.414-47.78,47.81,0,10.59,3.454,20.362,9.28,28.283-23.065,15.084-50.66,23.843-80.343,23.843-81.2,0-147.22-65.55-147.22-146.75s66.02-146.75,147.22-146.75Zm-1.063,19.625c-7.462,31.99-21.767,62.112-42.906,83.25-21.14,21.14-48.73,32.913-80.72,40.376,31.99,7.462,62.112,21.736,83.25,42.875,21.14,21.14,32.914,48.764,40.376,80.75,7.463-31.986,19.204-59.61,40.344-80.75,21.14-21.138,51.262-35.412,83.25-42.874-32.236-7.428-59.455-19.11-80.72-40.375-21.262-21.263-35.446-51.013-42.873-83.25Zm.094,86.564c20.498,0,37.125,16.627,37.125,37.125,0,20.496-16.626,37.124-37.124,37.124-20.497,0-37.125-16.628-37.125-37.125,0-20.5,16.63-37.126,37.126-37.126Z");
-	private static readonly Geometry TaskbarOrbitRingGeometry = CreateOrbitGeometry("M256.219,59.282c-109.882,0-198.813,88.931-198.813,198.813s88.931,198.313,198.813,198.313c28.527,0,55.727-6.064,80.22-17.312-5.983-7.862-9.502-17.646-9.502-28.375,0-26.396,21.384-47.78,47.78-47.78,6.84,0,13.355,1.41,19.214,3.964,5.316-15.913,8.204-32.895,8.204-50.47,0-92.548-75.148-167.653-167.656-167.653Z");
 	private bool floatingMenuDragCandidate;
 	private bool floatingMenuDragging;
 	private Point floatingMenuDragStart;
@@ -55,10 +54,6 @@ namespace Orbit
 	private bool windowPlacementPersistenceReady;
 	private const int WM_MBUTTONUP = 0x0208;
 	
-
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
 		[DllImport("user32.dll")]
 		private static extern bool GetCursorPos(out POINT lpPoint);
 
@@ -69,13 +64,20 @@ namespace Orbit
 			public int Y;
 		}
 
-		public MainWindow(MainWindowViewModel viewModel)
+		public MainWindow(
+			MainWindowViewModel viewModel,
+			Services.FloatingMenuQuickToggleService floatingMenuQuickToggleService,
+			Services.FloatingMenuGeometryService floatingMenuGeometryService,
+			Services.ShellClientResizeService shellClientResizeService,
+			Services.ShellWindowPlacementService windowPlacementService,
+			Services.TaskbarOrbitIconService taskbarOrbitIconService)
 		{
 			this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-			floatingMenuQuickToggleService = ((App)System.Windows.Application.Current)
-				.Services
-				.GetService(typeof(Services.FloatingMenuQuickToggleService)) as Services.FloatingMenuQuickToggleService
-				?? new Services.FloatingMenuQuickToggleService();
+			this.floatingMenuQuickToggleService = floatingMenuQuickToggleService ?? throw new ArgumentNullException(nameof(floatingMenuQuickToggleService));
+			this.floatingMenuGeometryService = floatingMenuGeometryService ?? throw new ArgumentNullException(nameof(floatingMenuGeometryService));
+			this.shellClientResizeService = shellClientResizeService ?? throw new ArgumentNullException(nameof(shellClientResizeService));
+			this.windowPlacementService = windowPlacementService ?? throw new ArgumentNullException(nameof(windowPlacementService));
+			this.taskbarOrbitIconService = taskbarOrbitIconService ?? throw new ArgumentNullException(nameof(taskbarOrbitIconService));
 
 			InitializeComponent();
 			isPrimaryShellWindow = System.Windows.Application.Current?.MainWindow == null;
@@ -247,66 +249,55 @@ namespace Orbit
 
 		private void RestoreWindowPlacementFromSettingsIfPrimary()
 		{
-			var savedWidth = Settings.Default.MainWindowWidth;
-			var savedHeight = Settings.Default.MainWindowHeight;
-			var savedLeft = Settings.Default.MainWindowLeft;
-			var savedTop = Settings.Default.MainWindowTop;
-			var savedMaximized = Settings.Default.MainWindowMaximized;
 			var referencePrimaryWindow = System.Windows.Application.Current?.MainWindow;
-
-			// All windows (including tear-offs) should inherit primary shell dimensions.
-			var sizeSourceWindow = !ReferenceEquals(referencePrimaryWindow, this) ? referencePrimaryWindow : null;
-			if (sizeSourceWindow is { IsLoaded: true } && sizeSourceWindow.WindowState != WindowState.Minimized)
+			var sourceBounds = default(Rect?);
+			var sizeSourceWindow = !ReferenceEquals(referencePrimaryWindow, this)
+				? referencePrimaryWindow
+				: null;
+			if (sizeSourceWindow is { IsLoaded: true } &&
+				sizeSourceWindow.WindowState != WindowState.Minimized)
 			{
-				var sourceBounds = sizeSourceWindow.WindowState == WindowState.Normal
+				sourceBounds = sizeSourceWindow.WindowState == WindowState.Normal
 					? new Rect(sizeSourceWindow.Left, sizeSourceWindow.Top, sizeSourceWindow.Width, sizeSourceWindow.Height)
 					: sizeSourceWindow.RestoreBounds;
-
-				if (IsFinitePositive(sourceBounds.Width) && sourceBounds.Width >= 640)
-				{
-					Width = sourceBounds.Width;
-				}
-
-				if (IsFinitePositive(sourceBounds.Height) && sourceBounds.Height >= 480)
-				{
-					Height = sourceBounds.Height;
-				}
 			}
-			else
+
+			var plan = windowPlacementService.BuildRestorePlan(
+				windowPlacementService.ReadFromSettings(),
+				sourceBounds,
+				isPrimaryShellWindow,
+				GetVirtualScreenBounds());
+
+			if (plan.Width.HasValue)
 			{
-				if (IsFinitePositive(savedWidth) && savedWidth >= 640)
-				{
-					Width = savedWidth;
-				}
-
-				if (IsFinitePositive(savedHeight) && savedHeight >= 480)
-				{
-					Height = savedHeight;
-				}
+				Width = plan.Width.Value;
 			}
 
-			// Only the primary shell controls persisted position/maximized state.
-			if (!isPrimaryShellWindow)
+			if (plan.Height.HasValue)
 			{
-				return;
+				Height = plan.Height.Value;
 			}
 
-			var hasSavedPosition = !NearlyEquals(savedLeft, -1d) && !NearlyEquals(savedTop, -1d);
-			if (hasSavedPosition && double.IsFinite(savedLeft) && double.IsFinite(savedTop))
+			if (plan.Left.HasValue && plan.Top.HasValue)
 			{
-				var candidate = new Rect(savedLeft, savedTop, Width, Height);
-				if (IsVisibleOnVirtualScreen(candidate))
-				{
-					WindowStartupLocation = WindowStartupLocation.Manual;
-					Left = savedLeft;
-					Top = savedTop;
-				}
+				WindowStartupLocation = WindowStartupLocation.Manual;
+				Left = plan.Left.Value;
+				Top = plan.Top.Value;
 			}
 
-			if (savedMaximized)
+			if (plan.Maximize)
 			{
 				WindowState = WindowState.Maximized;
 			}
+		}
+
+		private static Rect GetVirtualScreenBounds()
+		{
+			return new Rect(
+				SystemParameters.VirtualScreenLeft,
+				SystemParameters.VirtualScreenTop,
+				SystemParameters.VirtualScreenWidth,
+				SystemParameters.VirtualScreenHeight);
 		}
 
 		private void MainShellBranchTabControl_Loaded(object sender, RoutedEventArgs e)
@@ -384,22 +375,7 @@ namespace Orbit
 					? new Rect(Left, Top, Width, Height)
 					: RestoreBounds;
 
-				if (!IsFinitePositive(bounds.Width) || !IsFinitePositive(bounds.Height))
-				{
-					return;
-				}
-
-				if (!double.IsFinite(bounds.Left) || !double.IsFinite(bounds.Top))
-				{
-					return;
-				}
-
-				Settings.Default.MainWindowWidth = bounds.Width;
-				Settings.Default.MainWindowHeight = bounds.Height;
-				Settings.Default.MainWindowLeft = bounds.Left;
-				Settings.Default.MainWindowTop = bounds.Top;
-				Settings.Default.MainWindowMaximized = WindowState == WindowState.Maximized;
-				Settings.Default.Save();
+				windowPlacementService.SaveToSettings(bounds, WindowState == WindowState.Maximized);
 			}
 			catch
 			{
@@ -439,33 +415,6 @@ namespace Orbit
 			ScheduleWindowPlacementSave();
 		}
 
-		private static bool IsFinitePositive(double value)
-		{
-			return double.IsFinite(value) && value > 0;
-		}
-
-		private static bool NearlyEquals(double left, double right)
-		{
-			return Math.Abs(left - right) < 0.0001;
-		}
-
-		private static bool IsVisibleOnVirtualScreen(Rect rect)
-		{
-			if (rect.Width <= 0 || rect.Height <= 0)
-			{
-				return false;
-			}
-
-			var virtualScreen = new Rect(
-				SystemParameters.VirtualScreenLeft,
-				SystemParameters.VirtualScreenTop,
-				SystemParameters.VirtualScreenWidth,
-				SystemParameters.VirtualScreenHeight);
-
-			var intersection = Rect.Intersect(virtualScreen, rect);
-			return !intersection.IsEmpty && intersection.Width >= 100 && intersection.Height >= 100;
-		}
-
 		// Method to handle window size changes
 		public void MetroWindow_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
@@ -493,35 +442,7 @@ namespace Orbit
 
 		private void ResizeWindows()
 		{
-			foreach (var session in viewModel.Sessions)
-			{
-				if (session.HostControl is not ChildClientView clientView)
-				{
-					continue;
-				}
-
-				if (PresentationSource.FromVisual(clientView) == null)
-				{
-					continue;
-				}
-
-				if (!clientView.IsVisible)
-				{
-					// Hidden clients get re-synced when their tab is reactivated.
-					continue;
-				}
-
-				var viewportSize = clientView.GetHostViewportSize();
-				var width = Math.Max(0, (int)Math.Round(viewportSize.Width));
-				var height = Math.Max(0, (int)Math.Round(viewportSize.Height));
-
-				if (width <= 0 || height <= 0)
-				{
-					continue;
-				}
-
-				_ = clientView.ResizeWindowAsync(width, height);
-			}
+			shellClientResizeService.ResizeVisibleClients(viewModel.Sessions);
 		}
 
 		private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
@@ -543,115 +464,10 @@ namespace Orbit
 			}
 
 			// Use white for taskbar icon for best visibility on both light and dark taskbars
-			var mainIcon = CreateOrbitIconImage(Colors.White, Colors.White, includeRing: false);
-			if (mainIcon != null)
-			{
-				Icon = mainIcon;
-			}
+			Icon = taskbarOrbitIconService.CreateMainIcon();
 
 			// No overlay needed anymore - main icon handles it
 			TaskbarInfo.Overlay = null;
-		}
-
-		private static ImageSource? CreateOrbitIconImage(Color accent, Color foreground, bool includeRing)
-		{
-			const double targetSize = 56d;
-
-			var fillColor = Color.FromArgb(235, accent.R, accent.G, accent.B);
-			var fillBrush = new SolidColorBrush(fillColor);
-			fillBrush.Freeze();
-
-			var bodyDrawing = new GeometryDrawing(fillBrush, null, TaskbarOrbitBodyGeometry);
-
-			var group = new DrawingGroup();
-			group.Children.Add(bodyDrawing);
-
-			if (includeRing)
-			{
-				var ringColor = AdjustColorBrightness(accent, 0.25);
-				var ringBrush = new SolidColorBrush(Color.FromArgb(245, ringColor.R, ringColor.G, ringColor.B));
-				ringBrush.Freeze();
-
-				var ringPen = new Pen(ringBrush, 26)
-				{
-					StartLineCap = PenLineCap.Round,
-					EndLineCap = PenLineCap.Round,
-					LineJoin = PenLineJoin.Round
-				};
-				ringPen.Freeze();
-
-				var ringDrawing = new GeometryDrawing(null, ringPen, TaskbarOrbitRingGeometry);
-				group.Children.Add(ringDrawing);
-			}
-
-			var highlightColor = Color.FromArgb(255, foreground.R, foreground.G, foreground.B);
-			var highlightBrush = new SolidColorBrush(highlightColor);
-			highlightBrush.Freeze();
-			var highlightGeometry = new EllipseGeometry(new Point(357, 190), 24, 24);
-			var highlightDrawing = new GeometryDrawing(highlightBrush, null, highlightGeometry);
-			group.Children.Add(highlightDrawing);
-
-			var bounds = TaskbarOrbitBodyGeometry.Bounds;
-			var scale = targetSize / Math.Max(bounds.Width, bounds.Height);
-			var translateX = -bounds.X * scale;
-			var translateY = -bounds.Y * scale;
-			var marginX = (targetSize - bounds.Width * scale) / 2d;
-			var marginY = (targetSize - bounds.Height * scale) / 2d;
-
-			var transform = new MatrixTransform(scale, 0, 0, scale, translateX + marginX, translateY + marginY);
-			transform.Freeze();
-			group.Transform = transform;
-			group.Freeze();
-
-			var drawingImage = new DrawingImage(group);
-			drawingImage.Freeze();
-			return drawingImage;
-		}
-
-		private static ImageSource? CreateOrbitOverlayImage(Color accent, Color foreground)
-		{
-			// Legacy method - now uses CreateOrbitIconImage
-			return CreateOrbitIconImage(accent, foreground, includeRing: true);
-		}
-
-		private static Color ExtractColor(object? resource, Color fallback)
-		{
-			return resource switch
-			{
-				Color color => color,
-				SolidColorBrush brush when brush.Color != default => brush.Color,
-				_ => fallback
-			};
-		}
-
-		private static Geometry CreateOrbitGeometry(string data)
-		{
-			var geometry = Geometry.Parse(data);
-			geometry.Freeze();
-			return geometry;
-		}
-
-		private static Color AdjustColorBrightness(Color color, double correctionFactor)
-		{
-			double red = color.R;
-			double green = color.G;
-			double blue = color.B;
-
-			if (correctionFactor < 0)
-			{
-				correctionFactor = 1 + correctionFactor;
-				red *= correctionFactor;
-				green *= correctionFactor;
-				blue *= correctionFactor;
-			}
-			else
-			{
-				red = (255 - red) * correctionFactor + red;
-				green = (255 - green) * correctionFactor + green;
-				blue = (255 - blue) * correctionFactor + blue;
-			}
-
-			return Color.FromArgb(color.A, (byte)Math.Clamp(red, 0, 255), (byte)Math.Clamp(green, 0, 255), (byte)Math.Clamp(blue, 0, 255));
 		}
 
 		private void ScriptControlButton_Click(object sender, RoutedEventArgs e)
@@ -712,12 +528,22 @@ namespace Orbit
 			// Detect snap zones and clipping
 			var overlayWidth = SnapZoneOverlay.ActualWidth;
 			var overlayHeight = SnapZoneOverlay.ActualHeight;
-			var detection = DetectSnapZone(newLeft, newTop, FloatingMenuHandle.ActualWidth, FloatingMenuHandle.ActualHeight, overlayWidth, overlayHeight);
-			viewModel.FloatingMenuDockCandidate = detection.region;
-			viewModel.SetFloatingMenuClipping(detection.clipped);
+			var detection = floatingMenuGeometryService.DetectSnapZone(
+				newLeft,
+				newTop,
+				FloatingMenuHandle.ActualWidth,
+				FloatingMenuHandle.ActualHeight,
+				overlayWidth > 0 ? overlayWidth : ActualWidth,
+				overlayHeight > 0 ? overlayHeight : ActualHeight,
+				Settings.Default.FloatingMenuDockEdgeThreshold,
+				Settings.Default.FloatingMenuDockCornerThreshold,
+				Settings.Default.FloatingMenuDockCornerHeight,
+				Settings.Default.FloatingMenuDockEdgeCoverage);
+			viewModel.FloatingMenuDockCandidate = detection.Region;
+			viewModel.SetFloatingMenuClipping(detection.Clipped);
 			viewModel.IsFloatingMenuDockOverlayVisible =
-				detection.region != FloatingMenuDockRegion.None ||
-				detection.clipped ||
+				detection.Region != FloatingMenuDockRegion.None ||
+				detection.Clipped ||
 				(viewModel.ShowAllSnapZonesOnDrag && viewModel.IsFloatingMenuDragging);
 
 			viewModel.UpdateFloatingMenuPosition(newLeft, newTop, ActualWidth, ActualHeight);
@@ -744,89 +570,6 @@ namespace Orbit
 			}
 
 			floatingMenuDragCandidate = false;
-		}
-
-		private (FloatingMenuDockRegion region, bool clipped) DetectSnapZone(double left, double top, double handleWidth, double handleHeight, double overlayWidth, double overlayHeight)
-		{
-			// Use configurable thresholds from settings
-			var snapThreshold = Settings.Default.FloatingMenuDockEdgeThreshold;
-			var cornerSize = Settings.Default.FloatingMenuDockCornerThreshold;
-			var cornerHeight = Settings.Default.FloatingMenuDockCornerHeight;
-			var edgeCoverage = Settings.Default.FloatingMenuDockEdgeCoverage;
-
-			// Clamp values to reasonable ranges
-			snapThreshold = Math.Clamp(snapThreshold, 40, 200);
-			cornerSize = Math.Clamp(cornerSize, 60, 250);
-			cornerHeight = Math.Clamp(cornerHeight, 60, 250);
-			edgeCoverage = Math.Clamp(edgeCoverage, 0.05d, 0.95d);
-
-			var hostWidth = overlayWidth > 0 ? overlayWidth : ActualWidth;
-			var hostHeight = overlayHeight > 0 ? overlayHeight : ActualHeight;
-
-			hostWidth = Math.Max(hostWidth, handleWidth);
-			hostHeight = Math.Max(hostHeight, handleHeight);
-
-			// Ensure zones never exceed host bounds
-			var handleRect = new Rect(left, top, Math.Max(0d, handleWidth), Math.Max(0d, handleHeight));
-
-			double ClampDimension(double value, double max) => Math.Max(0d, Math.Min(value, max));
-
-			var leftThickness = ClampDimension(snapThreshold, hostWidth);
-			var rightThickness = leftThickness;
-			var topThickness = ClampDimension(snapThreshold, hostHeight);
-			var bottomThickness = topThickness;
-
-			var verticalCoverage = ClampDimension(hostHeight * edgeCoverage, hostHeight);
-			var verticalStart = (hostHeight - verticalCoverage) / 2d;
-			var horizontalCoverage = ClampDimension(hostWidth * edgeCoverage, hostWidth);
-			var horizontalStart = (hostWidth - horizontalCoverage) / 2d;
-
-			var cornerWidth = ClampDimension(cornerSize, hostWidth);
-			var cornerHeightClamped = ClampDimension(cornerHeight, hostHeight);
-
-			var leftZone = new Rect(0d, verticalStart, leftThickness, verticalCoverage);
-			var rightZone = new Rect(Math.Max(0d, hostWidth - rightThickness), verticalStart, rightThickness, verticalCoverage);
-			var topZone = new Rect(horizontalStart, 0d, horizontalCoverage, topThickness);
-			var bottomZone = new Rect(horizontalStart, Math.Max(0d, hostHeight - bottomThickness), horizontalCoverage, bottomThickness);
-
-			var topLeftZone = new Rect(0d, 0d, cornerWidth, cornerHeightClamped);
-			var topRightZone = new Rect(Math.Max(0d, hostWidth - cornerWidth), 0d, cornerWidth, cornerHeightClamped);
-			var bottomLeftZone = new Rect(0d, Math.Max(0d, hostHeight - cornerHeightClamped), cornerWidth, cornerHeightClamped);
-			var bottomRightZone = new Rect(Math.Max(0d, hostWidth - cornerWidth), Math.Max(0d, hostHeight - cornerHeightClamped), cornerWidth, cornerHeightClamped);
-
-			bool Intersects(Rect zone) => zone.Width > 0d && zone.Height > 0d && zone.IntersectsWith(handleRect);
-
-			var topLeftActive = Intersects(topLeftZone);
-			var topRightActive = Intersects(topRightZone);
-			var bottomLeftActive = Intersects(bottomLeftZone);
-			var bottomRightActive = Intersects(bottomRightZone);
-
-			var leftActive = Intersects(leftZone);
-			var rightActive = Intersects(rightZone);
-			var topActive = Intersects(topZone);
-			var bottomActive = Intersects(bottomZone);
-
-			var anyActive = topLeftActive || topRightActive || bottomLeftActive || bottomRightActive || leftActive || rightActive || topActive || bottomActive;
-
-			if (topLeftActive)
-				return (FloatingMenuDockRegion.TopLeft, anyActive);
-			if (topRightActive)
-				return (FloatingMenuDockRegion.TopRight, anyActive);
-			if (bottomLeftActive)
-				return (FloatingMenuDockRegion.BottomLeft, anyActive);
-			if (bottomRightActive)
-				return (FloatingMenuDockRegion.BottomRight, anyActive);
-
-			if (leftActive)
-				return (FloatingMenuDockRegion.Left, anyActive);
-			if (rightActive)
-				return (FloatingMenuDockRegion.Right, anyActive);
-			if (topActive)
-				return (FloatingMenuDockRegion.Top, anyActive);
-			if (bottomActive)
-				return (FloatingMenuDockRegion.Bottom, anyActive);
-
-			return (FloatingMenuDockRegion.None, anyActive);
 		}
 
 		private void FloatingMenu_MouseMove(object sender, MouseEventArgs e)

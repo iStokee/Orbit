@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:Orbit.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewModels:GuideBrowserViewModel}"
@@ -102,15 +102,11 @@
             <!--  Navigation  -->
             <Border
                 Grid.Column="0"
-                Padding="20"
                 Style="{StaticResource Orbit.Workbench.Panel}">
                 <StackPanel>
                     <Expander
                         IsExpanded="True"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                        FontWeight="SemiBold"
+                        Style="{StaticResource Orbit.Workbench.Expander}"
                         Header="Guides">
                         <StackPanel Margin="0,10,0,0">
 	                            <TextBlock
@@ -171,10 +167,7 @@
                     <Expander
                         Margin="0,10,0,0"
                         IsExpanded="False"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                        FontWeight="SemiBold"
+                        Style="{StaticResource Orbit.Workbench.Expander}"
                         Header="Tips">
                         <StackPanel Margin="0,10,0,0">
 	                            <TextBlock
@@ -204,11 +197,11 @@
                         VerticalScrollBarVisibility="Auto" />
                     <Border
                         Panel.ZIndex="2"
-                        Background="#66000000"
+                        Background="{StaticResource Orbit.Brushes.Surface.Overlay}"
                         CornerRadius="12"
                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <mah:ProgressRing
+                            <Controls:ProgressRing
                                 Width="48"
                                 Height="48"
                                 Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
@@ -227,7 +220,6 @@
         <!--  Status bar  -->
         <Border
             Grid.Row="2"
-            Margin="0,16,0,0"
             Padding="16,12"
             Style="{StaticResource Orbit.Workbench.Panel}">
             <StackPanel Orientation="Horizontal">

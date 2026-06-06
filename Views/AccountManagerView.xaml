@@ -69,11 +69,7 @@
                         ItemsSource="{Binding Sessions}"
                         SelectedItem="{Binding SelectedSession}"
                         IsEnabled="{Binding HasSessions}"
-                        Padding="6,2"
-                        MinWidth="240"
-                        Background="Transparent"
-                        BorderThickness="1"
-                        BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}">
+                        MinWidth="240">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -127,7 +123,6 @@
                     <Button
                         Command="{Binding LoginSelectedAccountCommand}"
                         Style="{StaticResource Orbit.Workbench.Button.Primary}"
-                        Padding="16,6"
                         MinWidth="140"
                         VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -214,10 +209,8 @@
                                         Command="{Binding DataContext.DeleteAccountCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
                                         Style="{StaticResource Orbit.Workbench.IconButton}"
-                                        Width="32"
-                                        Height="32"
                                         ToolTip="Delete Account">
-                                        <iconPacks:PackIconMaterial Kind="Delete" Width="16" Height="16" />
+                                        <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14" />
                                     </Button>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -321,19 +314,15 @@
                     <Button
                         Command="{Binding AddAccountCommand}"
                         Style="{StaticResource Orbit.Workbench.IconButton}"
-                        Width="36"
-                        Height="36"
                         Margin="0,0,4,0"
                         ToolTip="Add Account">
-                        <iconPacks:PackIconMaterial Kind="Plus" />
+                        <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14" />
                     </Button>
                     <Button
                         Command="{Binding ClearFormCommand}"
                         Style="{StaticResource Orbit.Workbench.IconButton}"
-                        Width="36"
-                        Height="36"
                         ToolTip="Clear Form">
-                        <iconPacks:PackIconMaterial Kind="Close" />
+                        <iconPacks:PackIconMaterial Kind="Close" Width="14" Height="14" />
                     </Button>
                 </StackPanel>
             </Grid>

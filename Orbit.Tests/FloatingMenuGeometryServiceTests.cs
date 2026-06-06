@@ -94,4 +94,54 @@ public sealed class FloatingMenuGeometryServiceTests
 
 		Assert.Equal(expected, service.DetermineDirectionForRegion(region));
 	}
+
+	[Theory]
+	[InlineData(4, 4, FloatingMenuDockRegion.TopLeft)]
+	[InlineData(940, 4, FloatingMenuDockRegion.TopRight)]
+	[InlineData(4, 740, FloatingMenuDockRegion.BottomLeft)]
+	[InlineData(940, 740, FloatingMenuDockRegion.BottomRight)]
+	[InlineData(4, 360, FloatingMenuDockRegion.Left)]
+	[InlineData(940, 360, FloatingMenuDockRegion.Right)]
+	[InlineData(480, 4, FloatingMenuDockRegion.Top)]
+	[InlineData(480, 740, FloatingMenuDockRegion.Bottom)]
+	public void DetectSnapZone_ReturnsNearestActiveRegion(double left, double top, FloatingMenuDockRegion expected)
+	{
+		var service = new FloatingMenuGeometryService();
+
+		var detection = service.DetectSnapZone(
+			left,
+			top,
+			handleWidth: 52,
+			handleHeight: 52,
+			hostWidth: 1000,
+			hostHeight: 800,
+			snapThreshold: 80,
+			cornerSize: 100,
+			cornerHeight: 100,
+			edgeCoverage: 0.5);
+
+		Assert.Equal(expected, detection.Region);
+		Assert.True(detection.Clipped);
+	}
+
+	[Fact]
+	public void DetectSnapZone_ReturnsNoneAwayFromZones()
+	{
+		var service = new FloatingMenuGeometryService();
+
+		var detection = service.DetectSnapZone(
+			left: 480,
+			top: 360,
+			handleWidth: 52,
+			handleHeight: 52,
+			hostWidth: 1000,
+			hostHeight: 800,
+			snapThreshold: 80,
+			cornerSize: 100,
+			cornerHeight: 100,
+			edgeCoverage: 0.5);
+
+		Assert.Equal(FloatingMenuDockRegion.None, detection.Region);
+		Assert.False(detection.Clipped);
+	}
 }

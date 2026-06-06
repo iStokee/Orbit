@@ -4,10 +4,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     Title="Launcher Account Config"
     Width="980"
-    Height="520"
+    Height="560"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
     <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
@@ -17,10 +18,21 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock
-            Margin="0,0,0,10"
-            Style="{StaticResource Orbit.Workbench.HelperText}"
-            Text="Manage Jagex launcher account entries used by Orbit (stored in %USERPROFILE%\MemoryError\env_vars.json)." />
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial Kind="AccountKey" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Launcher Accounts" />
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Manage Jagex launcher account entries (stored in env_vars.json)." />
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}" Padding="0">
             <DataGrid

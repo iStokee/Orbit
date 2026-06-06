@@ -42,6 +42,12 @@ namespace Orbit.Views
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+		[DllImport("user32.dll", SetLastError = true)]
+		private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
         #endregion
 
 		internal RSForm rsForm;
@@ -64,6 +70,12 @@ namespace Orbit.Views
 		private bool externalStylesApplied;
 
 		private static readonly TimeSpan ResizeThrottleInterval = TimeSpan.FromMilliseconds(50);
+		private const int SW_SHOW = 5;
+		private const uint SWP_NOMOVE = 0x0002;
+		private const uint SWP_NOSIZE = 0x0001;
+		private const uint SWP_NOZORDER = 0x0004;
+		private const uint SWP_NOACTIVATE = 0x0010;
+		private const uint SWP_FRAMECHANGED = 0x0020;
 
 		internal Size LastAppliedViewportSize
 		{
@@ -209,42 +221,8 @@ namespace Orbit.Views
 				// External script windows: restore parent/styles so the window isn't orphaned.
 				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
 				{
-					try
-					{
-						var hwnd = (IntPtr)boundSession.ExternalHandle;
-
-						if (externalStylesApplied && externalOriginalStyle.HasValue)
-						{
-							const int GWL_STYLE = -16;
-							SetWindowLong(hwnd, GWL_STYLE, externalOriginalStyle.Value);
-							externalStylesApplied = false;
-						}
-
-						if (externalOriginalParent != IntPtr.Zero)
-						{
-							SetParent(hwnd, externalOriginalParent);
-						}
-					}
-					catch { /* best effort */ }
-
-					try
-					{
-						RSPanel.Child = null;
-					}
-					catch { /* best effort */ }
-
-					try
-					{
-						externalHostPanel?.Dispose();
-					}
-					catch { /* ignore */ }
-
-					externalHostPanel = null;
-					externalOriginalParent = IntPtr.Zero;
-					externalOriginalStyle = null;
-					hasStarted = false;
-					loadRequested = false;
-					boundSession = null;
+					// Do not detach external script windows on transient WPF unloads. Tab switches,
+					// Dragablz moves, and tear-offs can unload/reload content while the session remains active.
 					return;
 				}
 
@@ -464,6 +442,7 @@ namespace Orbit.Views
 			var hwnd = (IntPtr)session.ExternalHandle;
 			if (hwnd == IntPtr.Zero)
 			{
+				Console.WriteLine($"[OrbitAPI] External script session '{session.Name}' has no HWND to attach.");
 				return;
 			}
 
@@ -473,8 +452,10 @@ namespace Orbit.Views
 			}
 
 			RSPanel.Child = externalHostPanel;
+			var hostHandle = externalHostPanel.Handle;
+			Console.WriteLine($"[OrbitAPI] Attaching script window '{session.Name}' HWND=0x{hwnd.ToInt64():X} to host HWND=0x{hostHandle.ToInt64():X}.");
 
-			var previousParent = SetParent(hwnd, externalHostPanel.Handle);
+			var previousParent = SetParent(hwnd, hostHandle);
 			if (externalOriginalParent == IntPtr.Zero)
 			{
 				externalOriginalParent = previousParent;
@@ -493,12 +474,77 @@ namespace Orbit.Views
 			var newStyle = (curStyle & ~WS_POPUP) | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 			SetWindowLong(hwnd, GWL_STYLE, newStyle);
 			externalStylesApplied = true;
+			SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+			ShowWindow(hwnd, SW_SHOW);
 
 			var viewport = GetHostViewportSize();
 			if (viewport.Width > 0 && viewport.Height > 0)
 			{
 				_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
 			}
+			else
+			{
+				_ = ResizeWindowAsync(800, 600);
+			}
+
+			Console.WriteLine($"[OrbitAPI] Script window '{session.Name}' attached.");
+		}
+
+		private void DetachExternalWindow(bool restoreParent)
+		{
+			var session = boundSession;
+			if (session?.IsExternalScript != true || session.ExternalHandle == 0)
+			{
+				return;
+			}
+
+			var hwnd = (IntPtr)session.ExternalHandle;
+			try
+			{
+				if (restoreParent)
+				{
+					if (externalStylesApplied && externalOriginalStyle.HasValue)
+					{
+						const int GWL_STYLE = -16;
+						SetWindowLong(hwnd, GWL_STYLE, externalOriginalStyle.Value);
+						externalStylesApplied = false;
+					}
+
+					if (externalOriginalParent != IntPtr.Zero)
+					{
+						SetParent(hwnd, externalOriginalParent);
+					}
+
+					SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+					ShowWindow(hwnd, SW_SHOW);
+				}
+			}
+			catch
+			{
+				// Best-effort teardown. The script window may already be closed.
+			}
+
+			try
+			{
+				if (RSPanel != null)
+				{
+					RSPanel.Child = null;
+				}
+			}
+			catch { }
+
+			try
+			{
+				externalHostPanel?.Dispose();
+			}
+			catch { }
+
+			externalHostPanel = null;
+			externalOriginalParent = IntPtr.Zero;
+			externalOriginalStyle = null;
+			externalStylesApplied = false;
+			hasStarted = false;
+			loadRequested = false;
 		}
 
 		public async Task LoadNewSession()
@@ -792,6 +838,19 @@ namespace Orbit.Views
 
 		internal void DetachSession(bool restoreParent = true)
 		{
+			if (boundSession?.IsExternalScript == true)
+			{
+				try
+				{
+					DetachExternalWindow(restoreParent);
+				}
+				finally
+				{
+					boundSession = null;
+				}
+				return;
+			}
+
 			try
 			{
 				// Don't block the UI thread during teardown; best-effort detach.

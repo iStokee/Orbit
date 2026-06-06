@@ -362,6 +362,18 @@ public class ScriptManagerViewModel : INotifyPropertyChanged, IDisposable
 			}
 
 			Settings.Default.ScriptWindowEmbeddingEnabled = value;
+			try
+			{
+				Settings.Default.Save();
+			}
+			catch (Exception ex)
+			{
+				ConsoleLogService.Instance.Append(
+					$"[OrbitAPI] Failed to persist script window embedding preference: {ex.Message}",
+					ConsoleLogSource.Orbit,
+					ConsoleLogLevel.Warning);
+			}
+
 			OnPropertyChanged(nameof(ScriptWindowEmbeddingEnabled));
 
 			ConsoleLogService.Instance.Append(

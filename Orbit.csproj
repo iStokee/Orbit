@@ -15,6 +15,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PlatformTarget>x64</PlatformTarget>
     <BaseOutputPath>..\Build\</BaseOutputPath>
+    <ProdBuildRoot>$(MSBuildProjectDirectory)\..\..\Build\Prod\</ProdBuildRoot>
+    <ProdBuildOrbitDir>$(ProdBuildRoot)Orbit\</ProdBuildOrbitDir>
 
   </PropertyGroup>
 
@@ -44,7 +46,16 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <PublishDir>$(ProdBuildOrbitDir)</PublishDir>
   </PropertyGroup>
+
+  <Target Name="CopyOrbitReleaseBuildToProd" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
+    <ItemGroup>
+      <OrbitReleaseBuildArtifacts Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(ProdBuildOrbitDir)" />
+    <Copy SourceFiles="@(OrbitReleaseBuildArtifacts)" DestinationFiles="@(OrbitReleaseBuildArtifacts->'$(ProdBuildOrbitDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
   <ItemGroup>
     <Compile Remove="Classes\CustomInterTabClient.cs" />

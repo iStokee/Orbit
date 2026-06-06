@@ -35,19 +35,6 @@ namespace Orbit.ViewModels
 	/// </summary>
 	public class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 	{
-		// Keys used to retrieve shared tool metadata from the registry. Keeping them here makes it easy to see
-		// which panels participate in the dynamic tool surface.
-	private const string AccountManagerToolKey = "AccountManager";
-	private const string SettingsToolKey = "Settings";
-	private const string ConsoleToolKey = "Console";
-	private const string ThemeManagerToolKey = "ThemeManager";
-	private const string SessionsOverviewToolKey = "SessionsOverview";
-	private const string ScriptManagerToolKey = "ScriptManager";
-	private const string GuideToolKey = "ApiDocumentation";
-	private const string ToolsOverviewToolKey = "UnifiedToolsManager";
-	private const string McpControlToolKey = "McpControl";
-	private const string FsmNodeEditorToolKey = "FsmNodeEditor";
-
 	private readonly SessionManagerService sessionManager;
 	private readonly ThemeService themeService;
 	private readonly ScriptIntegrationService scriptIntegrationService;
@@ -70,12 +57,11 @@ namespace Orbit.ViewModels
 	private readonly ShellSessionSelectionService shellSessionSelectionService;
 	private readonly ShellTabCollectionCoordinatorService shellTabCollectionCoordinatorService;
 	private readonly ShellTabSelectionService shellTabSelectionService;
-	private readonly ShellToolHostService shellToolHostService;
+	private readonly ShellToolCoordinatorService shellToolCoordinatorService;
 	private readonly OrbitLayoutStateService orbitLayoutState;
 	private readonly ConsoleLogService consoleLogService;
 	private readonly FloatingMenuGeometryService floatingMenuGeometryService;
 	private readonly FloatingMenuVisibilityService floatingMenuVisibilityService;
-	private readonly IToolRegistry toolRegistry;
 	private readonly InterTabClient interTabClient;
 	private readonly MesharpHotkeyService mesharpHotkeyService;
 	private readonly MesharpSessionCommandService mesharpSessionCommandService;
@@ -134,7 +120,7 @@ namespace Orbit.ViewModels
 		ShellSessionSelectionService shellSessionSelectionService,
 		ShellTabCollectionCoordinatorService shellTabCollectionCoordinatorService,
 		ShellTabSelectionService shellTabSelectionService,
-		ShellToolHostService shellToolHostService,
+		ShellToolCoordinatorService shellToolCoordinatorService,
 		OrbitLayoutStateService orbitLayoutStateService,
 		ConsoleLogService consoleLogService,
 		FloatingMenuGeometryService floatingMenuGeometryService,
@@ -142,8 +128,7 @@ namespace Orbit.ViewModels
 		InterTabClient interTabClient,
 		MesharpHotkeyService mesharpHotkeyService,
 		MesharpSessionCommandService mesharpSessionCommandService,
-		SettingsViewModel settingsViewModel,
-		IToolRegistry toolRegistry)
+		SettingsViewModel settingsViewModel)
 	{
 		this.sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
 		this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
@@ -167,7 +152,7 @@ namespace Orbit.ViewModels
 		this.shellSessionSelectionService = shellSessionSelectionService ?? throw new ArgumentNullException(nameof(shellSessionSelectionService));
 		this.shellTabCollectionCoordinatorService = shellTabCollectionCoordinatorService ?? throw new ArgumentNullException(nameof(shellTabCollectionCoordinatorService));
 		this.shellTabSelectionService = shellTabSelectionService ?? throw new ArgumentNullException(nameof(shellTabSelectionService));
-		this.shellToolHostService = shellToolHostService ?? throw new ArgumentNullException(nameof(shellToolHostService));
+		this.shellToolCoordinatorService = shellToolCoordinatorService ?? throw new ArgumentNullException(nameof(shellToolCoordinatorService));
 			this.orbitLayoutState = orbitLayoutStateService ?? throw new ArgumentNullException(nameof(orbitLayoutStateService));
 			this.consoleLogService = consoleLogService ?? throw new ArgumentNullException(nameof(consoleLogService));
 			this.floatingMenuGeometryService = floatingMenuGeometryService ?? throw new ArgumentNullException(nameof(floatingMenuGeometryService));
@@ -176,7 +161,6 @@ namespace Orbit.ViewModels
 			this.mesharpHotkeyService = mesharpHotkeyService ?? throw new ArgumentNullException(nameof(mesharpHotkeyService));
 			this.mesharpSessionCommandService = mesharpSessionCommandService ?? throw new ArgumentNullException(nameof(mesharpSessionCommandService));
 			this.settingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
-			this.toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
 
 		ScriptManager = this.scriptManagerService;
 		ConsoleLog = this.consoleLogService;
@@ -199,15 +183,16 @@ namespace Orbit.ViewModels
 		AddSessionCommand = new AsyncRelayCommand(AddSessionAsync);
 		InjectCommand = new AsyncRelayCommand(InjectAsync, CanInject);
 		ShowSessionsCommand = new RelayCommand(ShowSessions, () => Sessions.Count > 0);
-		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey("SessionGallery"));
+		OpenSessionGalleryCommand = new RelayCommand(() => TryOpenToolByKey(ShellToolCoordinatorService.SessionGalleryToolKey));
 	OpenOrbitViewCommand = new RelayCommand(OpenOrbitViewWorkspace);
 	MoveTabToOrbitCommand = new RelayCommand<object?>(MoveTabToOrbit, CanMoveTabToOrbit);
 	MoveSessionToIndividualTabsCommand = new RelayCommand<object?>(MoveSessionToIndividualTabs, CanMoveSessionToIndividualTabs);
 	OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
 		OpenScriptManagerCommand = new RelayCommand(OpenScriptManager);
 		OpenFsmNodeEditorCommand = new RelayCommand(OpenFsmNodeEditor);
-		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => this.toolRegistry.Find(AccountManagerToolKey) != null);
+		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => shellToolCoordinatorService.IsToolAvailable(ShellToolCoordinatorService.AccountManagerToolKey));
 		OpenGuideCommand = new RelayCommand(OpenGuideTab);
+		OpenMESharpApiBrowserCommand = new RelayCommand(OpenMESharpApiBrowserTab);
 		OpenSettingsCommand = new RelayCommand(OpenSettingsTab);
 		OpenToolsOverviewCommand = new RelayCommand(OpenToolsOverviewTab);
 		OpenMcpControlCommand = new RelayCommand(OpenMcpControlTab);
@@ -285,6 +270,7 @@ namespace Orbit.ViewModels
 	public ConsoleLogService ConsoleLog { get; }
 	public IRelayCommand OpenAccountManagerCommand { get; }
 	public IRelayCommand OpenGuideCommand { get; }
+	public IRelayCommand OpenMESharpApiBrowserCommand { get; }
 	public IRelayCommand OpenSettingsCommand { get; }
 	public IRelayCommand OpenToolsOverviewCommand { get; }
 	public IRelayCommand OpenMcpControlCommand { get; }
@@ -541,32 +527,12 @@ namespace Orbit.ViewModels
 
 	private void OpenScriptManager()
 	{
-		if (TryOpenToolByKey(ScriptManagerToolKey))
-			return;
-
-		ConsoleLog.Append(
-			"[Orbit] Script Manager tool is unavailable; falling back to local instance.",
-			ConsoleLogSource.Orbit,
-			ConsoleLogLevel.Warning);
-
-		OpenOrFocusToolTab(
-			key: ScriptManagerToolKey,
-			name: "Script Manager",
-			controlFactory: () => ResolveRequiredService<Views.ScriptManagerPanel>(),
-			icon: PackIconMaterialKind.CodeBraces);
+		shellToolCoordinatorService.OpenScriptManager(Tabs, this, tab => SelectedTab = tab);
 	}
 
 	private void OpenFsmNodeEditor()
 	{
-		if (TryOpenToolByKey(FsmNodeEditorToolKey))
-		{
-			return;
-		}
-
-		ConsoleLog.Append(
-			"[Orbit] Orbit Builder plugin is not loaded. Load it from Tools > Unified Tools Manager > Auto-load or Import Plugin.",
-			ConsoleLogSource.Orbit,
-			ConsoleLogLevel.Warning);
+		shellToolCoordinatorService.OpenFsmNodeEditor(Tabs, this, tab => SelectedTab = tab);
 	}
 
 		private void OpenAccountManager()
@@ -719,111 +685,58 @@ namespace Orbit.ViewModels
 
 	public void OpenAccountManagerTab()
 	{
-		if (!TryOpenToolByKey(AccountManagerToolKey))
-		{
-			ConsoleLog.Append("[Orbit] Account Manager tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
+		shellToolCoordinatorService.OpenAccountManager(Tabs, this, tab => SelectedTab = tab);
 	}
 
     public void OpenSettingsTab()
     {
-        if (!TryOpenToolByKey(SettingsToolKey))
-        {
-            ConsoleLog.Append("[Orbit] Settings tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-            OpenOrFocusToolTab(
-                key: SettingsToolKey,
-                name: "Settings",
-                controlFactory: () => ResolveRequiredService<Views.SettingsView>(),
-                icon: PackIconMaterialKind.Cog);
-        }
+        shellToolCoordinatorService.OpenSettings(Tabs, this, tab => SelectedTab = tab);
     }
 
     public void OpenConsoleTab()
     {
-        if (!TryOpenToolByKey(ConsoleToolKey))
-        {
-            ConsoleLog.Append("[Orbit] Console tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-            OpenOrFocusToolTab(
-                key: ConsoleToolKey,
-                name: "Console",
-                controlFactory: () => new Views.ConsoleView(),
-                icon: PackIconMaterialKind.Console);
-        }
+        shellToolCoordinatorService.OpenConsole(Tabs, this, tab => SelectedTab = tab);
     }
 
     public void OpenThemeManagerTab()
     {
-        if (!TryOpenToolByKey(ThemeManagerToolKey))
-        {
-            ConsoleLog.Append("[Orbit] Theme Manager tool is unavailable; falling back to legacy view.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-            OpenOrFocusToolTab(
-                key: ThemeManagerToolKey,
-                name: "Theme Manager",
-                controlFactory: () => ResolveRequiredService<Views.ThemeManagerPanel>(),
-                icon: PackIconMaterialKind.Palette);
-        }
+        shellToolCoordinatorService.OpenThemeManager(Tabs, this, tab => SelectedTab = tab);
     }
 
     public void OpenSessionsOverviewTab()
     {
-        if (!TryOpenToolByKey(SessionsOverviewToolKey))
-        {
-            ConsoleLog.Append("[Orbit] Sessions tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-        }
+        shellToolCoordinatorService.OpenSessionsOverview(Tabs, this, tab => SelectedTab = tab);
     }
 
 	public void OpenGuideTab()
 	{
-		if (!TryOpenToolByKey(GuideToolKey))
-		{
-			ConsoleLog.Append("[Orbit] Guide tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
+		shellToolCoordinatorService.OpenGuide(Tabs, this, tab => SelectedTab = tab);
+	}
+
+	public void OpenMESharpApiBrowserTab()
+	{
+		shellToolCoordinatorService.OpenMESharpApiBrowser(Tabs, this, tab => SelectedTab = tab);
 	}
 
 	public void OpenToolsOverviewTab()
 	{
-		if (!TryOpenToolByKey(ToolsOverviewToolKey))
-		{
-			ConsoleLog.Append("[Orbit] Tools dashboard is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
+		shellToolCoordinatorService.OpenToolsOverview(Tabs, this, tab => SelectedTab = tab);
 	}
 
 	public void OpenMcpControlTab()
 	{
-		if (!TryOpenToolByKey(McpControlToolKey))
-		{
-			ConsoleLog.Append("[Orbit] MCP Control tool is unavailable.", ConsoleLogSource.Orbit, ConsoleLogLevel.Warning);
-		}
+		shellToolCoordinatorService.OpenMcpControl(Tabs, this, tab => SelectedTab = tab);
 	}
 
 	private bool TryOpenToolByKey(string key)
 	{
-		var tool = toolRegistry.Find(key);
-		if (tool == null)
-		{
-			return false;
-		}
-
-		OpenOrFocusToolTab(tool.Key, tool.DisplayName, () => tool.CreateView(this), tool.Icon);
-		return true;
+		return shellToolCoordinatorService.TryOpenToolByKey(Tabs, this, key, tab => SelectedTab = tab);
 	}
 
 	private void OpenOrbitViewWorkspace()
 	{
 		TryOpenToolByKey(ShellPresentationPolicyService.OrbitViewToolKey);
 		AdoptSessionsIntoOrbitWorkspace();
-	}
-
-	private static T ResolveRequiredService<T>() where T : class
-	{
-		var app = Application.Current as App;
-		var service = app?.Services.GetService<T>();
-		if (service == null)
-		{
-			throw new InvalidOperationException($"Required service '{typeof(T).Name}' is not available from DI.");
-		}
-
-		return service;
 	}
 
 	private void OnSettingsViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -841,7 +754,7 @@ namespace Orbit.ViewModels
 	/// we create a new host control and wire the main view model as DataContext.
 	/// </summary>
 	private void OpenOrFocusToolTab(string key, string name, Func<System.Windows.FrameworkElement> controlFactory, PackIconMaterialKind icon = PackIconMaterialKind.Tools)
-		=> shellToolHostService.OpenOrFocusToolTab(
+		=> shellToolCoordinatorService.OpenOrFocusToolTab(
 			Tabs,
 			this,
 			key,
@@ -2086,7 +1999,7 @@ namespace Orbit.ViewModels
 			}
 
 		private void DisposeToolItem(object? item)
-			=> shellToolHostService.DisposeToolItem(item, this);
+			=> shellToolCoordinatorService.DisposeToolItem(item, this);
 
 		private void RestoreOrbitWorkspaceToTabs()
 		{

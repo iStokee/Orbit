@@ -159,7 +159,7 @@
                 Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
                 BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                 BorderThickness="1"
-                CornerRadius="6">
+                CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
 	                    <iconPacks:PackIconMaterial
                         Width="16"
@@ -184,47 +184,23 @@
                 HorizontalAlignment="Right"
                 Orientation="Horizontal">
                 <Button
-                    Width="140"
-                    Height="36"
                     Margin="0,0,12,0"
                     Click="CancelButton_Click"
-                    Content="Keep Session"
                     IsCancel="True"
                     Style="{DynamicResource Orbit.Workbench.Button}">
-                    <Button.ContentTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial
-                                    Width="14"
-                                    Height="14"
-                                    Margin="0,0,8,0"
-                                    VerticalAlignment="Center"
-                                    Kind="ArrowLeft" />
-                                <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </Button.ContentTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" Kind="ArrowLeft" />
+                        <TextBlock VerticalAlignment="Center" Text="Keep Session" />
+                    </StackPanel>
                 </Button>
                 <Button
-                    Width="150"
-                    Height="36"
                     Click="CloseButton_Click"
-                    Content="Close session"
                     IsDefault="True"
                     Style="{DynamicResource Orbit.Workbench.Button.Primary}">
-                    <Button.ContentTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial
-                                    Width="14"
-                                    Height="14"
-                                    Margin="0,0,8,0"
-                                    VerticalAlignment="Center"
-                                    Kind="Close" />
-                                <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </Button.ContentTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" Kind="Close" />
+                        <TextBlock VerticalAlignment="Center" Text="Close Session" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Grid>

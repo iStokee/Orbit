@@ -17,10 +17,10 @@
         <Style x:Key="ScriptManagerRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
-                    <Setter Property="Margin" Value="16" />
+                    <Setter Property="Margin" Value="12" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
-                    <Setter Property="Margin" Value="12" />
+                    <Setter Property="Margin" Value="8" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -247,22 +247,18 @@
                             TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Button
-                                Width="26"
-                                Height="26"
                                 Margin="0,0,4,0"
                                 Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
                                 Style="{StaticResource Orbit.Workbench.IconButton}">
-                                <iconPacks:PackIconMaterial Width="12" Height="12" Kind="Play" />
+                                <iconPacks:PackIconMaterial Width="14" Height="14" Kind="Play" />
                             </Button>
                             <Button
-                                Width="26"
-                                Height="26"
                                 Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
                                 Style="{StaticResource Orbit.Workbench.IconButton}"
                                 ToolTip="Toggle favorite">
-                                <iconPacks:PackIconMaterial Width="12" Height="12">
+                                <iconPacks:PackIconMaterial Width="14" Height="14">
                                     <iconPacks:PackIconMaterial.Style>
                                         <Style TargetType="iconPacks:PackIconMaterial">
                                             <Setter Property="Kind" Value="StarOutline" />

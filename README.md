@@ -73,6 +73,8 @@ Important security model:
 - Orbit does not ship or hide an encryption key.
 - The encrypted account file is bound to the current Windows user profile.
 - A process already running as the same Windows user can still ask Windows to decrypt the data, so this protects against offline file disclosure, not a compromised account/session.
+- Community C# scripts and Orbit plugins are full-trust code. Treat them like executable programs: they can use filesystem, networking, reflection, process, and DPAPI APIs unless they are moved to a separate sandbox/capability runtime.
+- DPAPI does not protect saved Orbit passwords from a malicious script/plugin running under the same Windows user. Do not market saved credentials as protected from untrusted community code.
 
 ## Multi-Session Injection Notes
 

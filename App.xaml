@@ -309,6 +309,15 @@
                 </Style.Triggers>
             </Style>
 
+            <!--  Status pill that can be placed inside a ToolHeader's right column  -->
+            <Style x:Key="Orbit.ToolHeaderStatus" TargetType="Border">
+                <Setter Property="Margin" Value="10,0,0,0" />
+                <Setter Property="Padding" Value="10,6" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Subtle}" />
+            </Style>
+
             <!--  Shared tool header visuals  -->
             <Style x:Key="Orbit.ToolHeader" TargetType="Border">
                 <Setter Property="Margin" Value="0,0,0,10" />
@@ -573,6 +582,23 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
             </Style>
+
+            <!--  Accent-background info block — use for inline explanatory content  -->
+            <Style x:Key="Orbit.Workbench.InfoBlock" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Secondary}" />
+            </Style>
+
+            <!--  Shared Expander appearance  -->
+            <Style x:Key="Orbit.Workbench.Expander" TargetType="Expander">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <!--  Semi-transparent overlay for loading/blocking states  -->
+            <SolidColorBrush x:Key="Orbit.Brushes.Surface.Overlay" Color="#66000000" />
 
             <!--  Orbit icon geometry - shared across all icon uses for consistency  -->
             <!--  Sourced from Orbital.svg  -->

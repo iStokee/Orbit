@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
-             xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              mc:Ignorable="d"
              d:DesignHeight="800" d:DesignWidth="1000">
 
@@ -114,18 +114,16 @@
                 <!-- Info Card -->
                 <Expander
                     Margin="0,16,0,0"
+                    Style="{StaticResource Orbit.Workbench.Expander}"
                     Header="About Tools"
                     IsExpanded="False">
                     <Border
-                        Style="{StaticResource Orbit.Workbench.Panel}"
-                        Margin="0,8,0,0"
-                        Background="{DynamicResource Orbit.Brushes.Action.Primary}"
-                        BorderBrush="{DynamicResource Orbit.Brushes.Action.Secondary}">
+                        Style="{StaticResource Orbit.Workbench.InfoBlock}"
+                        Margin="0,8,0,0">
                         <StackPanel>
                             <TextBlock
                                 Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
-                                FontSize="13"
-                                Opacity="0.95"
+                                Style="{StaticResource Orbit.Workbench.HelperText}"
                                 TextWrapping="Wrap">
                                 <Run Text="Orbit uses an extensible tool system that allows plugins to be discovered and loaded at runtime. Tools can be:" />
                                 <LineBreak />

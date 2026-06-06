@@ -37,6 +37,9 @@ namespace Orbit.Services
 		/// <param name="processId">Process ID of the script (optional, will be detected if not provided)</param>
 		/// <returns>The session ID for the registered script window</returns>
 		public Guid RegisterScriptWindow(IntPtr windowHandle, string tabName, int? processId = null)
+			=> ExecuteOnUi(() => RegisterScriptWindowOnUi(windowHandle, tabName, processId));
+
+		private Guid RegisterScriptWindowOnUi(IntPtr windowHandle, string tabName, int? processId)
 		{
 			if (!Orbit.Settings.Default.ScriptWindowEmbeddingEnabled)
 			{
@@ -111,8 +114,8 @@ namespace Orbit.Services
 			session.UpdateState(SessionState.ClientReady);
 			session.UpdateInjectionState(InjectionState.NotReady); // Scripts don't need injection
 
-				// Add to session collection (this will trigger UI updates)
-				ExecuteOnUi(() => _sessionCollection.Sessions.Add(session));
+			// Add to session collection (this will trigger UI updates)
+			_sessionCollection.Sessions.Add(session);
 
 			// Surface the registered window into the active session presentation.
 			// Orbit View no longer auto-synchronizes sessions, so without this the tab could be "registered but invisible".
@@ -158,6 +161,9 @@ namespace Orbit.Services
 		/// <param name="sessionId">The session ID returned from RegisterScriptWindow</param>
 		/// <returns>True if the session was found and removed, false otherwise</returns>
 		public bool UnregisterScriptWindow(Guid sessionId)
+			=> ExecuteOnUi(() => UnregisterScriptWindowOnUi(sessionId));
+
+		private bool UnregisterScriptWindowOnUi(Guid sessionId)
 		{
 			var session = _sessionCollection.Sessions.FirstOrDefault(s => s.Id == sessionId);
 			if (session == null || !session.IsExternalScript)
@@ -165,28 +171,26 @@ namespace Orbit.Services
 				return false;
 			}
 
-			ExecuteOnUi(() =>
+			_orbitLayoutState.RemoveItem(session);
+
+			var mainWindows = Application.Current?.Windows
+				.OfType<Orbit.MainWindow>()
+				.ToList();
+
+			if (mainWindows != null)
 			{
-				_orbitLayoutState.RemoveItem(session);
-
-				var mainWindows = Application.Current?.Windows
-					.OfType<Orbit.MainWindow>()
-					.ToList();
-
-				if (mainWindows != null)
+				foreach (var window in mainWindows)
 				{
-					foreach (var window in mainWindows)
+					if (window.DataContext is MainWindowViewModel vm)
 					{
-						if (window.DataContext is MainWindowViewModel vm)
-						{
-							vm.Tabs.Remove(session);
-						}
+						vm.Tabs.Remove(session);
 					}
 				}
+			}
 
-				_sessionPlacement.Remove(session);
-				_sessionCollection.Sessions.Remove(session);
-			});
+			session.HostControl?.DetachSession(restoreParent: true);
+			_sessionPlacement.Remove(session);
+			_sessionCollection.Sessions.Remove(session);
 
 			return true;
 		}
@@ -200,16 +204,15 @@ namespace Orbit.Services
 				return (int)processId;
 			}
 
-			private static void ExecuteOnUi(Action action)
+			private static T ExecuteOnUi<T>(Func<T> action)
 			{
 				var dispatcher = Application.Current?.Dispatcher;
 				if (dispatcher == null || dispatcher.CheckAccess())
 				{
-					action();
-					return;
+					return action();
 				}
 
-				dispatcher.Invoke(action);
+				return dispatcher.Invoke(action);
 			}
 		}
 	}

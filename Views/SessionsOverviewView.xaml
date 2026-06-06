@@ -16,10 +16,10 @@
 
         <Style x:Key="SessionsRootGridStyle" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="12" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="2">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
                     <Setter Property="Margin" Value="8" />
                 </DataTrigger>
             </Style.Triggers>
@@ -28,10 +28,10 @@
         <Style x:Key="SessionsHeaderBorderStyle" TargetType="Border" BasedOn="{StaticResource Orbit.ToolHeader}">
             <Setter Property="Padding" Value="12" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Padding" Value="8,6,8,6" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="2">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
                     <Setter Property="Padding" Value="6,4,6,4" />
                 </DataTrigger>
             </Style.Triggers>
@@ -42,11 +42,11 @@
             <Setter Property="Padding" Value="12" />
             <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="1">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
                     <Setter Property="Margin" Value="0,0,0,8" />
                     <Setter Property="Padding" Value="10" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity}" Value="2">
+                <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="2">
                     <Setter Property="Margin" Value="0,0,0,6" />
                     <Setter Property="Padding" Value="8" />
                 </DataTrigger>
@@ -112,13 +112,13 @@
                         Style="{StaticResource Orbit.Workbench.Button}" />
                     <TextBlock Margin="0,0,8,0" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Density:" />
                     <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Full"
-                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
+                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
                                   Style="{StaticResource MahApps.Styles.ToggleButton}" />
                     <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Compact"
-                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
+                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
                                   Style="{StaticResource MahApps.Styles.ToggleButton}" />
                     <ToggleButton Padding="8,2" Content="Minimal"
-                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=SessionsHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
+                                  IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
                                   Style="{StaticResource MahApps.Styles.ToggleButton}" />
                 </StackPanel>
             </Grid>
