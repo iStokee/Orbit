@@ -9,15 +9,19 @@
              d:DesignHeight="800" d:DesignWidth="1000">
 
     <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled">
-            <StackPanel>
-                <!-- Header -->
-                <Border Style="{StaticResource Orbit.ToolHeader}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
@@ -30,22 +34,46 @@
                             <TextBlock Text="Manage Orbit tools and their visibility in the floating menu"
                                       Style="{StaticResource Orbit.ToolHeaderSubtitle}" />
                         </StackPanel>
+
+                        <Border Grid.Column="2" Style="{StaticResource Orbit.ToolHeaderStatus}">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Kind="ViewDashboard" Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}" />
+                                <TextBlock Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Dragablz workbench" />
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- Tools Grid -->
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.CommandBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource Orbit.Workbench.Badge.Primary}">
+                        <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}" Text="Floating Menu" />
+                    </Border>
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Orbit.Workbench.HelperText}"
+                        Text="Control quick-access visibility without removing tools from the workbench." />
+                </StackPanel>
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource Orbit.Workbench.MetaText}"
+                    Text="{Binding Tools.Count, StringFormat={}{0} registered tools}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="2"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
                 <Border Style="{StaticResource Orbit.Workbench.Panel}">
                     <StackPanel>
-                        <TextBlock
-                            Margin="0,0,0,8"
-                            Style="{StaticResource Orbit.Workbench.SectionTitle}"
-                            Text="Registered Tools" />
-
-                        <TextBlock
-                            Margin="0,0,0,12"
-                            Style="{StaticResource Orbit.Workbench.HelperText}"
-                            Text="Control which tools appear in the floating menu. All tools remain accessible via direct navigation."
-                            TextWrapping="Wrap" />
 
                         <!-- Tools List -->
                         <ItemsControl ItemsSource="{Binding Tools}">
@@ -110,42 +138,23 @@
                         </ItemsControl>
                     </StackPanel>
                 </Border>
-
-                <!-- Info Card -->
-                <Expander
-                    Margin="0,16,0,0"
-                    Style="{StaticResource Orbit.Workbench.Expander}"
-                    Header="About Tools"
-                    IsExpanded="False">
-                    <Border
-                        Style="{StaticResource Orbit.Workbench.InfoBlock}"
-                        Margin="0,8,0,0">
-                        <StackPanel>
-                            <TextBlock
-                                Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
-                                Style="{StaticResource Orbit.Workbench.HelperText}"
-                                TextWrapping="Wrap">
-                                <Run Text="Orbit uses an extensible tool system that allows plugins to be discovered and loaded at runtime. Tools can be:" />
-                                <LineBreak />
-                                <LineBreak />
-                                <Run Text="• " FontWeight="Bold" />
-                                <Run Text="Built-in" FontWeight="SemiBold" />
-                                <Run Text=" - Core functionality like Session Management, Theme Manager, and the Documentation Guide" />
-                                <LineBreak />
-                                <Run Text="• " FontWeight="Bold" />
-                                <Run Text="External" FontWeight="SemiBold" />
-                                <Run Text=" - Third-party tools registered via Dependency Injection" />
-                                <LineBreak />
-                                <LineBreak />
-                                <Run Text="Developers can create custom tools by implementing " />
-                                <Run FontFamily="Consolas" FontWeight="SemiBold" Text="IOrbitTool" />
-                                <Run Text=" and registering them in App.xaml.cs." />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
-                </Expander>
-
             </StackPanel>
         </ScrollViewer>
+
+        <Border Grid.Row="3" Style="{StaticResource Orbit.Workbench.Panel}" Padding="12,8">
+            <StackPanel Orientation="Horizontal">
+                <iconPacks:PackIconMaterial
+                    Width="16"
+                    Height="16"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
+                    Kind="InformationOutline" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Style="{StaticResource Orbit.Workbench.MetaText}"
+                    Text="Plugins and built-in tools remain available through tabs even when hidden from the floating menu." />
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

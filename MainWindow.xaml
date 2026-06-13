@@ -935,10 +935,10 @@
                                     </TextBlock>
                                 </Grid>
                                 <Button
-                                    Command="{Binding OpenFsmNodeEditorCommand}"
+                                    Command="{Binding OpenSharpBuilderCommand}"
                                     Style="{StaticResource FloatingMenuButtonStyle}"
                                     ToolTip="FSM Node Editor"
-                                    Visibility="{Binding ShowMenuFsmNodeEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding ShowMenuSharpBuilder, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="GraphOutline" />
                                 </Button>
                             </StackPanel>

@@ -21,7 +21,7 @@ public sealed class ShellToolCoordinatorService
 	public const string ToolsOverviewToolKey = "UnifiedToolsManager";
 	public const string McpControlToolKey = "McpControl";
 	public const string SessionGalleryToolKey = "SessionGallery";
-	public const string FsmNodeEditorToolKey = "FsmNodeEditor";
+	public const string SharpBuilderToolKey = "SharpBuilder";
 
 	private readonly IToolRegistry _toolRegistry;
 	private readonly ShellToolHostService _toolHostService;
@@ -154,11 +154,11 @@ public sealed class ShellToolCoordinatorService
 	public void OpenMcpControl(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
 		=> OpenRegisteredToolOrLog(tabs, ownerContext, McpControlToolKey, selectTab, "MCP Control tool is unavailable.");
 
-	public void OpenFsmNodeEditor(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
+	public void OpenSharpBuilder(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
 	{
-		if (!TryOpenToolByKey(tabs, ownerContext, FsmNodeEditorToolKey, selectTab))
+		if (!TryOpenToolByKey(tabs, ownerContext, SharpBuilderToolKey, selectTab))
 		{
-			LogUnavailable("Orbit Builder plugin is not loaded. Load it from Tools > Unified Tools Manager > Auto-load or Import Plugin.");
+			LogUnavailable("SharpBuilder plugin is not loaded. Load it from Tools > Unified Tools Manager > Auto-load or Import Plugin.");
 		}
 	}
 

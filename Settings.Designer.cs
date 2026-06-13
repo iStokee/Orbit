@@ -386,12 +386,12 @@ namespace Orbit {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool ShowMenuFsmNodeEditor {
+        public bool ShowMenuSharpBuilder {
             get {
-                return ((bool)(this["ShowMenuFsmNodeEditor"]));
+                return ((bool)(this["ShowMenuSharpBuilder"]));
             }
             set {
-                this["ShowMenuFsmNodeEditor"] = value;
+                this["ShowMenuSharpBuilder"] = value;
             }
         }
         

@@ -10,9 +10,13 @@
     Width="980"
     Height="560"
     WindowStartupLocation="CenterOwner"
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+    GlowBrush="{DynamicResource Orbit.Brushes.Action.Primary}"
+    TitleCharacterCasing="Normal"
     mc:Ignorable="d">
-    <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
+    <Grid Style="{StaticResource Orbit.Workbench.DialogRoot}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -23,24 +27,61 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
                     <iconPacks:PackIconMaterial Kind="AccountKey" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
                 </Border>
                 <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Launcher Accounts" />
-                    <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Manage Jagex launcher account entries (stored in env_vars.json)." />
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Manage Jagex launcher account entries and batch launch behavior." />
                 </StackPanel>
+                <Border Grid.Column="2" Style="{StaticResource Orbit.ToolHeaderStatus}">
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="env_vars.json" />
+                </Border>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}" Padding="0">
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.CommandBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Click="AddRow_Click" Style="{StaticResource Orbit.Workbench.Button.Primary}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" Kind="Plus" />
+                            <TextBlock Text="Add Account" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="RemoveRow_Click" Style="{StaticResource Orbit.Workbench.Button}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" Kind="Minus" />
+                            <TextBlock Text="Remove" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource Orbit.Workbench.MetaText}"
+                    Text="Select one or more rows for batch launch." />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource Orbit.Workbench.Panel}" Padding="0">
             <DataGrid
                 x:Name="AccountsGrid"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
+                ColumnHeaderStyle="{StaticResource Orbit.Workbench.DataGridColumnHeader}"
+                CellStyle="{StaticResource Orbit.Workbench.DataGridCell}"
                 IsReadOnly="False"
-                SelectionMode="Single">
+                SelectionMode="Single"
+                Style="{StaticResource Orbit.Workbench.DataGrid}">
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn Width="70" Binding="{Binding IsSelected}" Header="Use" />
                     <DataGridTextColumn Width="2*" Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Header="Display Name" />
@@ -50,15 +91,16 @@
             </DataGrid>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource Orbit.Workbench.CommandBar}">
-            <DockPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button Width="90" Click="AddRow_Click" Content="Add" Style="{StaticResource Orbit.Workbench.Button}" />
-                    <Button Width="90" Click="RemoveRow_Click" Content="Remove" Style="{StaticResource Orbit.Workbench.Button}" />
-                </StackPanel>
+        <Border Grid.Row="3" Style="{StaticResource Orbit.Workbench.DialogCommandBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
                 <Border
-                    Margin="12,0"
-                    Padding="12,8"
+                    Padding="10,8"
+                    HorizontalAlignment="Left"
                     Background="{DynamicResource Orbit.Brushes.Surface.Muted}"
                     BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
                     BorderThickness="1"
@@ -95,9 +137,9 @@
                         </Slider>
                         <Border
                             Margin="8,0,0,0"
-                            Padding="8,2"
+                            Padding="8,3"
                             Background="{DynamicResource Orbit.Brushes.Action.Primary}"
-                            CornerRadius="10">
+                            CornerRadius="4">
                             <TextBlock
                                 FontWeight="SemiBold"
                                 Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
@@ -105,12 +147,18 @@
                         </Border>
                     </StackPanel>
                 </Border>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <Button Width="130" Click="LaunchSelected_Click" Content="Launch Selected" Style="{StaticResource Orbit.Workbench.Button.Primary}" />
-                    <Button Width="90" Click="Cancel_Click" Content="Cancel" Style="{StaticResource Orbit.Workbench.Button}" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Click="LaunchSelected_Click" Style="{StaticResource Orbit.Workbench.Button.Primary}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" Kind="Play" />
+                            <TextBlock Text="Launch Selected" />
+                        </StackPanel>
+                    </Button>
                     <Button Width="90" Click="Save_Click" Content="Save" Style="{StaticResource Orbit.Workbench.Button}" />
+                    <Button Width="90" Click="Cancel_Click" Content="Cancel" Style="{StaticResource Orbit.Workbench.Button}" />
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
     </Grid>
 </Controls:MetroWindow>

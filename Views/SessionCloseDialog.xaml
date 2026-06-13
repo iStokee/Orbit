@@ -43,48 +43,54 @@
 	        </Style>
     </Controls:MetroWindow.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="24">
+    <Grid Style="{StaticResource Orbit.Workbench.DialogRoot}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial Kind="Alert" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Close Session" />
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Review runtime state before terminating the embedded client." />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Header with Icon and Title -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal">
-                <Border
-                    Width="48"
-                    Height="48"
-                    Margin="0,0,16,0"
-                    Background="{DynamicResource Orbit.Brushes.Action.Primary}"
-                    CornerRadius="24">
-                    <Viewbox Margin="12">
-                        <iconPacks:PackIconMaterial
-                            Width="24"
-                            Height="24"
-                            Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
-                            Kind="Alert" />
-                    </Viewbox>
-                </Border>
-                <StackPanel VerticalAlignment="Center">
-	                    <TextBlock
-	                        Style="{StaticResource Orbit.Workbench.SectionTitle}"
-	                        Text="Close this session?" />
-	                    <TextBlock
-	                        Margin="0,4,0,0"
-	                        Style="{StaticResource Orbit.Workbench.HelperText}"
-	                        Text="This action will terminate the session and close the game client." />
-                </StackPanel>
-            </StackPanel>
+            <Border Grid.Row="0" Style="{StaticResource Orbit.Workbench.DialogPanel}">
+                <DockPanel>
+                    <Border Style="{StaticResource Orbit.Workbench.Badge.Warning}">
+                        <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Warning}" Text="Destructive Action" />
+                    </Border>
+                    <TextBlock
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Orbit.Workbench.HelperText}"
+                        Text="This action terminates the session and closes the game client." />
+                </DockPanel>
+            </Border>
 
             <!-- Session Information Card -->
             <Border
                 Grid.Row="1"
-                Margin="0,24,0,0"
-	                Style="{StaticResource Orbit.Workbench.Panel}">
+	                Style="{StaticResource Orbit.Workbench.DialogPanel}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -153,7 +159,6 @@
             <!-- Warning Message -->
             <Border
                 Grid.Row="2"
-                Margin="0,16,0,0"
                 Padding="16,12"
                 VerticalAlignment="Top"
                 Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
@@ -172,17 +177,15 @@
 	                        Style="{StaticResource Orbit.Workbench.HelperText}"
 	                        TextWrapping="Wrap">
                         <Run FontWeight="SemiBold" Text="Important:" />
-                        <Run Text="Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />
+                        <Run Text=" Unsaved in-game progress may be lost. Please ensure you have safely logged out before proceeding." />
                     </TextBlock>
                 </StackPanel>
             </Border>
+        </Grid>
+        </ScrollViewer>
 
-            <!-- Buttons -->
-            <StackPanel
-                Grid.Row="4"
-                Margin="0,24,0,0"
-                HorizontalAlignment="Right"
-                Orientation="Horizontal">
+        <Border Grid.Row="2" Style="{StaticResource Orbit.Workbench.DialogCommandBar}">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                 <Button
                     Margin="0,0,12,0"
                     Click="CancelButton_Click"
@@ -203,6 +206,6 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
-        </Grid>
-    </ScrollViewer>
+        </Border>
+    </Grid>
 </Controls:MetroWindow>

@@ -583,6 +583,47 @@
                 <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
             </Style>
 
+            <Style x:Key="Orbit.Workbench.DialogRoot" TargetType="Grid" BasedOn="{StaticResource Orbit.Workbench.PageRoot}">
+                <Setter Property="Margin" Value="12" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.DialogPanel" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
+                <Setter Property="Padding" Value="14" />
+                <Setter Property="Margin" Value="0,0,0,10" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.DialogCommandBar" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.CommandBar}">
+                <Setter Property="Margin" Value="0" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.DataGrid" TargetType="DataGrid">
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="GridLinesVisibility" Value="Horizontal" />
+                <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                <Setter Property="RowBackground" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
+                <Setter Property="AlternatingRowBackground" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+                <Setter Property="HeadersVisibility" Value="Column" />
+                <Setter Property="CanUserResizeRows" Value="False" />
+                <Setter Property="RowHeight" Value="34" />
+                <Setter Property="ColumnHeaderHeight" Value="34" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.DataGridColumnHeader" TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Muted}" />
+                <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Secondary}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Padding" Value="10,0" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                <Setter Property="BorderThickness" Value="0,0,1,1" />
+            </Style>
+
+            <Style x:Key="Orbit.Workbench.DataGridCell" TargetType="DataGridCell">
+                <Setter Property="BorderThickness" Value="0" />
+            </Style>
+
             <!--  Accent-background info block — use for inline explanatory content  -->
             <Style x:Key="Orbit.Workbench.InfoBlock" TargetType="Border" BasedOn="{StaticResource Orbit.Workbench.Panel}">
                 <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />

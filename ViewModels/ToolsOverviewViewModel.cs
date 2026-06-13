@@ -147,8 +147,8 @@ namespace Orbit.ViewModels
 					case "ThemeManager":
 						_mainWindowViewModel!.ShowMenuThemeManager = value;
 						break;
-					case "FsmNodeEditor":
-						_mainWindowViewModel!.ShowMenuFsmNodeEditor = value;
+					case "SharpBuilder":
+						_mainWindowViewModel!.ShowMenuSharpBuilder = value;
 						break;
 					case "Console":
 						_mainWindowViewModel!.ShowMenuConsole = value;
@@ -192,8 +192,8 @@ namespace Orbit.ViewModels
 					case "ThemeManager":
 						Settings.Default.ShowMenuThemeManager = value;
 						break;
-					case "FsmNodeEditor":
-						Settings.Default.ShowMenuFsmNodeEditor = value;
+					case "SharpBuilder":
+						Settings.Default.ShowMenuSharpBuilder = value;
 						break;
 					case "Console":
 						Settings.Default.ShowMenuConsole = value;
@@ -247,7 +247,7 @@ namespace Orbit.ViewModels
 				"ApiDocumentation" => "Open the Orbit documentation hub",
 				"MesharpApiBrowser" => "Browse reflected MESharp scripting API documentation",
 				"ToolsOverview" => "Manage registered tools and their visibility",
-				"FsmNodeEditor" => "Design and run finite state machine scripts visually",
+				"SharpBuilder" => "SharpBuilder: design and run automation graphs visually",
 				"Settings" => "Configure Orbit application settings",
 				_ => "Custom tool - no description available"
 			};

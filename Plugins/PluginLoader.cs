@@ -217,8 +217,11 @@ public class PluginLoader
                 fileName.StartsWith("Microsoft.") ||
                 fileName.StartsWith("netstandard") ||
                 fileName == "Orbit.dll" ||
-                fileName == "csharp_interop.dll")
+                fileName == "csharp_interop.dll" ||
+                fileName.StartsWith("MESharp.Fsm.Host.Standalone") ||
+                fileName.StartsWith("SharpBuilder.Studio"))
             {
+                // The standalone SharpBuilder editor ships beside its launcher plugin; its managed dll is not a plugin.
                 continue;
             }
 

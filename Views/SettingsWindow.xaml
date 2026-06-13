@@ -28,9 +28,31 @@
         </DataTemplate>
     </Controls:MetroWindow.IconTemplate>
 
-	    <ScrollViewer VerticalScrollBarVisibility="Auto">
-	        <StackPanel Margin="{StaticResource Orbit.ToolPageMargin}" Orientation="Vertical">
-	            <Border Style="{StaticResource Orbit.Workbench.Panel}">
+    <Grid Style="{StaticResource Orbit.Workbench.DialogRoot}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource Orbit.ToolHeader}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                    <iconPacks:PackIconMaterial Kind="Tune" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Quick Settings" />
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Tune floating menu visibility, snap behavior, and launch ergonomics." />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+	    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+	        <StackPanel Orientation="Vertical">
+	            <Border Style="{StaticResource Orbit.Workbench.DialogPanel}">
 	                <StackPanel>
 	            <TextBlock Text="Floating Menu" Style="{StaticResource Orbit.Workbench.SectionTitle}" Margin="0,0,0,10"/>
 
@@ -112,4 +134,5 @@
 	            </Border>
 	        </StackPanel>
 	    </ScrollViewer>
+    </Grid>
 </Controls:MetroWindow>

@@ -122,7 +122,7 @@ Notable details:
 
 - Client launch mode + launcher account config are in **General** (top section)
 - Tools/plugins dashboard is a dedicated **Settings** tab
-- Orbit Builder is registered but hidden from default floating menu exposure
+- SharpBuilder is registered but hidden from default floating menu exposure
 
 ## Script Integration (OrbitAPI)
 

@@ -14,7 +14,7 @@ public sealed class McpInjectorSettingsService
         var path = ResolveSettingsPath();
         if (!File.Exists(path))
         {
-            return new McpInjectorSettings(path, true, string.Empty, false);
+            return new McpInjectorSettings(path, true, false);
         }
 
         try
@@ -23,16 +23,15 @@ public sealed class McpInjectorSettingsService
             var node = JsonNode.Parse(json)?.AsObject();
             if (node == null)
             {
-                return new McpInjectorSettings(path, true, string.Empty, true);
+                return new McpInjectorSettings(path, true, true);
             }
 
             var autoStart = node["MCP_AUTOSTART"]?.GetValue<bool>() ?? true;
-            var serverPath = node["MCP_SERVER_PATH"]?.GetValue<string>() ?? string.Empty;
-            return new McpInjectorSettings(path, autoStart, serverPath, true);
+            return new McpInjectorSettings(path, autoStart, true);
         }
         catch
         {
-            return new McpInjectorSettings(path, true, string.Empty, true);
+            return new McpInjectorSettings(path, true, true);
         }
     }
 
@@ -63,7 +62,6 @@ public sealed class McpInjectorSettingsService
         }
 
         root["MCP_AUTOSTART"] = settings.AutoStart;
-        root["MCP_SERVER_PATH"] = settings.ServerPath ?? string.Empty;
 
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(dir))
@@ -78,8 +76,13 @@ public sealed class McpInjectorSettingsService
     {
         var baseDir = AppContext.BaseDirectory;
         var currentDir = Environment.CurrentDirectory;
+        var profileDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var userSettingsPath = string.IsNullOrWhiteSpace(profileDir)
+            ? string.Empty
+            : Path.Combine(profileDir, "MemoryError", "MMISettings.json");
         var candidates = new[]
         {
+            userSettingsPath,
             Path.Combine(baseDir, "MMISettings.json"),
             Path.Combine(currentDir, "MMISettings.json"),
             Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "ME", "x64", "Build_DLL", "MMISettings.json")),
@@ -90,14 +93,14 @@ public sealed class McpInjectorSettingsService
 
         foreach (var candidate in candidates)
         {
-            if (File.Exists(candidate))
+            if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
             {
                 return candidate;
             }
         }
 
-        return candidates[0];
+        return string.IsNullOrWhiteSpace(userSettingsPath) ? candidates[1] : userSettingsPath;
     }
 }
 
-public sealed record McpInjectorSettings(string SettingsPath, bool AutoStart, string ServerPath, bool Exists);
+public sealed record McpInjectorSettings(string SettingsPath, bool AutoStart, bool Exists);

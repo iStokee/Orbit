@@ -37,8 +37,6 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
     private string _sidecarPath = string.Empty;
     private string _injectorSettingsPath = string.Empty;
     private bool _basicInjectorAutoStart = true;
-    private string _basicInjectorServerPath = string.Empty;
-    private bool _basicInjectorServerPathOverrideEnabled;
     private bool _hasInjectorSettingsFile;
 
     public McpControlCenterViewModel(
@@ -220,24 +218,6 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         set => SetProperty(ref _basicInjectorAutoStart, value);
     }
 
-    public string BasicInjectorServerPath
-    {
-        get => _basicInjectorServerPath;
-        set => SetProperty(ref _basicInjectorServerPath, value);
-    }
-
-    public bool BasicInjectorServerPathOverrideEnabled
-    {
-        get => _basicInjectorServerPathOverrideEnabled;
-        set
-        {
-            if (SetProperty(ref _basicInjectorServerPathOverrideEnabled, value) && !value)
-            {
-                BasicInjectorServerPath = string.Empty;
-            }
-        }
-    }
-
     public bool HasInjectorSettingsFile
     {
         get => _hasInjectorSettingsFile;
@@ -384,8 +364,6 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         var settings = _injectorSettingsService.Load();
         InjectorSettingsPath = settings.SettingsPath;
         BasicInjectorAutoStart = settings.AutoStart;
-        BasicInjectorServerPath = settings.ServerPath;
-        BasicInjectorServerPathOverrideEnabled = !string.IsNullOrWhiteSpace(settings.ServerPath);
         HasInjectorSettingsFile = settings.Exists;
 
         AppendLog(
@@ -397,16 +375,14 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private void SaveInjectorSettings()
     {
-        var effectiveServerPath = BasicInjectorServerPathOverrideEnabled ? (BasicInjectorServerPath ?? string.Empty) : string.Empty;
         var settings = new McpInjectorSettings(
             InjectorSettingsPath,
             BasicInjectorAutoStart,
-            effectiveServerPath,
             Exists: true);
         _injectorSettingsService.Save(settings);
         HasInjectorSettingsFile = true;
         AppendLog(
-            $"Saved injector MCP settings (MCP_AUTOSTART={(BasicInjectorAutoStart ? "1" : "0")}, MCP_SERVER_PATH='{effectiveServerPath}').",
+            $"Saved injector MCP settings (MCP_AUTOSTART={(BasicInjectorAutoStart ? "1" : "0")}).",
             ConsoleLogLevel.Info);
     }
 

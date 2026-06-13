@@ -189,7 +189,7 @@ namespace Orbit.ViewModels
 	MoveSessionToIndividualTabsCommand = new RelayCommand<object?>(MoveSessionToIndividualTabs, CanMoveSessionToIndividualTabs);
 	OpenThemeManagerCommand = new RelayCommand(OpenThemeManager);
 		OpenScriptManagerCommand = new RelayCommand(OpenScriptManager);
-		OpenFsmNodeEditorCommand = new RelayCommand(OpenFsmNodeEditor);
+		OpenSharpBuilderCommand = new RelayCommand(OpenSharpBuilder);
 		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => shellToolCoordinatorService.IsToolAvailable(ShellToolCoordinatorService.AccountManagerToolKey));
 		OpenGuideCommand = new RelayCommand(OpenGuideTab);
 		OpenMESharpApiBrowserCommand = new RelayCommand(OpenMESharpApiBrowserTab);
@@ -258,7 +258,7 @@ namespace Orbit.ViewModels
 	public IRelayCommand<object?> MoveSessionToIndividualTabsCommand { get; }
 	public IRelayCommand OpenThemeManagerCommand { get; }
 	public IRelayCommand OpenScriptManagerCommand { get; }
-	public IRelayCommand OpenFsmNodeEditorCommand { get; }
+	public IRelayCommand OpenSharpBuilderCommand { get; }
 	public IRelayCommand ToggleConsoleCommand { get; }
 	public IRelayCommand BrowseScriptCommand { get; }
 	public IRelayCommand LoadScriptCommand { get; }
@@ -530,9 +530,9 @@ namespace Orbit.ViewModels
 		shellToolCoordinatorService.OpenScriptManager(Tabs, this, tab => SelectedTab = tab);
 	}
 
-	private void OpenFsmNodeEditor()
+	private void OpenSharpBuilder()
 	{
-		shellToolCoordinatorService.OpenFsmNodeEditor(Tabs, this, tab => SelectedTab = tab);
+		shellToolCoordinatorService.OpenSharpBuilder(Tabs, this, tab => SelectedTab = tab);
 	}
 
 		private void OpenAccountManager()
@@ -1375,14 +1375,14 @@ namespace Orbit.ViewModels
 		}
 	}
 
-	public bool ShowMenuFsmNodeEditor
+	public bool ShowMenuSharpBuilder
 	{
-		get => Settings.Default.ShowMenuFsmNodeEditor;
+		get => Settings.Default.ShowMenuSharpBuilder;
 		set
 		{
-			if (Settings.Default.ShowMenuFsmNodeEditor == value) return;
-			Settings.Default.ShowMenuFsmNodeEditor = value;
-			OnPropertyChanged(nameof(ShowMenuFsmNodeEditor));
+			if (Settings.Default.ShowMenuSharpBuilder == value) return;
+			Settings.Default.ShowMenuSharpBuilder = value;
+			OnPropertyChanged(nameof(ShowMenuSharpBuilder));
 		}
 	}
 

@@ -359,7 +359,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ThemeManager" => Settings.Default.ShowMenuThemeManager,
             "Console" => Settings.Default.ShowMenuConsole,
             "McpControl" => Settings.Default.ShowMenuMcpControl,
-            "FsmNodeEditor" => Settings.Default.ShowMenuFsmNodeEditor,
+            "SharpBuilder" => Settings.Default.ShowMenuSharpBuilder,
             "ApiDocumentation" => Settings.Default.ShowMenuApiDocumentation,
             "Settings" => Settings.Default.ShowMenuSettings,
             "UnifiedToolsManager" => Settings.Default.ShowMenuToolsOverview,
@@ -395,8 +395,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
                 case "ThemeManager":
                     _mainWindowViewModel.ShowMenuThemeManager = value;
                     break;
-                case "FsmNodeEditor":
-                    _mainWindowViewModel.ShowMenuFsmNodeEditor = value;
+                case "SharpBuilder":
+                    _mainWindowViewModel.ShowMenuSharpBuilder = value;
                     break;
                 case "Console":
                     _mainWindowViewModel.ShowMenuConsole = value;
@@ -442,8 +442,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
             case "ThemeManager":
                 Settings.Default.ShowMenuThemeManager = value;
                 break;
-            case "FsmNodeEditor":
-                Settings.Default.ShowMenuFsmNodeEditor = value;
+            case "SharpBuilder":
+                Settings.Default.ShowMenuSharpBuilder = value;
                 break;
             case "Console":
                 Settings.Default.ShowMenuConsole = value;
@@ -487,7 +487,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "ScriptManager" => "Browse and manage script library",
             "Console" => "View unified logs from Orbit, ME, and scripts",
             "McpControl" => "Control MCP runtime policy, probe bridge health, and inspect structured payloads",
-            "FsmNodeEditor" => "Visual editor and runner for FSM-based automations",
+            "SharpBuilder" => "SharpBuilder: visual editor and runner for automation graphs",
             "ApiDocumentation" => "Open the Orbit documentation hub",
             "MesharpApiBrowser" => "Browse reflected MESharp scripting API documentation",
             "ToolsOverview" => "Manage registered tools and their visibility",

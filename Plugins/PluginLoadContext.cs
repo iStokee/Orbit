@@ -58,6 +58,7 @@ internal class PluginLoadContext : AssemblyLoadContext
     private static bool ShouldUseDefaultContext(string? assemblyName)
     {
         return string.Equals(assemblyName, "Orbit", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assemblyName, "Orbit.Plugin.Abstractions", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(assemblyName, "csharp_interop", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(assemblyName, "netstandard", StringComparison.OrdinalIgnoreCase) ||
                (assemblyName?.StartsWith("System", StringComparison.OrdinalIgnoreCase) == true) ||

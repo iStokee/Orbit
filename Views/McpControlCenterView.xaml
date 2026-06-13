@@ -146,31 +146,12 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Text="{Binding InjectorSettingsPath}" FontFamily="Consolas"
                                            Style="{StaticResource Orbit.Workbench.MetaText}" TextWrapping="Wrap" />
                                 <Controls:ToggleSwitch Grid.Row="1" Margin="0,8,0,0" Header="MCP_AUTOSTART"
                                                        IsOn="{Binding BasicInjectorAutoStart, Mode=TwoWay}" />
-                                <Controls:ToggleSwitch Grid.Row="2"
-                                                       Margin="0,8,0,0"
-                                                       Header="Override MCP server path (Advanced)"
-                                                       IsOn="{Binding BasicInjectorServerPathOverrideEnabled, Mode=TwoWay}" />
-
-                                <StackPanel Grid.Row="3"
-                                            Margin="0,8,0,0"
-                                            Visibility="{Binding BasicInjectorServerPathOverrideEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="Optional explicit path for MCP server launch. Leave override OFF for default Orbit sidecar discovery."
-                                               TextWrapping="Wrap"
-                                               Style="{StaticResource Orbit.Workbench.HelperText}" />
-                                    <TextBlock Margin="0,6,0,2"
-                                               Text="MCP_SERVER_PATH"
-                                               Style="{StaticResource Orbit.Workbench.FieldLabel}" />
-                                    <TextBox Text="{Binding BasicInjectorServerPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             ToolTip="Example: C:\Orbit\MESharp.McpServer.exe" />
-                                </StackPanel>
                             </Grid>
                         </Grid>
                     </Border>

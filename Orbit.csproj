@@ -139,6 +139,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\C#\csharp_interop\csharp_interop.csproj" />
+    <!-- Plugin contract (IOrbitTool / IOrbitPlugin). Shared to the plugin ALC by PluginLoadContext. -->
+    <ProjectReference Include="..\..\C#\Orbit.Plugin.Abstractions\Orbit.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
