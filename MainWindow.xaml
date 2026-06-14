@@ -875,13 +875,6 @@
                                     Visibility="{Binding ShowMenuGuide, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <iconPacks:PackIconMaterial Kind="BookOpenPageVariant" />
                                 </Button>
-                                <Button
-                                    Command="{Binding OpenMESharpApiBrowserCommand}"
-                                    Style="{StaticResource FloatingMenuButtonStyle}"
-                                    ToolTip="MESharp API"
-                                    Visibility="{Binding ShowMenuGuide, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <iconPacks:PackIconMaterial Kind="BookSearch" />
-                                </Button>
                                 <Grid Visibility="{Binding ShowMenuSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Button
                                         Command="{Binding OpenSettingsCommand}"

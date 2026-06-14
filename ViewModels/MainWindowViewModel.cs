@@ -192,7 +192,6 @@ namespace Orbit.ViewModels
 		OpenSharpBuilderCommand = new RelayCommand(OpenSharpBuilder);
 		OpenAccountManagerCommand = new RelayCommand(OpenAccountManager, () => shellToolCoordinatorService.IsToolAvailable(ShellToolCoordinatorService.AccountManagerToolKey));
 		OpenGuideCommand = new RelayCommand(OpenGuideTab);
-		OpenMESharpApiBrowserCommand = new RelayCommand(OpenMESharpApiBrowserTab);
 		OpenSettingsCommand = new RelayCommand(OpenSettingsTab);
 		OpenToolsOverviewCommand = new RelayCommand(OpenToolsOverviewTab);
 		OpenMcpControlCommand = new RelayCommand(OpenMcpControlTab);
@@ -270,7 +269,6 @@ namespace Orbit.ViewModels
 	public ConsoleLogService ConsoleLog { get; }
 	public IRelayCommand OpenAccountManagerCommand { get; }
 	public IRelayCommand OpenGuideCommand { get; }
-	public IRelayCommand OpenMESharpApiBrowserCommand { get; }
 	public IRelayCommand OpenSettingsCommand { get; }
 	public IRelayCommand OpenToolsOverviewCommand { get; }
 	public IRelayCommand OpenMcpControlCommand { get; }
@@ -711,11 +709,6 @@ namespace Orbit.ViewModels
 	public void OpenGuideTab()
 	{
 		shellToolCoordinatorService.OpenGuide(Tabs, this, tab => SelectedTab = tab);
-	}
-
-	public void OpenMESharpApiBrowserTab()
-	{
-		shellToolCoordinatorService.OpenMESharpApiBrowser(Tabs, this, tab => SelectedTab = tab);
 	}
 
 	public void OpenToolsOverviewTab()

@@ -17,7 +17,6 @@ public sealed class ShellToolCoordinatorService
 	public const string SessionsOverviewToolKey = "SessionsOverview";
 	public const string ScriptManagerToolKey = "ScriptManager";
 	public const string GuideToolKey = "ApiDocumentation";
-	public const string MESharpApiBrowserToolKey = "MesharpApiBrowser";
 	public const string ToolsOverviewToolKey = "UnifiedToolsManager";
 	public const string McpControlToolKey = "McpControl";
 	public const string SessionGalleryToolKey = "SessionGallery";
@@ -144,9 +143,6 @@ public sealed class ShellToolCoordinatorService
 
 	public void OpenGuide(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
 		=> OpenRegisteredToolOrLog(tabs, ownerContext, GuideToolKey, selectTab, "Guide tool is unavailable.");
-
-	public void OpenMESharpApiBrowser(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
-		=> OpenRegisteredToolOrLog(tabs, ownerContext, MESharpApiBrowserToolKey, selectTab, "MESharp API browser tool is unavailable.");
 
 	public void OpenToolsOverview(ObservableCollection<object> tabs, object ownerContext, Action<object?> selectTab)
 		=> OpenRegisteredToolOrLog(tabs, ownerContext, ToolsOverviewToolKey, selectTab, "Tools dashboard is unavailable.");

@@ -164,7 +164,6 @@ public partial class App : Application
 			sp.GetRequiredService<TearOffHostRegistry>(),
 			sp.GetRequiredService<SessionReconciliationService>()));
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
-		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.MESharpApiBrowserTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
 		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.PluginManagerTool>();

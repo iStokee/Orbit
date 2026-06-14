@@ -489,7 +489,6 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "McpControl" => "Control MCP runtime policy, probe bridge health, and inspect structured payloads",
             "SharpBuilder" => "SharpBuilder: visual editor and runner for automation graphs",
             "ApiDocumentation" => "Open the Orbit documentation hub",
-            "MesharpApiBrowser" => "Browse reflected MESharp scripting API documentation",
             "ToolsOverview" => "Manage registered tools and their visibility",
             "PluginManager" => "Load and manage dynamic plugin tools",
             "Settings" => "Configure Orbit application settings",
