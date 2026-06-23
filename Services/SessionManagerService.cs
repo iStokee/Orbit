@@ -430,10 +430,10 @@ namespace Orbit.Services
 
 			// Close client first, then parent/launcher to avoid orphaning the child process.
 			// We avoid force-killing the launcher to prevent respawn loops/crash flashes.
-			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle, bool allowKill)>
+			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle, bool allowKill, int? processId)>
 			{
-				(process, "client", externalHandle, forceKillOnTimeout),
-				(parentProcess, "launcher", nint.Zero, false)
+				(process, "client", externalHandle, forceKillOnTimeout, processId),
+				(parentProcess, "launcher", nint.Zero, false, parentProcessIdValue)
 			}.Where(p => p.process != null).ToList();
 
 			var clientExited = process == null;
@@ -454,9 +454,12 @@ namespace Orbit.Services
 					clientExited = exited;
 				}
 
-				if (exited)
+				// Use the PID captured before shutdown: a gracefully-exited process is disposed
+				// inside TryShutdownProcessAsync, after which target.process.Id throws
+				// "No process is associated with this object".
+				if (exited && target.processId is int targetProcessId)
 				{
-					TryUnregisterProcess(target.process.Id);
+					TryUnregisterProcess(targetProcessId);
 				}
 			}
 

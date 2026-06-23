@@ -69,6 +69,54 @@ public sealed class SessionPlacementService
 		return new MoveScope(this, session, target);
 	}
 
+	/// <summary>
+	/// Opens a "move in progress" grace for a session whose destination host is not yet known
+	/// (e.g. a Dragablz drag-out, where the landing host is only known once the matching add
+	/// arrives). Unlike <see cref="BeginMove"/> this deliberately does NOT change the recorded
+	/// placement. Pairs with <see cref="EndExternalMove"/> and is idempotent.
+	/// </summary>
+	public void BeginExternalMove(SessionModel session, string? reason = null)
+	{
+		if (session == null)
+		{
+			return;
+		}
+
+		bool opened;
+		lock (_sync)
+		{
+			opened = _movingSessions.Add(session.Id);
+		}
+
+		if (opened)
+		{
+			LogPlacement($"{GetSessionLogIdentity(session)} external-move open{FormatReason(reason)}");
+		}
+	}
+
+	/// <summary>
+	/// Closes a grace opened by <see cref="BeginExternalMove"/>. Idempotent: safe to call from
+	/// the landing add, from final orphan validation, or both.
+	/// </summary>
+	public void EndExternalMove(SessionModel session, string? reason = null)
+	{
+		if (session == null)
+		{
+			return;
+		}
+
+		bool closed;
+		lock (_sync)
+		{
+			closed = _movingSessions.Remove(session.Id);
+		}
+
+		if (closed)
+		{
+			LogPlacement($"{GetSessionLogIdentity(session)} external-move close placement={GetPlacement(session)}{FormatReason(reason)}");
+		}
+	}
+
 	public void SetPlacement(SessionModel session, SessionPlacementKind placement, string? reason = null)
 	{
 		if (session == null)
@@ -108,6 +156,32 @@ public sealed class SessionPlacementService
 				: SessionPlacementKind.Unknown;
 		}
 	}
+
+	// --- Ownership oracle (Stage 2) ---------------------------------------------------------
+	// Data-driven answers to "where does this session live", replacing visual-tree scraping.
+	// With move paths now maintaining placement transactionally, these are the authoritative
+	// predicates the shell/reconcile consumers read.
+
+	/// <summary>
+	/// True when the session is placed in some visible host — main tab strip, an Orbit workspace
+	/// cell, or a tear-off window. Replaces the scrape's <c>HasAnyUiReference</c>.
+	/// </summary>
+	public bool IsPlacedInHost(SessionModel session)
+		=> GetPlacement(session) is SessionPlacementKind.MainTabs
+			or SessionPlacementKind.OrbitWorkspace
+			or SessionPlacementKind.TearOffWindow;
+
+	/// <summary>True when the session is placed in the Orbit workspace.</summary>
+	public bool IsInOrbitWorkspace(SessionModel session)
+		=> GetPlacement(session) == SessionPlacementKind.OrbitWorkspace;
+
+	/// <summary>
+	/// True when the session is placed in a non-Orbit host (main tab strip or a tear-off window).
+	/// Replaces the scrape's <c>IsInNonOrbitTabs</c>.
+	/// </summary>
+	public bool IsInNonOrbitHost(SessionModel session)
+		=> GetPlacement(session) is SessionPlacementKind.MainTabs
+			or SessionPlacementKind.TearOffWindow;
 
 	public bool IsMoveInProgress(SessionModel session)
 	{

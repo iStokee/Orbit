@@ -70,6 +70,23 @@ public sealed class SessionReconciliationService
 			reason);
 	}
 
+	/// <summary>
+	/// True when the given window data-context is a registered Orbit-View tear-off host. Registry
+	/// lookup only — no visual-tree scrape (Stage 2c replacement for the CaptureUiOwnership-based
+	/// window classification).
+	/// </summary>
+	public bool IsOrbitViewHost(object? windowDataContext)
+	{
+		if (windowDataContext == null)
+		{
+			return false;
+		}
+
+		return _tearOffRegistry
+			.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
+			.Any(host => ReferenceEquals(host.Window.DataContext, windowDataContext));
+	}
+
 	public SessionUiOwnership CaptureUiOwnership(
 		IEnumerable<object>? orbitWorkspaceItems = null,
 		string partition = "OrbitMainShell")
@@ -130,6 +147,43 @@ public sealed class SessionReconciliationService
 		}
 
 		return new SessionUiOwnership(orbitItems, nonOrbitItems, tabStripItems, orbitWindows);
+	}
+
+	/// <summary>
+	/// Cheap placement-model check (no visual-tree scrape) for whether a drag/move grace is open
+	/// for the session. Reconcile passes must consult this before re-homing or restoring, so they
+	/// don't act on the transiently-inconsistent visual tree mid-move and create duplicate tabs.
+	/// </summary>
+	public bool IsSessionMoving(SessionModel session)
+		=> session != null && _placement.IsMoveInProgress(session);
+
+	/// <summary>
+	/// Count of live sessions the authoritative placement model reports in no host (excluding
+	/// closing/terminal). Placement-driven health metric replacing the scrape-based conflict count
+	/// (conflicts are now resolved by the ownership coordinator). No visual-tree walk.
+	/// </summary>
+	public int CountUnplacedSessions()
+		=> _sessionCollection.Sessions.Count(session =>
+			session.State is not SessionState.Closed and not SessionState.ShuttingDown &&
+			!_placement.IsPlacedInHost(session));
+
+	/// <summary>
+	/// Placement-driven orphan decision (Stage 2c) — the data-backed replacement for the
+	/// snapshot/scrape overload. A session should be restored only when it is tracked, settled
+	/// (not moving), not closing/terminal, and the authoritative placement says it is in no host.
+	/// </summary>
+	public bool ShouldRestoreOrphan(SessionModel session)
+	{
+		if (session == null ||
+			!_sessionCollection.Sessions.Contains(session) ||
+			_placement.IsMoveInProgress(session) ||
+			_placement.GetPlacement(session) == SessionPlacementKind.Closing ||
+			session.State is SessionState.Closed or SessionState.ShuttingDown)
+		{
+			return false;
+		}
+
+		return !_placement.IsPlacedInHost(session);
 	}
 
 	public bool ShouldRestoreOrphan(SessionReconciliationSnapshot snapshot)

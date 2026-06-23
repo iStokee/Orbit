@@ -113,9 +113,7 @@ namespace Orbit.ViewModels
 		public int InjectedSessionCount => Sessions.Count(s => s.InjectionState == InjectionState.Injected);
 		public int ScriptLoadedCount => Sessions.Count(s => !string.IsNullOrWhiteSpace(s.ActiveScriptPath));
 		public int ErrorSessionCount => Sessions.Count(s => !string.IsNullOrWhiteSpace(s.LastError));
-		public int ConflictingUiOwnershipCount => reconciliationService
-			.CaptureAll(orbitLayoutState.Items.Cast<object>(), "sessions-overview-count")
-			.Count(snapshot => snapshot.HasConflictingUiOwnership);
+		public int UnplacedSessionCount => reconciliationService.CountUnplacedSessions();
 
 		public string DiagnosticsStatus
 		{
@@ -158,16 +156,13 @@ namespace Orbit.ViewModels
 
 		private void DumpDiagnostics()
 		{
-			var snapshots = reconciliationService.CaptureAll(orbitLayoutState.Items.Cast<object>(), "sessions-overview-dump");
-			var conflicts = snapshots.Count(snapshot => snapshot.HasConflictingUiOwnership);
-			var orphaned = snapshots.Count(snapshot =>
-				snapshot.InSessionCollection &&
-				!snapshot.HasAnyUiReference &&
-				snapshot.State is not SessionState.Closed and not SessionState.ShuttingDown);
+			var unplaced = reconciliationService.CountUnplacedSessions();
 
+			// LogDiagnostics performs the on-demand visual-tree dump — retained as a manual
+			// debugging aid only; it no longer drives any automatic decision (Stage 2c).
 			reconciliationService.LogDiagnostics(orbitLayoutState.Items.Cast<object>(), "sessions-overview-dump");
-			DiagnosticsStatus = $"Captured {snapshots.Count} session(s), {conflicts} ownership conflict(s), {orphaned} visible orphan candidate(s).";
-			OnPropertyChanged(nameof(ConflictingUiOwnershipCount));
+			DiagnosticsStatus = $"Logged diagnostics for {SessionCount} session(s); {unplaced} unplaced.";
+			OnPropertyChanged(nameof(UnplacedSessionCount));
 		}
 
 		private bool CanLoadScript(SessionModel? session)
@@ -493,7 +488,7 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(InjectedSessionCount));
 			OnPropertyChanged(nameof(ScriptLoadedCount));
 			OnPropertyChanged(nameof(ErrorSessionCount));
-			OnPropertyChanged(nameof(ConflictingUiOwnershipCount));
+			OnPropertyChanged(nameof(UnplacedSessionCount));
 		}
 
 		public void Dispose()

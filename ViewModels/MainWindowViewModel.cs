@@ -1897,14 +1897,61 @@ namespace Orbit.ViewModels
 			ScheduleOrphanedSessionValidation(removedSession);
 		}
 
+		// A programmatic removal (closing a session) does not trigger Dragablz's drag-only
+		// TabEmptiedHandler, so an emptied split branch is left as a stuck white cell. Schedule a
+		// best-effort branch consolidation for this window after the removal settles.
+		if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Reset)
+		{
+			ScheduleEmptyBranchCollapse("tab-removed");
+		}
+
 			UpdateFloatingMenuVisibilityForCurrentTab();
 		}
 
-		private bool IsOrbitViewTearOffWindow()
+		private void ScheduleEmptyBranchCollapse(string reason)
 		{
-			var ownership = sessionReconciliationService.CaptureUiOwnership(orbitLayoutState.Items.Cast<object>());
-			return ownership.OrbitWindows.Any(window => ReferenceEquals(window.DataContext, this));
+			var dispatcher = Application.Current?.Dispatcher;
+			if (dispatcher == null)
+			{
+				CollapseEmptyBranchesForThisWindow(reason);
+				return;
+			}
+
+			dispatcher.BeginInvoke(
+				new Action(() => CollapseEmptyBranchesForThisWindow(reason)),
+				System.Windows.Threading.DispatcherPriority.Background);
 		}
+
+		private void CollapseEmptyBranchesForThisWindow(string reason)
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			// Don't fight an in-flight drag; Dragablz consolidates those branches itself.
+			if (System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+			{
+				return;
+			}
+
+			var window = Application.Current?.Windows?
+				.OfType<Window>()
+				.FirstOrDefault(candidate => ReferenceEquals(candidate.DataContext, this));
+			if (window == null)
+			{
+				return;
+			}
+
+			var collapsed = LayoutBranchConsolidator.CollapseEmptyBranchesInWindow(window);
+			if (collapsed > 0)
+			{
+				OrbitInteractionLogger.Log($"[Orbit][Shell] Collapsed {collapsed} empty layout branch(es) ({reason}).");
+			}
+		}
+
+		private bool IsOrbitViewTearOffWindow()
+			=> sessionReconciliationService.IsOrbitViewHost(this);
 
 	private static object? ResolveClosingItem(ItemActionCallbackArgs<TabablzControl> args)
 	{
@@ -1942,6 +1989,12 @@ namespace Orbit.ViewModels
 
 	private void ValidateOrphanedSession(SessionModel session)
 	{
+		// Close the drag-out grace as the backstop: this runs at Background priority, after the
+		// matching add has had a full dispatcher cycle to land. If it landed, the session now
+		// has a UI reference and will not be restored; if it genuinely did not, clearing the
+		// grace lets the real orphan be recovered.
+		sessionPlacementService.EndExternalMove(session, "orphan-validation");
+
 		shellSessionRecoveryService.ValidateOrphanedSession(
 			session,
 			_disposed,

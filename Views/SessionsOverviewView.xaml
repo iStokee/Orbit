@@ -92,7 +92,7 @@
                                 <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Error}" Text="{Binding ErrorSessionCount, StringFormat='Errors: {0}'}" />
                             </Border>
                             <Border Style="{StaticResource Orbit.Workbench.Badge.Warning}">
-                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Warning}" Text="{Binding ConflictingUiOwnershipCount, StringFormat='UI Conflicts: {0}'}" />
+                                <TextBlock Style="{StaticResource Orbit.Workbench.BadgeText.Warning}" Text="{Binding UnplacedSessionCount, StringFormat='Unplaced: {0}'}" />
                             </Border>
                         </WrapPanel>
                         <TextBlock

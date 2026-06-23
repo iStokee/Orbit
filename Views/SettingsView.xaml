@@ -6,6 +6,7 @@
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:local="clr-namespace:Orbit"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:orbitControls="clr-namespace:Orbit.Views.Controls"
     xmlns:views="clr-namespace:Orbit.Views"
@@ -1198,7 +1199,7 @@
                                     <ComboBox
                                         Width="200"
                                         HorizontalAlignment="Left"
-                                        SelectedValue="{Binding OrbitHeaderDensity, Mode=TwoWay}"
+                                        SelectedValue="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
                                         <ComboBoxItem Content="Standard">
                                             <ComboBoxItem.Tag>

@@ -37,6 +37,10 @@ public partial class App : Application
 		consoleLog.StartCapture();
 		OrbitInteractionLogger.IsEnabled = Settings.Default.OrbitInteractionLoggingEnabled;
 
+		// Force-instantiate the ownership coordinator so it subscribes to placement changes and
+		// enforces the single-host invariant (resolves ghost-duplicate sessions).
+		_serviceProvider.GetRequiredService<SessionOwnershipCoordinatorService>();
+
 		_pipeServer = _serviceProvider.GetRequiredService<ConsolePipeServer>();
 		_pipeServer.Start();
 		_orbitApiPipeServer = _serviceProvider.GetRequiredService<OrbitApiPipeServer>();
@@ -102,6 +106,7 @@ public partial class App : Application
 		services.AddSingleton<SessionStartupService>();
 		services.AddSingleton<SessionTargetResolverService>();
 		services.AddSingleton<SessionUiCoordinatorService>();
+		services.AddSingleton<SessionOwnershipCoordinatorService>();
 		services.AddSingleton<ShellPresentationPolicyService>();
 		services.AddSingleton<ShellSessionCloseService>();
 		services.AddSingleton<ShellSessionFocusService>();

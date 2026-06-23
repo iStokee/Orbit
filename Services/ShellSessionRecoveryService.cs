@@ -42,8 +42,7 @@ public sealed class ShellSessionRecoveryService
 			return;
 		}
 
-		var snapshot = sessionReconciliationService.Capture(session, orbitItems, "ensure-visible");
-		if (!snapshot.HasAnyUiReference)
+		if (!sessionPlacementService.IsPlacedInHost(session))
 		{
 			sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs, "restore-visible-session");
 			if (!tabs.Contains(session))
@@ -72,26 +71,15 @@ public sealed class ShellSessionRecoveryService
 				return;
 			}
 
-			var snapshot = sessionReconciliationService.Capture(session, orbitItems, "orphan-validation");
-			if (snapshot.HasConflictingUiOwnership)
+			// Placement-driven (Stage 2c): conflicts are now resolved by the ownership coordinator,
+			// so this path only restores a session the authoritative model reports in no host.
+			if (!sessionReconciliationService.ShouldRestoreOrphan(session))
 			{
-				sessionReconciliationService.LogDecision(
-					"orphan-conflicting-ownership",
-					snapshot,
-					"session is visible in both orbit and non-orbit owners; leaving ownership cleanup to workspace reconciliation");
-			}
-
-			if (!sessionReconciliationService.ShouldRestoreOrphan(snapshot))
-			{
-				if (snapshot.InSessionCollection && !snapshot.HasAnyUiReference)
-				{
-					sessionReconciliationService.LogDecision("orphan-ignore", snapshot);
-				}
-
 				return;
 			}
 
-			sessionReconciliationService.LogDecision("orphan-restore", snapshot);
+			Console.WriteLine(
+				$"[Orbit][Reconcile] orphan-restore session='{session.Name}' placement={sessionPlacementService.GetPlacement(session)}");
 			consoleLog.Append(
 				$"[Orbit] Session '{session.Name}' temporarily lost all UI references; restoring it to tabs instead of closing the process.",
 				ConsoleLogSource.Orbit,

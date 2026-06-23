@@ -567,6 +567,15 @@ namespace Orbit.ViewModels
 						continue;
 					}
 
+					// A drag is in flight for this session; the visual-tree ownership scrape is
+					// transiently unreliable mid-move. Re-homing now is the second restore path
+					// (besides orphan validation) that produces duplicate "ghost" tabs, so skip
+					// until the move settles.
+					if (item is SessionModel movingSession && _reconciliationService.IsSessionMoving(movingSession))
+					{
+						continue;
+					}
+
 					// If the item is hosted in a non-Orbit tab strip, it has been moved out of Orbit View.
 					if (ownership.IsInNonOrbitTabs(item))
 					{
@@ -635,20 +644,12 @@ namespace Orbit.ViewModels
 					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(ownerByItem[item]);
 				}
 
+				// Conflicting orbit/non-orbit ownership is now resolved structurally by
+				// SessionOwnershipCoordinatorService (Stage 2b); the loop no longer scrapes to
+				// detect-and-log it.
+
 				// Sessions no longer present in the global session collection are stale UI shells.
 				// Remove them from Orbit-owned controls so reconcile cannot rehydrate them into Items.
-				foreach (var conflictingSession in actual
-					.OfType<SessionModel>()
-					.Select(session => _reconciliationService.Capture(session, Items.Cast<object>(), _lastReconcileReason))
-					.Where(snapshot => snapshot.HasConflictingUiOwnership)
-					.ToList())
-				{
-					_reconciliationService.LogDecision(
-						"orbit-conflicting-ownership",
-						conflictingSession,
-						"session is hosted by Orbit and non-Orbit UI simultaneously");
-				}
-
 				foreach (var staleSession in actual
 					.OfType<SessionModel>()
 					.Where(session => !Sessions.Contains(session))
