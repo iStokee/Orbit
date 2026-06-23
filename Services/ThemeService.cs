@@ -627,6 +627,9 @@ namespace Orbit.Services
 			ThemeLogger.Log($"Removed {removedCount} custom foreground resources");
 		}
 
+		// Single runtime owner of the Orbit.* semantic design tokens. Runs on every theme apply
+		// (built-in and custom) before the first window is shown. App.xaml defines the same keys as
+		// the design-time / pre-theme seed; keep the two in sync (App.xaml has the matching catalog).
 		private static void ApplyOrbitSemanticTextResources()
 		{
 			var resources = Application.Current.Resources;

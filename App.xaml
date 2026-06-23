@@ -175,6 +175,13 @@
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
+            <!--  Orbit.* semantic design tokens.
+                  RUNTIME OWNER: ThemeService.ApplyOrbitSemanticTextResources() recomputes every key
+                  below on each theme apply (built-in and custom), before the first window is shown,
+                  and is authoritative at runtime. The definitions here are the design-time / pre-theme
+                  SEED for the default (Dark.Cyan) theme — keep their values in sync with the runtime
+                  owner so the XAML designer matches the running app. Do NOT add a token here without a
+                  matching write in ApplyOrbitSemanticTextResources (and vice-versa).  -->
             <SolidColorBrush x:Key="Orbit.Brushes.Text.Primary" Color="{DynamicResource Orbit.Colors.Text.Primary}" />
             <SolidColorBrush x:Key="Orbit.Brushes.Text.Secondary" Color="{DynamicResource Orbit.Colors.Text.Primary}" Opacity="0.82" />
             <SolidColorBrush x:Key="Orbit.Brushes.Text.Tertiary" Color="{DynamicResource Orbit.Colors.Text.Primary}" Opacity="0.64" />
@@ -196,9 +203,11 @@
             <SolidColorBrush x:Key="Orbit.Brushes.Border.Strong" Color="{DynamicResource MahApps.Colors.Gray5}" />
             <SolidColorBrush x:Key="Orbit.Brushes.Status.Neutral" Color="{DynamicResource MahApps.Colors.Gray5}" />
             <SolidColorBrush x:Key="Orbit.Brushes.Status.Info" Color="{DynamicResource Orbit.Colors.Action.Secondary}" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Status.Success" Color="#FF4CAF50" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Status.Warning" Color="#FFFFC107" />
-            <SolidColorBrush x:Key="Orbit.Brushes.Status.Error" Color="#FFF44336" />
+            <!--  Status colors match the runtime owner (ForestGreen / Goldenrod / Firebrick);
+                  previously these seeded Material hues and drifted from the running app.  -->
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Success" Color="#FF228B22" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Warning" Color="#FFDAA520" />
+            <SolidColorBrush x:Key="Orbit.Brushes.Status.Error" Color="#FFB22222" />
             <Color x:Key="Orbit.Colors.Action.Primary">{StaticResource MahApps.Colors.Accent}</Color>
             <Color x:Key="Orbit.Colors.Action.Secondary">{StaticResource MahApps.Colors.Accent2}</Color>
             <Color x:Key="Orbit.Colors.Action.Tertiary">{StaticResource MahApps.Colors.Accent3}</Color>
