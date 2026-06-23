@@ -526,32 +526,17 @@ namespace Orbit.Services
 			resources["ControlzEx.Brushes.AccentForeground"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("ControlzEx.Brushes.AccentForeground", resources["ControlzEx.Brushes.AccentForeground"]);
 
-			// Legacy aliases for backward compatibility
-			resources["AccentColor"] = accentColor;
-			ThemeLogger.LogResourceSet("AccentColor", accentColor);
-			resources["AccentColor2"] = accentColor2;
-			ThemeLogger.LogResourceSet("AccentColor2", accentColor2);
-			resources["AccentColor3"] = accentColor3;
-			ThemeLogger.LogResourceSet("AccentColor3", accentColor3);
-			resources["AccentColor4"] = accentColor4;
-			ThemeLogger.LogResourceSet("AccentColor4", accentColor4);
-			resources["HighlightColor"] = highlightColor;
-			ThemeLogger.LogResourceSet("HighlightColor", highlightColor);
+			// Legacy aliases for backward compatibility.
+			// NOTE: AccentColor / AccentColor2-4 / HighlightColor and AccentColorBrush / 2-4 /
+			// HighlightBrush are intentionally NOT set here. EnsureDragablzMahAppsCompatResources()
+			// runs immediately after this method (see ApplyCustomTheme) and recomputes those exact
+			// keys to identical values from the MahApps.Brushes.Accent* keys set above — it is the
+			// single owner of those aliases. Only the keys EnsureDragablz does not touch live here.
 			resources["IdealForegroundColor"] = idealForeground;
 			ThemeLogger.LogResourceSet("IdealForegroundColor", idealForeground);
 			resources["AccentForegroundColor"] = idealForeground;
 			ThemeLogger.LogResourceSet("AccentForegroundColor", idealForeground);
 
-			resources["AccentColorBrush"] = CreateFrozenBrush(accentColor);
-			ThemeLogger.LogResourceSet("AccentColorBrush", resources["AccentColorBrush"]);
-			resources["AccentColorBrush2"] = CreateFrozenBrush(accentColor2);
-			ThemeLogger.LogResourceSet("AccentColorBrush2", resources["AccentColorBrush2"]);
-			resources["AccentColorBrush3"] = CreateFrozenBrush(accentColor3);
-			ThemeLogger.LogResourceSet("AccentColorBrush3", resources["AccentColorBrush3"]);
-			resources["AccentColorBrush4"] = CreateFrozenBrush(accentColor4);
-			ThemeLogger.LogResourceSet("AccentColorBrush4", resources["AccentColorBrush4"]);
-			resources["HighlightBrush"] = CreateFrozenBrush(highlightColor);
-			ThemeLogger.LogResourceSet("HighlightBrush", resources["HighlightBrush"]);
 			resources["IdealForegroundColorBrush"] = CreateFrozenBrush(idealForeground);
 			ThemeLogger.LogResourceSet("IdealForegroundColorBrush", resources["IdealForegroundColorBrush"]);
 			resources["AccentForegroundColorBrush"] = CreateFrozenBrush(idealForeground);

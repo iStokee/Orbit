@@ -22,18 +22,11 @@
                 <ResourceDictionary Source="Resources/SessionTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Dragablz MahApps theme compatibility keys expected by Dragablz/Themes/MahApps.xaml -->
-            <SolidColorBrush x:Key="BlackBrush" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
-            <SolidColorBrush x:Key="BlackColorBrush" Color="{DynamicResource MahApps.Colors.ThemeForeground}" />
-            <SolidColorBrush x:Key="WhiteBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" />
-            <SolidColorBrush x:Key="WhiteColorBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" />
-            <SolidColorBrush x:Key="TransparentWhiteBrush" Color="#00FFFFFF" />
-            <SolidColorBrush x:Key="SemiTransparentWhiteBrush" Color="#55FFFFFF" />
-            <SolidColorBrush x:Key="HighlightBrush" Color="{DynamicResource MahApps.Colors.Highlight}" />
-            <SolidColorBrush x:Key="AccentColorBrush" Color="{DynamicResource MahApps.Colors.Accent}" />
-            <SolidColorBrush x:Key="AccentColorBrush2" Color="{DynamicResource MahApps.Colors.Accent2}" />
-            <SolidColorBrush x:Key="AccentColorBrush3" Color="{DynamicResource MahApps.Colors.Accent3}" />
-            <Color x:Key="AccentColor2">{StaticResource MahApps.Colors.Accent2}</Color>
+            <!-- Dragablz/MahApps legacy compatibility keys (WhiteBrush, BlackBrush, AccentColorBrush,
+                 HighlightBrush, AccentColor2, …) are owned at runtime by
+                 ThemeService.EnsureDragablzMahAppsCompatResources(), which runs on every theme apply
+                 (built-in and custom) before the first window is shown. They are intentionally NOT
+                 seeded here — a static block previously duplicated them and drifted out of sync. -->
 
             <!-- Shared outer margin for tool pages (tighter than the original 16px). -->
             <Thickness x:Key="Orbit.ToolPageMargin">10</Thickness>
