@@ -299,7 +299,7 @@ namespace Orbit.Services
 		/// <summary>
 		/// Convert v1.6 theme names to v2.0 format
 		/// </summary>
-		private string ConvertLegacyBaseTheme(string? oldThemeName)
+		internal string ConvertLegacyBaseTheme(string? oldThemeName)
 		{
 			if (string.IsNullOrWhiteSpace(oldThemeName))
 				return "Dark";
@@ -759,7 +759,7 @@ namespace Orbit.Services
 			};
 		}
 
-		private static double GetContrastRatio(Color colorA, Color colorB)
+		internal static double GetContrastRatio(Color colorA, Color colorB)
 		{
 			var luminanceA = GetRelativeLuminance(colorA);
 			var luminanceB = GetRelativeLuminance(colorB);
@@ -768,7 +768,7 @@ namespace Orbit.Services
 			return (lighter + 0.05) / (darker + 0.05);
 		}
 
-		private static double GetRelativeLuminance(Color color)
+		internal static double GetRelativeLuminance(Color color)
 		{
 			static double ToLinear(byte component)
 			{
@@ -784,7 +784,7 @@ namespace Orbit.Services
 			return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
 		}
 
-		private static Color GetBestContrastText(Color background)
+		internal static Color GetBestContrastText(Color background)
 		{
 			var effectiveBackground = BlendAgainstOpaqueBackground(background);
 			var blackContrast = GetContrastRatio(effectiveBackground, Colors.Black);
@@ -808,7 +808,7 @@ namespace Orbit.Services
 				(byte)Math.Round((color.B * alpha) + (baseColor.B * (1 - alpha))));
 		}
 
-		private static Color CreateSecondaryFrom(Color source, double alphaScale)
+		internal static Color CreateSecondaryFrom(Color source, double alphaScale)
 		{
 			var clamped = Math.Clamp(alphaScale, 0.0, 1.0);
 			return Color.FromArgb(
@@ -868,7 +868,7 @@ namespace Orbit.Services
 			ThemeLogger.Log($"Removed {removedCount} custom accent resources");
 		}
 
-		private static TypographySettings SanitizeTypographySettings(TypographySettings? settings)
+		internal static TypographySettings SanitizeTypographySettings(TypographySettings? settings)
 		{
 			var value = settings ?? new TypographySettings();
 			var normalizedWeight = SupportedFontWeights.Contains(value.FontWeight)
@@ -888,7 +888,7 @@ namespace Orbit.Services
 			};
 		}
 
-		private static FontWeight ResolveFontWeight(string weight)
+		internal static FontWeight ResolveFontWeight(string weight)
 			=> weight.Trim().ToLowerInvariant() switch
 			{
 				"semibold" => FontWeights.SemiBold,
@@ -904,7 +904,7 @@ namespace Orbit.Services
 			return Path.Combine(baseDir, TypographyStorageFileName);
 		}
 
-		private static bool TryParseColor(string value, out Color color)
+		internal static bool TryParseColor(string value, out Color color)
 		{
 			try
 			{
@@ -931,7 +931,7 @@ namespace Orbit.Services
 			return brush;
 		}
 
-		private static Color ChangeColorBrightness(Color color, double correctionFactor)
+		internal static Color ChangeColorBrightness(Color color, double correctionFactor)
 		{
 			double red = color.R;
 			double green = color.G;
@@ -960,7 +960,7 @@ namespace Orbit.Services
 			return luma > 0.5 ? Colors.Black : Colors.White;
 		}
 
-			private static Color GetSharedAccentForeground(params Color[] accentSurfaces)
+			internal static Color GetSharedAccentForeground(params Color[] accentSurfaces)
 		{
 			if (accentSurfaces == null || accentSurfaces.Length == 0)
 			{
