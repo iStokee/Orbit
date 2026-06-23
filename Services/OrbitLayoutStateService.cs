@@ -70,6 +70,10 @@ namespace Orbit.Services
 			{
 				_sessionPlacementService.SetPlacement(session, SessionPlacementKind.OrbitWorkspace);
 			}
+			else if (item is ToolTabItem tool)
+			{
+				_sessionPlacementService.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace);
+			}
 
 			_sessionReconciliationService.RemoveItemFromTabOwners(
 				item,

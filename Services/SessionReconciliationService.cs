@@ -158,6 +158,17 @@ public sealed class SessionReconciliationService
 		=> session != null && _placement.IsMoveInProgress(session);
 
 	/// <summary>
+	/// Placement-driven "is this workspace item currently hosted in a non-Orbit tab strip" for
+	/// sessions and tools (Stage 2e). Replaces the reconcile loop's visual-tree scrape read.
+	/// </summary>
+	public bool IsItemInNonOrbitHost(object item) => item switch
+	{
+		SessionModel session => _placement.IsInNonOrbitHost(session),
+		ToolTabItem tool => _placement.IsInNonOrbitHost(tool),
+		_ => false
+	};
+
+	/// <summary>
 	/// Count of live sessions the authoritative placement model reports in no host (excluding
 	/// closing/terminal). Placement-driven health metric replacing the scrape-based conflict count
 	/// (conflicts are now resolved by the ownership coordinator). No visual-tree walk.

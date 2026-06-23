@@ -502,6 +502,11 @@ namespace Orbit.ViewModels
 					}
 
 					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
+					// NOTE: the loop reads ownership from the visual-tree scrape, NOT placement.
+					// Placement drifts for sessions/tools drag-docked directly into an Orbit control
+					// (that path doesn't run ReconcileAddedSession), so a placement-based eviction
+					// would wrongly remove a freshly-docked item. Moving the loop onto placement
+					// requires branch membership as data (Stage 2f).
 					var ownership = _reconciliationService.CaptureUiOwnership(Items.Cast<object>());
 					foreach (var (_, tabControl) in _tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView))
 					{

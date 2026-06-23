@@ -182,4 +182,38 @@ public sealed class SessionPlacementServiceTests
 		Assert.False(placement.IsInOrbitWorkspace(session));
 		Assert.False(placement.IsInNonOrbitHost(session));
 	}
+
+	// --- Stage 2e: tool placement -----------------------------------------------------------
+
+	[Theory]
+	[InlineData(SessionPlacementKind.OrbitWorkspace, true, false)]
+	[InlineData(SessionPlacementKind.MainTabs, false, true)]
+	[InlineData(SessionPlacementKind.TearOffWindow, false, true)]
+	[InlineData(SessionPlacementKind.Unknown, false, false)]
+	public void ToolOwnershipOracle_MatchesPlacement(
+		SessionPlacementKind placementKind,
+		bool inOrbitWorkspace,
+		bool inNonOrbitHost)
+	{
+		var placement = new SessionPlacementService();
+		var tool = new ToolTabItem("tool-key", "Tool", null!);
+		placement.SetPlacement(tool, placementKind);
+
+		Assert.Equal(inOrbitWorkspace, placement.IsInOrbitWorkspace(tool));
+		Assert.Equal(inNonOrbitHost, placement.IsInNonOrbitHost(tool));
+	}
+
+	[Fact]
+	public void ToolPlacement_IsKeyedByToolKey_AndRemovable()
+	{
+		var placement = new SessionPlacementService();
+		var tool = new ToolTabItem("shared-key", "Tool", null!);
+		var sameKey = new ToolTabItem("shared-key", "Renamed", null!);
+
+		placement.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace);
+		Assert.Equal(SessionPlacementKind.OrbitWorkspace, placement.GetPlacement(sameKey)); // keyed by Key
+
+		placement.Remove(tool);
+		Assert.Equal(SessionPlacementKind.Unknown, placement.GetPlacement(sameKey));
+	}
 }

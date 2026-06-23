@@ -792,14 +792,19 @@ namespace Orbit.ViewModels
 
 	public void AdoptSessionsIntoOrbitWorkspace()
 	{
-		var sessionTabs = Tabs.OfType<SessionModel>().ToList();
-		if (sessionTabs.Count == 0)
+		// Adopt every session not already in the Orbit workspace, from ANY window — not just this
+		// window's tab strip. Sessions in tear-off windows were previously ignored, so the button
+		// appeared to do nothing whenever the sessions weren't in the main strip.
+		var sessionsToAdopt = Sessions
+			.Where(session => session != null && !orbitLayoutState.Items.Contains(session))
+			.ToList();
+		if (sessionsToAdopt.Count == 0)
 		{
 			return;
 		}
 
 		var firstMoved = sessionUiCoordinator.AdoptSessionsIntoOrbit(
-			sessionTabs,
+			sessionsToAdopt,
 			HandleTabRemoval,
 			"adopt-session-to-orbit");
 

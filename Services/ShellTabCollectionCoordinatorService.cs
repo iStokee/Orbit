@@ -93,9 +93,8 @@ public sealed class ShellTabCollectionCoordinatorService
 				case SessionModel session:
 					ReconcileAddedSession(session, isOrbitViewTearOffWindow, isMainWindowShell);
 					break;
-				case ToolTabItem tool when !isOrbitViewTearOffWindow &&
-					!string.Equals(tool.Key, ShellPresentationPolicyService.OrbitViewToolKey, StringComparison.Ordinal):
-					orbitLayoutState.RemoveItem(tool);
+				case ToolTabItem tool when !string.Equals(tool.Key, ShellPresentationPolicyService.OrbitViewToolKey, StringComparison.Ordinal):
+					ReconcileAddedTool(tool, isOrbitViewTearOffWindow, isMainWindowShell);
 					break;
 			}
 		}
@@ -119,5 +118,22 @@ public sealed class ShellTabCollectionCoordinatorService
 			session,
 			isMainWindowShell ? SessionPlacementKind.MainTabs : SessionPlacementKind.TearOffWindow);
 		orbitLayoutState.RemoveItem(session);
+	}
+
+	private void ReconcileAddedTool(
+		ToolTabItem tool,
+		bool isOrbitViewTearOffWindow,
+		bool isMainWindowShell)
+	{
+		if (isOrbitViewTearOffWindow)
+		{
+			sessionPlacementService.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace, "orbit-tearoff-tool-add");
+			return;
+		}
+
+		sessionPlacementService.SetPlacement(
+			tool,
+			isMainWindowShell ? SessionPlacementKind.MainTabs : SessionPlacementKind.TearOffWindow);
+		orbitLayoutState.RemoveItem(tool);
 	}
 }

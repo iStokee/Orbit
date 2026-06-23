@@ -131,6 +131,23 @@ public sealed class SessionReconciliationDecisionTests
 		}
 	}
 
+	[Fact]
+	public void IsItemInNonOrbitHost_HandlesSessionsToolsAndUnknownTypes()
+	{
+		var placement = new SessionPlacementService();
+		var service = new SessionReconciliationService(
+			SessionCollectionService.Instance, placement, new TearOffHostRegistry());
+		var session = new SessionModel { Name = "S" };
+		var tool = new ToolTabItem("t", "T", null!);
+
+		placement.SetPlacement(session, SessionPlacementKind.MainTabs);
+		placement.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace);
+
+		Assert.True(service.IsItemInNonOrbitHost(session));   // main tabs = non-orbit
+		Assert.False(service.IsItemInNonOrbitHost(tool));     // orbit workspace
+		Assert.False(service.IsItemInNonOrbitHost("other"));  // unknown type → false
+	}
+
 	private static bool Decide(SessionReconciliationSnapshot snapshot)
 	{
 		var service = new SessionReconciliationService(

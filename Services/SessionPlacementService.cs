@@ -59,6 +59,11 @@ public sealed class SessionPlacementService
 	private readonly Dictionary<Guid, SessionPlacementKind> _placements = new();
 	private readonly HashSet<Guid> _movingSessions = new();
 
+	// Tool tabs are tracked separately, keyed by their stable Key (Stage 2e). Sessions key by
+	// Guid; tools by Key. Tools deliberately do not raise PlacementChanged (the ownership
+	// coordinator is session-only) but share the same data-driven oracle.
+	private readonly Dictionary<string, SessionPlacementKind> _toolPlacements = new(StringComparer.Ordinal);
+
 	public IDisposable BeginMove(SessionModel session, SessionPlacementKind target)
 	{
 		if (session == null)
@@ -217,6 +222,70 @@ public sealed class SessionPlacementService
 		{
 			LogPlacement($"{GetSessionLogIdentity(session)} {previous} -> Unknown (removed)");
 			PlacementChanged?.Invoke(this, new SessionPlacementChangedEventArgs(session, previous, SessionPlacementKind.Unknown, "removed"));
+		}
+	}
+
+	// --- Tool placement (Stage 2e) ----------------------------------------------------------
+	// Same data-driven oracle for tool tabs so the Orbit reconcile loop reads tool ownership
+	// from data instead of scraping the visual tree.
+
+	public void SetPlacement(ToolTabItem tool, SessionPlacementKind placement, string? reason = null)
+	{
+		if (tool?.Key is not string key)
+		{
+			return;
+		}
+
+		SessionPlacementKind previous;
+		lock (_sync)
+		{
+			previous = _toolPlacements.TryGetValue(key, out var existing)
+				? existing
+				: SessionPlacementKind.Unknown;
+			if (previous == placement)
+			{
+				return;
+			}
+
+			_toolPlacements[key] = placement;
+		}
+
+		LogPlacement($"tool='{tool.Name}' key={key} {previous} -> {placement}{FormatReason(reason)}");
+	}
+
+	public SessionPlacementKind GetPlacement(ToolTabItem tool)
+	{
+		if (tool?.Key is not string key)
+		{
+			return SessionPlacementKind.Unknown;
+		}
+
+		lock (_sync)
+		{
+			return _toolPlacements.TryGetValue(key, out var placement)
+				? placement
+				: SessionPlacementKind.Unknown;
+		}
+	}
+
+	/// <summary>True when the tool is placed in a non-Orbit host (main tab strip or tear-off).</summary>
+	public bool IsInNonOrbitHost(ToolTabItem tool)
+		=> GetPlacement(tool) is SessionPlacementKind.MainTabs or SessionPlacementKind.TearOffWindow;
+
+	/// <summary>True when the tool is placed in the Orbit workspace.</summary>
+	public bool IsInOrbitWorkspace(ToolTabItem tool)
+		=> GetPlacement(tool) == SessionPlacementKind.OrbitWorkspace;
+
+	public void Remove(ToolTabItem tool)
+	{
+		if (tool?.Key is not string key)
+		{
+			return;
+		}
+
+		lock (_sync)
+		{
+			_toolPlacements.Remove(key);
 		}
 	}
 
