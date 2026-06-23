@@ -18,6 +18,7 @@ using Orbit.Models;
 using Orbit.Services;
 using Orbit.Views;
 using Orbit;
+using static Orbit.Utilities.VisualTreeUtil;
 using Application = System.Windows.Application;
 using Orientation = System.Windows.Controls.Orientation;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
@@ -1036,27 +1037,6 @@ namespace Orbit.ViewModels
 			}
 
 			return null;
-		}
-
-		/// <summary>
-		/// Finds all visual children of type T in the visual tree
-		/// </summary>
-		private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-		{
-			if (parent == null)
-				yield break;
-
-			for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-			{
-				var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-				if (child is T typedChild)
-					yield return typedChild;
-
-				foreach (var descendant in FindVisualChildren<T>(child))
-				{
-					yield return descendant;
-				}
-			}
 		}
 
 		private Thickness GetMarginFromSettings()

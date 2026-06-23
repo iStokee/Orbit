@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orbit.Services;
 using Orbit.Views;
 using Application = System.Windows.Application;
+using static Orbit.Utilities.VisualTreeUtil;
 
 namespace Orbit
 {
@@ -70,21 +71,6 @@ namespace Orbit
 			return source != null && FindVisualAncestor<OrbitGridLayoutView>(source) != null;
 		}
 
-		private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
-		{
-			var current = child;
-			while (current != null)
-			{
-				if (current is T typed)
-				{
-					return typed;
-				}
-
-				current = VisualTreeHelper.GetParent(current);
-			}
-
-			return null;
-		}
 
 		/// <summary>
 		/// Handles empty TabablzControl scenarios.
@@ -132,27 +118,5 @@ namespace Orbit
 			return tabControls.Count > 1;
 		}
 
-		private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-		{
-			if (parent == null)
-			{
-				yield break;
-			}
-
-			var count = VisualTreeHelper.GetChildrenCount(parent);
-			for (var index = 0; index < count; index++)
-			{
-				var child = VisualTreeHelper.GetChild(parent, index);
-				if (child is T typed)
-				{
-					yield return typed;
-				}
-
-				foreach (var descendant in FindVisualChildren<T>(child))
-				{
-					yield return descendant;
-				}
-			}
-		}
 	}
 }

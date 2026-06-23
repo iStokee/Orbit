@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media;
 using Dragablz;
 using Dragablz.Dockablz;
+using static Orbit.Utilities.VisualTreeUtil;
 
 namespace Orbit.Services;
 
@@ -88,28 +89,5 @@ public static class LayoutBranchConsolidator
 		}
 
 		return FindVisualChildren<Layout>(window).Sum(CollapseEmptyBranches);
-	}
-
-	private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-	{
-		if (parent == null)
-		{
-			yield break;
-		}
-
-		var count = VisualTreeHelper.GetChildrenCount(parent);
-		for (var index = 0; index < count; index++)
-		{
-			var child = VisualTreeHelper.GetChild(parent, index);
-			if (child is T typed)
-			{
-				yield return typed;
-			}
-
-			foreach (var descendant in FindVisualChildren<T>(child))
-			{
-				yield return descendant;
-			}
-		}
 	}
 }

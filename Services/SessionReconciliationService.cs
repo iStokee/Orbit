@@ -10,6 +10,7 @@ using Orbit.Models;
 using Orbit.ViewModels;
 using Orbit.Views;
 using Application = System.Windows.Application;
+using static Orbit.Utilities.VisualTreeUtil;
 
 namespace Orbit.Services;
 
@@ -355,45 +356,6 @@ public sealed class SessionReconciliationService
 		return new TabOwnership(owners, orbitCount, nonOrbitCount);
 	}
 
-	private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
-	{
-		var current = child;
-		while (current != null)
-		{
-			if (current is T typed)
-			{
-				return typed;
-			}
-
-			current = VisualTreeHelper.GetParent(current);
-		}
-
-		return null;
-	}
-
-	private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-	{
-		if (parent == null)
-		{
-			yield break;
-		}
-
-		var childCount = VisualTreeHelper.GetChildrenCount(parent);
-		for (var index = 0; index < childCount; index++)
-		{
-			var child = VisualTreeHelper.GetChild(parent, index);
-			if (child is T typed)
-			{
-				yield return typed;
-			}
-
-			foreach (var descendant in FindVisualChildren<T>(child))
-			{
-				yield return descendant;
-			}
-		}
-	}
-
 	private sealed record TabOwnership(
 		IReadOnlyList<string> Owners,
 		int OrbitTabOwnerCount,
@@ -454,11 +416,7 @@ public sealed record SessionUiOwnership(
 	IReadOnlySet<object> TabStripItems,
 	IReadOnlySet<Window> OrbitWindows)
 {
-	public bool IsInOrbit(object item) => OrbitItems.Contains(item);
-
 	public bool IsInNonOrbitTabs(object item) => NonOrbitItems.Contains(item);
-
-	public bool IsInAnyTabStrip(object item) => TabStripItems.Contains(item);
 }
 
 public sealed record SessionReconciliationSnapshot(
