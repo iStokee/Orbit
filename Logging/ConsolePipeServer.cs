@@ -1,19 +1,31 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Orbit.Logging;
 
+/// <summary>
+/// Receives console log lines from every injected MESharp client over the shared
+/// <c>MESharpConsole</c> pipe. Multi-instance: each connecting session gets its own server
+/// instance and reader task, so one long-lived session can never lock the others out
+/// (the previous single-instance server silently dropped every other session's logs).
+/// Lines are attributed to their session via the connected client's process id.
+/// </summary>
 internal sealed class ConsolePipeServer : IDisposable
 {
 	private const string PipeName = "MESharpConsole";
+	// Injected clients hold their connection open for their whole lifetime, so allow one
+	// instance per plausible concurrent session plus headroom.
+	private const int MaxInstances = 16;
+
 	private readonly CancellationTokenSource _cts = new();
-	private readonly object _pipeSync = new();
+	private readonly ConcurrentDictionary<NamedPipeServerStream, byte> _activePipes = new();
 	private Task? _listenerTask;
-	private NamedPipeServerStream? _activePipe;
 	private bool _disposed;
 
 	public void Start()
@@ -32,69 +44,36 @@ internal sealed class ConsolePipeServer : IDisposable
 
 		while (!token.IsCancellationRequested)
 		{
+			NamedPipeServerStream? pipe = null;
 			try
 			{
-				using var pipe = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
+				pipe = Orbit.Services.MESharpPipeSecurity.CreateServer(PipeName, PipeDirection.In, MaxInstances,
 					PipeTransmissionMode.Message, PipeOptions.Asynchronous);
-				using var cancelRegistration = token.Register(static state =>
-				{
-					try
-					{
-						((NamedPipeServerStream)state!).Dispose();
-					}
-					catch
-					{
-						// Ignore cancellation disposal races.
-					}
-				}, pipe);
-				SetActivePipe(pipe);
+				_activePipes.TryAdd(pipe, 0);
 
-				try
-				{
-					await pipe.WaitForConnectionAsync(token).ConfigureAwait(false);
-				}
-				catch (OperationCanceledException)
-				{
-					break;
-				}
-				catch (ObjectDisposedException) when (token.IsCancellationRequested)
-				{
-					break;
-				}
-				catch (IOException) when (token.IsCancellationRequested)
-				{
-					break;
-				}
+				await pipe.WaitForConnectionAsync(token).ConfigureAwait(false);
 
-				using var reader = new StreamReader(pipe, Encoding.UTF8);
-
-				while (!token.IsCancellationRequested && pipe.IsConnected)
-				{
-					string? line;
-					try
-					{
-						line = await reader.ReadLineAsync().ConfigureAwait(false);
-					}
-					catch (IOException)
-					{
-						break;
-					}
-					catch (ObjectDisposedException) when (token.IsCancellationRequested)
-					{
-						break;
-					}
-
-					if (line is null)
-					{
-						break;
-					}
-
-					ProcessRemoteLine(line);
-				}
+				// Hand the connection to its own reader and immediately pend the next accept,
+				// so additional sessions can connect while this one streams.
+				var connected = pipe;
+				pipe = null;
+				_ = Task.Run(() => ReadConnectionAsync(connected, token), token);
+			}
+			catch (OperationCanceledException)
+			{
+				break;
+			}
+			catch (ObjectDisposedException) when (token.IsCancellationRequested)
+			{
+				break;
+			}
+			catch (IOException) when (token.IsCancellationRequested)
+			{
+				break;
 			}
 			catch (Exception) when (!token.IsCancellationRequested)
 			{
-				// Keep the listener alive if a malformed message or transient pipe failure occurs.
+				// Keep the listener alive if a transient pipe failure occurs.
 				try
 				{
 					await Task.Delay(100, token).ConfigureAwait(false);
@@ -106,20 +85,76 @@ internal sealed class ConsolePipeServer : IDisposable
 			}
 			finally
 			{
-				SetActivePipe(null);
+				if (pipe != null)
+				{
+					_activePipes.TryRemove(pipe, out _);
+					try { pipe.Dispose(); } catch { /* teardown race */ }
+				}
 			}
 		}
 	}
 
-	private void SetActivePipe(NamedPipeServerStream? pipe)
+	private async Task ReadConnectionAsync(NamedPipeServerStream pipe, CancellationToken token)
 	{
-		lock (_pipeSync)
+		var sessionPid = TryGetClientProcessId(pipe);
+		try
 		{
-			_activePipe = pipe;
+			using var reader = new StreamReader(pipe, Encoding.UTF8);
+
+			while (!token.IsCancellationRequested && pipe.IsConnected)
+			{
+				string? line;
+				try
+				{
+					line = await reader.ReadLineAsync().ConfigureAwait(false);
+				}
+				catch (IOException)
+				{
+					break;
+				}
+				catch (ObjectDisposedException)
+				{
+					break;
+				}
+
+				if (line is null)
+				{
+					break;
+				}
+
+				ProcessRemoteLine(line, sessionPid);
+			}
+		}
+		catch
+		{
+			// Reader teardown races with Dispose; nothing to surface.
+		}
+		finally
+		{
+			_activePipes.TryRemove(pipe, out _);
+			try { pipe.Dispose(); } catch { /* already gone */ }
 		}
 	}
 
-	private static void ProcessRemoteLine(string line)
+	[DllImport("kernel32.dll", SetLastError = true)]
+	private static extern bool GetNamedPipeClientProcessId(IntPtr pipeHandle, out uint clientProcessId);
+
+	/// <summary>The wire format carries no session identity; recover it from the pipe handle.</summary>
+	private static int? TryGetClientProcessId(NamedPipeServerStream pipe)
+	{
+		try
+		{
+			return GetNamedPipeClientProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out var pid)
+				? (int)pid
+				: null;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private static void ProcessRemoteLine(string line, int? sessionPid)
 	{
 		if (string.IsNullOrWhiteSpace(line))
 			return;
@@ -132,6 +167,11 @@ internal sealed class ConsolePipeServer : IDisposable
 		{
 			level = parsedLevel;
 			message = line.Substring(tabIndex + 1);
+		}
+
+		if (sessionPid is { } pid)
+		{
+			message = $"[{pid}] {message}";
 		}
 
 		ConsoleLogLevel logLevel = level switch
@@ -163,18 +203,18 @@ internal sealed class ConsolePipeServer : IDisposable
 			// already torn down
 		}
 
-		lock (_pipeSync)
+		foreach (var pipe in _activePipes.Keys)
 		{
 			try
 			{
-				_activePipe?.Dispose();
+				pipe.Dispose();
 			}
 			catch
 			{
 				// best-effort cancel of blocked IO
 			}
-			_activePipe = null;
 		}
+		_activePipes.Clear();
 
 		try
 		{

@@ -2,7 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,15 +28,18 @@ namespace Orbit.Services.Updates
 		}
 
 		/// <summary>
-		/// Downloads an update from the specified URL
+		/// Downloads an update from the specified URL and verifies it against the
+		/// release's published SHA-256 checksum before making it available.
 		/// </summary>
 		/// <param name="downloadUrl">GitHub asset download URL</param>
 		/// <param name="assetName">Name of the asset file</param>
+		/// <param name="sha256Url">GitHub download URL of the release's <c>&lt;asset&gt;.sha256</c> checksum asset</param>
 		/// <param name="progress">Optional progress callback (0-100)</param>
 		/// <returns>Path to downloaded file</returns>
 		public async Task<string> DownloadUpdateAsync(
 			string downloadUrl,
 			string assetName,
+			string sha256Url,
 			IProgress<int> progress = null,
 			CancellationToken cancellationToken = default)
 		{
@@ -42,6 +47,15 @@ namespace Orbit.Services.Updates
 				throw new ArgumentException("downloadUrl is missing");
 			if (string.IsNullOrWhiteSpace(assetName))
 				throw new ArgumentException("assetName is missing");
+			if (string.IsNullOrWhiteSpace(sha256Url))
+				throw new InvalidDataException(
+					$"Release does not include the '{assetName}.sha256' checksum asset; refusing to install an unverifiable update.");
+
+			ValidateAssetDownloadUrl(downloadUrl);
+			ValidateAssetDownloadUrl(sha256Url);
+
+			var sha256Content = await _http.GetStringAsync(sha256Url, cancellationToken);
+			var expectedSha256 = ParseSha256(sha256Content);
 
 			var folder = GetUpdateFolder();
 			var safeAssetName = Path.GetFileName(assetName);
@@ -81,6 +95,13 @@ namespace Orbit.Services.Updates
 					}
 				}
 
+				var actualSha256 = await ComputeFileSha256Async(tempFile, cancellationToken);
+				if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
+				{
+					throw new InvalidDataException(
+						$"Downloaded update failed SHA-256 verification (expected {expectedSha256}, got {actualSha256}). The download may be corrupt or tampered with.");
+				}
+
 				// Avoid leaving a partially downloaded asset as the primary file when a download is interrupted.
 				File.Move(tempFile, targetFile, overwrite: true);
 			}
@@ -102,6 +123,51 @@ namespace Orbit.Services.Updates
 			}
 
 			return targetFile;
+		}
+
+		/// <summary>
+		/// Rejects download URLs that don't point at this project's GitHub release assets.
+		/// The update path ends in "replace and relaunch Orbit.exe", so the source host is
+		/// pinned rather than trusting whatever URL the release JSON hands back.
+		/// </summary>
+		public static void ValidateAssetDownloadUrl(string url)
+		{
+			if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+				throw new InvalidDataException($"Update download URL is not a valid absolute URL: {url}");
+
+			if (uri.Scheme != Uri.UriSchemeHttps)
+				throw new InvalidDataException($"Update download URL must use https: {url}");
+
+			if (!string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+				throw new InvalidDataException($"Update download URL host '{uri.Host}' is not github.com: {url}");
+
+			var expectedPrefix = $"/{UpdateConfig.Owner}/{UpdateConfig.Repo}/releases/download/";
+			if (!uri.AbsolutePath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+				throw new InvalidDataException(
+					$"Update download URL does not point at {UpdateConfig.Owner}/{UpdateConfig.Repo} release assets: {url}");
+		}
+
+		/// <summary>
+		/// Parses the hash out of a .sha256 checksum file (sha256sum format: hex digest, optionally followed by a file name).
+		/// </summary>
+		public static string ParseSha256(string content)
+		{
+			var token = (content ?? string.Empty)
+				.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+				.FirstOrDefault();
+
+			if (token == null || token.Length != 64 || !token.All(Uri.IsHexDigit))
+				throw new InvalidDataException("Release checksum asset does not contain a valid SHA-256 digest.");
+
+			return token;
+		}
+
+		private static async Task<string> ComputeFileSha256Async(string path, CancellationToken cancellationToken)
+		{
+			await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+			using var sha = SHA256.Create();
+			var hash = await sha.ComputeHashAsync(stream, cancellationToken);
+			return Convert.ToHexString(hash);
 		}
 
 		/// <summary>

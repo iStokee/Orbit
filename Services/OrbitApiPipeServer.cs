@@ -40,7 +40,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		{
 			try
 			{
-				using var pipe = new NamedPipeServerStream(
+				using var pipe = MESharpPipeSecurity.CreateServer(
 					PipeName,
 					PipeDirection.InOut,
 					4,

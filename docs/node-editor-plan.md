@@ -1,4 +1,19 @@
-# Orbit Visual Node Editor Plan
+# SharpBuilder (Orbit Visual Node Editor) Plan
+
+## Status (2026-06-12)
+
+> **Rebrand note (2026-06-12):** the project is now **SharpBuilder** (`C#/SharpBuilder`). Core types were renamed: `FsmScriptModel`→`GraphModel`, `FsmNodeModel`→`NodeModel`, `FsmTransitionModel`→`TransitionModel`, `FsmNodeType`→`NodeType`, `FsmExecutionEngine`→`GraphExecutionEngine`, `FsmScriptService`→`GraphScriptService`, `FsmScriptValidator`→`GraphValidator`, `FsmEditorControl`→`NodeEditorControl`, `FsmNodeEditorViewModel`→`NodeEditorViewModel`. Older type names below are historical. See `C#/SharpBuilder/README.md` for the current architecture and run modes.
+
+Phases 1–4 are implemented in `C#/SharpBuilder` (catalog, typed parameters, executor registry wired to the live API, palette/inspector UI, JSON persistence with schema v2 migration). Recent additions:
+- **Success/Fail branching**: transitions carry a `Trigger` (Any/OnSuccess/OnFail) evaluated before condition keys; retry results are capped (5 attempts with backoff) and degrade to Fail.
+- **Uniform dwell**: the engine applies `DwellMilliseconds` after every node; executors are delay-free.
+- **Pre-run validation** (`GraphValidator` (formerly FsmScriptValidator)): required params, broken/missing transitions, unreachable nodes, unimplemented definitions.
+- **Design-mode guard** (`GameRuntime.IsGameApiAvailable`): game-backed nodes refuse to run outside the injected process with a clear message.
+- **Headless runner** (`SharpBuilder.Runner`): standard hot-reloadable ME script that executes a saved `.orbitfsm.json` (configured via `%APPDATA%\Orbit\fsm_scripts\runner.config.json`) — shared graphs run without the editor.
+- **Live feedback**: current node glows distinctly from the visited trail; failed nodes tint red.
+- Unimplemented nodes (shop, worldhop, mouse click, trade) are hidden from the palette and report Fail instead of fake Success. Keyboard macros, loot pickup, and bank open are now wired to the real API.
+
+Open: node UX/catalog design pass (how nodes represent API calls visually), entity/item/coordinate pickers, remaining unimplemented executors.
 
 Context: Orbit already ships a WPF FSM node editor (Start/Action/Condition/Terminal nodes, manual transitions, boolean signals, file persistence). We want to evolve it toward a VisualRM-like node builder with a node catalog, typed parameters, richer UI, and C# API-backed execution.
 

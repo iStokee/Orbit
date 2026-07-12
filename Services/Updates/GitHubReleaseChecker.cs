@@ -44,6 +44,7 @@ namespace Orbit.Services.Updates
 			public Version RemoteVersion { get; set; }
 			public string DownloadUrl { get; set; }
 			public string AssetName { get; set; }
+			public string Sha256Url { get; set; }
 			public string ReleaseAuthor { get; set; }
 			public string ErrorMessage { get; set; }
 		}
@@ -126,16 +127,21 @@ namespace Orbit.Services.Updates
 					};
 				}
 
-				// find our asset
+				// find our asset and its .sha256 checksum sibling
 				GitHubAsset asset = null;
+				GitHubAsset sha256Asset = null;
 				if (release.assets != null)
 				{
+					var expectedSha256Name = expectedAssetName + ".sha256";
 					foreach (var a in release.assets)
 					{
 						if (string.Equals(a.name, expectedAssetName, StringComparison.OrdinalIgnoreCase))
 						{
 							asset = a;
-							break;
+						}
+						else if (string.Equals(a.name, expectedSha256Name, StringComparison.OrdinalIgnoreCase))
+						{
+							sha256Asset = a;
 						}
 					}
 				}
@@ -172,6 +178,7 @@ namespace Orbit.Services.Updates
 					RemoteVersion = remoteVersion,
 					DownloadUrl = asset.browser_download_url,
 					AssetName = asset.name,
+					Sha256Url = sha256Asset?.browser_download_url,
 					ReleaseAuthor = release.author?.login
 				};
 			}

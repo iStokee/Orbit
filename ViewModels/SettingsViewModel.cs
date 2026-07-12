@@ -550,6 +550,7 @@ namespace Orbit.ViewModels
 				_downloadedZipPath = await _updateManager.DownloadUpdateAsync(
 					updateInfo.DownloadUrl,
 					updateInfo.AssetName,
+					updateInfo.Sha256Url,
 					progress,
 					_lifetimeCts.Token
 				);

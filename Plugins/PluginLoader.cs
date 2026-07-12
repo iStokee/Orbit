@@ -309,7 +309,10 @@ public class PluginLoader
             return PluginLoadResult.CreateFailure($"Plugin OnLoad failed: {ex.Message}");
         }
 
-        _loadedPlugins[pluginPath] = loadedPlugin;
+        lock (_lock)
+        {
+            _loadedPlugins[pluginPath] = loadedPlugin;
+        }
         PluginLoaded?.Invoke(this, new PluginLoadedEventArgs(metadata, pluginInstance));
 
         return PluginLoadResult.CreateSuccess(metadata, wasReloaded: false);
@@ -318,7 +321,11 @@ public class PluginLoader
     private PluginLoadResult HotReloadPlugin(string pluginPath, string newFileHash)
     {
         // Unload old version
-        var oldPlugin = _loadedPlugins[pluginPath];
+        LoadedPlugin oldPlugin;
+        lock (_lock)
+        {
+            oldPlugin = _loadedPlugins[pluginPath];
+        }
         var oldMetadata = oldPlugin.Metadata;
 
         try
@@ -331,7 +338,10 @@ public class PluginLoader
         }
 
         oldPlugin.Context.Unload();
-        _loadedPlugins.Remove(pluginPath);
+        lock (_lock)
+        {
+            _loadedPlugins.Remove(pluginPath);
+        }
         oldMetadata.IsLoaded = false;
         PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(oldMetadata));
 
