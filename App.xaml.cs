@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,6 +92,7 @@ public partial class App : Application
 		services.AddSingleton<FloatingMenuGeometryService>();
 		services.AddSingleton<FloatingMenuVisibilityService>();
 		services.AddSingleton<FloatingMenuQuickToggleService>();
+		services.AddSingleton<OrbiterStateService>();
 		services.AddSingleton<TaskbarOrbitIconService>();
 		services.AddSingleton<ShellClientResizeService>();
 
@@ -135,7 +136,7 @@ public partial class App : Application
 		services.AddSingleton<InterTabClient>();
 		services.AddSingleton<MesharpHotkeyService>();
 
-			services.AddSingleton<SettingsViewModel>();
+		services.AddSingleton<SettingsViewModel>();
 		services.AddTransient<SettingsView>(sp => new SettingsView(
 			sp.GetRequiredService<SettingsViewModel>(),
 			sp.GetRequiredService<IToolRegistry>()));
