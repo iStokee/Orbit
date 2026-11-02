@@ -82,7 +82,14 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 	{
 		_accounts.Clear();
 		var selectedDisplayName = Settings.Default.LauncherSelectedDisplayName ?? string.Empty;
-		var loaded = LauncherAccountStore.Load();
+		System.Collections.Generic.IReadOnlyList<LauncherAccountModel> loaded;
+		try { loaded = LauncherAccountStore.Load(); }
+		catch (System.Exception ex)
+		{
+			MessageBox.Show($"Unable to load launcher accounts. The original file is preserved.\n{ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
+			AccountsGrid.IsEnabled = false;
+			return;
+		}
 		var hasExplicitSelections = loaded.Any(a => a.IsSelected);
 
 		foreach (var account in loaded)
@@ -125,7 +132,7 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 
 	private void Save_Click(object sender, RoutedEventArgs e)
 	{
-		SaveEntries();
+		if (!TrySaveEntries()) return;
 
 		DialogResult = true;
 		Close();
@@ -133,7 +140,7 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 
 	private void LaunchSelected_Click(object sender, RoutedEventArgs e)
 	{
-		SaveEntries();
+		if (!TrySaveEntries()) return;
 
 		var ownerViewModel = Owner?.DataContext as MainWindowViewModel
 			?? Application.Current?.Windows
@@ -185,6 +192,17 @@ public partial class LauncherAccountConfigWindow : MetroWindow
 		Settings.Default.LauncherBatchLaunchDelaySeconds = ClampLaunchDelaySeconds(LaunchDelaySlider.Value);
 		Settings.Default.LauncherBatchWaitForDockBeforeNext = FullWaitCheckBox.IsChecked == true;
 		Settings.Default.Save();
+	}
+
+	private bool TrySaveEntries()
+	{
+		if (!AccountsGrid.IsEnabled) return false;
+		try { SaveEntries(); return true; }
+		catch (System.Exception ex)
+		{
+			MessageBox.Show($"Unable to save launcher accounts.\n{ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
+			return false;
+		}
 	}
 
 	private static int ClampLaunchDelaySeconds(double candidate)

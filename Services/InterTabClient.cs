@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -34,7 +34,7 @@ namespace Orbit
 		/// </summary>
 		public INewTabHost<Window> GetNewHost(IInterTabClient interTabClient, object partition, TabablzControl source)
 		{
-			var view = serviceProvider.GetRequiredService<MainWindow>();
+			var view = serviceProvider.GetRequiredService<OwnedViewFactory>().Create<MainWindow>();
 			var partitionKey = partition?.ToString() ?? string.Empty;
 			var origin = ResolveOrigin(source, partitionKey);
 			OrbitInteractionLogger.Log($"[OrbitView][Drag] New tear-off host requested partition='{partitionKey}' origin={origin}.");
@@ -49,6 +49,8 @@ namespace Orbit
 			{
 				return TearOffHostRegistry.HostOrigin.OrbitView;
 			}
+			if (source != null && Application.Current?.MainWindow is Window primary && ReferenceEquals(Window.GetWindow(source), primary))
+				return TearOffHostRegistry.HostOrigin.MainTabs;
 
 			if (source != null && tearOffRegistry.TryGetOrigin(source, partitionKey, out var sourceOrigin))
 			{
@@ -81,7 +83,7 @@ namespace Orbit
 		public TabEmptiedResponse TabEmptiedHandler(TabablzControl tabControl, Window window)
 		{
 			// Keep the primary shell window alive, but still collapse empty split branches inside it.
-			if (ReferenceEquals(window, Application.Current.MainWindow))
+			if (ReferenceEquals(window, Application.Current?.MainWindow))
 			{
 				if (ShouldCollapsePrimaryShellBranch(tabControl))
 				{

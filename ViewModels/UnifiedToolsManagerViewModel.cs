@@ -23,13 +23,16 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IToolRegistry _toolRegistry;
     private readonly PluginManager _pluginManager;
-    private readonly MainWindowViewModel? _mainWindowViewModel;
+    private readonly WeakReference<MainWindowViewModel>? _mainWindowViewModel;
+    private readonly Func<MainWindowViewModel?> _resolveOwner;
     private string _statusMessage = "Ready";
     private bool _isLoading;
     private string _searchFilter = string.Empty;
     private bool _disposed;
 
     public ObservableCollection<ToolCardViewModel> ToolCards { get; }
+    public string InventorySummary { get; private set; } = string.Empty;
+    public bool HasNoSearchResults => ToolCards.All(card => !card.IsVisible);
 
     public string StatusMessage
     {
@@ -48,6 +51,8 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
         {
             _isLoading = value;
             OnPropertyChanged();
+            ImportPluginCommand?.NotifyCanExecuteChanged();
+            AutoLoadAllCommand?.NotifyCanExecuteChanged();
         }
     }
 
@@ -69,20 +74,23 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
     public UnifiedToolsManagerViewModel(
         IToolRegistry toolRegistry,
         PluginManager pluginManager,
-        MainWindowViewModel? mainWindowViewModel = null)
+        MainWindowViewModel? mainWindowViewModel = null,
+        Func<MainWindowViewModel?>? resolveOwner = null)
     {
         _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
         _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
-        _mainWindowViewModel = mainWindowViewModel;
+        _mainWindowViewModel = mainWindowViewModel == null ? null : new(mainWindowViewModel);
+        _resolveOwner = resolveOwner ?? (() => _mainWindowViewModel?.TryGetTarget(out var owner) == true ? owner : null);
 
         ToolCards = new ObservableCollection<ToolCardViewModel>();
 
-        ImportPluginCommand = new RelayCommand(async () => await ImportPluginAsync());
-        AutoLoadAllCommand = new RelayCommand(async () => await AutoLoadAllPluginsAsync());
+        ImportPluginCommand = new RelayCommand(async () => await ImportPluginAsync(), () => !IsLoading);
+        AutoLoadAllCommand = new RelayCommand(async () => await AutoLoadAllPluginsAsync(), () => !IsLoading);
         RefreshCommand = new RelayCommand(async () => await RefreshToolsAsync());
 
         // Subscribe to plugin events
         _pluginManager.PluginStatusChanged += OnPluginStatusChanged;
+        Settings.Default.PropertyChanged += OnSettingsChanged;
 
         // Initial load
         _ = RefreshToolsAsync();
@@ -156,13 +164,13 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RefreshToolsAsync()
     {
-        IsLoading = true;
-        StatusMessage = "Refreshing tools...";
+        if (_disposed) return;
 
         try
         {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            void Refresh()
             {
+                if (_disposed) return;
                 ToolCards.Clear();
 
                 // Get all tools from registry
@@ -179,23 +187,30 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
                         isPlugin,
                         pluginMetadata,
                         _pluginManager,
-                        _mainWindowViewModel));
+                        _resolveOwner(), _resolveOwner, message => StatusMessage = message));
                 }
 
                 var builtInCount = ToolCards.Count(t => !t.IsPlugin);
                 var pluginCount = ToolCards.Count(t => t.IsPlugin);
 
-                StatusMessage = $"{builtInCount} built-in tool(s), {pluginCount} plugin(s) loaded";
-            });
+                InventorySummary = $"{builtInCount} built-in tool(s), {pluginCount} plugin(s) loaded";
+                OnPropertyChanged(nameof(InventorySummary));
+                ApplyFilter();
+            }
+            if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+                await dispatcher.InvokeAsync(Refresh);
+            else Refresh();
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
         }
-        finally
-        {
-            IsLoading = false;
-        }
+    }
+
+    private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_disposed) return;
+        foreach (var card in ToolCards) card.NotifyMenuVisibilityChanged();
     }
 
     private void ApplyFilter()
@@ -207,6 +222,7 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
                             card.Description.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
                             card.Key.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase);
         }
+        OnPropertyChanged(nameof(HasNoSearchResults));
     }
 
     private void OnPluginStatusChanged(object? sender, PluginStatusChangedEventArgs e)
@@ -216,7 +232,7 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        Application.Current?.Dispatcher.InvokeAsync(() =>
+        void Apply()
         {
             if (_disposed)
             {
@@ -225,7 +241,9 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
 
             StatusMessage = e.Message;
             _ = RefreshToolsAsync();
-        });
+        }
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess()) dispatcher.InvokeAsync(Apply);
+        else Apply();
     }
 
     public void Dispose()
@@ -237,6 +255,8 @@ public class UnifiedToolsManagerViewModel : INotifyPropertyChanged, IDisposable
 
         _disposed = true;
         _pluginManager.PluginStatusChanged -= OnPluginStatusChanged;
+        Settings.Default.PropertyChanged -= OnSettingsChanged;
+        ToolCards.Clear();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -256,7 +276,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
     private readonly bool _isPlugin;
     private readonly PluginMetadata? _pluginMetadata;
     private readonly PluginManager? _pluginManager;
-    private readonly MainWindowViewModel? _mainWindowViewModel;
+    private readonly WeakReference<MainWindowViewModel>? _mainWindowViewModel;
+    private readonly Func<MainWindowViewModel?> _resolveOwner;
+    private readonly Action<string>? _setStatus;
     private bool _isVisible = true;
 
     public string Key => _tool.Key;
@@ -291,6 +313,11 @@ public class ToolCardViewModel : INotifyPropertyChanged
     }
 
     public string Description => GetToolDescription();
+    public bool SupportsMenuVisibility => Key is "SessionsOverview" or "Sessions" or "SessionGallery" or "OrbitView"
+        or "AccountManager" or "ScriptManager" or "ThemeManager" or "Console" or "McpControl"
+        or "SharpBuilder" or "ApiDocumentation" or "Settings" or "UnifiedToolsManager" or "ToolsOverview";
+    public IRelayCommand OpenCommand { get; }
+    public void NotifyMenuVisibilityChanged() => OnPropertyChanged(nameof(IsVisibleInMenu));
 
     public IRelayCommand UnloadCommand { get; }
     public IRelayCommand ReloadCommand { get; }
@@ -300,13 +327,27 @@ public class ToolCardViewModel : INotifyPropertyChanged
         bool isPlugin,
         PluginMetadata? pluginMetadata,
         PluginManager? pluginManager,
-        MainWindowViewModel? mainWindowViewModel)
+        MainWindowViewModel? mainWindowViewModel,
+        Func<MainWindowViewModel?>? resolveOwner = null,
+        Action<string>? setStatus = null)
     {
         _tool = tool ?? throw new ArgumentNullException(nameof(tool));
         _isPlugin = isPlugin;
         _pluginMetadata = pluginMetadata;
         _pluginManager = pluginManager;
-        _mainWindowViewModel = mainWindowViewModel;
+        _mainWindowViewModel = mainWindowViewModel == null ? null : new(mainWindowViewModel);
+        _resolveOwner = resolveOwner ?? (() => _mainWindowViewModel?.TryGetTarget(out var owner) == true ? owner : null);
+        _setStatus = setStatus;
+        OpenCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                var owner = _resolveOwner();
+                if (owner == null) { _setStatus?.Invoke("Open this dashboard in an Orbit window to launch tools."); return; }
+                if (!owner.TryOpenToolByKey(Key)) _setStatus?.Invoke($"Tool '{DisplayName}' is no longer available.");
+            }
+            catch (Exception ex) { _setStatus?.Invoke($"Cannot open '{DisplayName}': {ex.Message}"); }
+        });
 
         UnloadCommand = new RelayCommand(async () => await UnloadPluginAsync(), () => IsPlugin);
         ReloadCommand = new RelayCommand(async () => await ReloadPluginAsync(), () => IsPlugin);
@@ -319,7 +360,8 @@ public class ToolCardViewModel : INotifyPropertyChanged
 
         try
         {
-            await _pluginManager.UnloadPluginAsync(_pluginMetadata.PluginPath);
+            if (!await _pluginManager.UnloadPluginAsync(_pluginMetadata.PluginPath))
+                _setStatus?.Invoke($"Could not unload '{DisplayName}'. Close its open views and retry.");
         }
         catch (Exception ex)
         {
@@ -370,57 +412,7 @@ public class ToolCardViewModel : INotifyPropertyChanged
 
     private void SetMenuVisibilitySetting(bool value)
     {
-        if (_mainWindowViewModel != null)
-        {
-            void Apply()
-            {
-                switch (Key)
-                {
-                    case "SessionsOverview":
-                    case "Sessions":
-                        _mainWindowViewModel.ShowMenuSessions = value;
-                        break;
-                    case "SessionGallery":
-                        _mainWindowViewModel.ShowMenuSessionGallery = value;
-                        break;
-                    case "OrbitView":
-                        _mainWindowViewModel.ShowMenuOrbitView = value;
-                        break;
-                    case "AccountManager":
-                        _mainWindowViewModel.ShowMenuAccountManager = value;
-                        break;
-                    case "ScriptManager":
-                        _mainWindowViewModel.ShowMenuScriptControls = value;
-                        break;
-                case "ThemeManager":
-                    _mainWindowViewModel.ShowMenuThemeManager = value;
-                    break;
-                case "SharpBuilder":
-                    _mainWindowViewModel.ShowMenuSharpBuilder = value;
-                    break;
-                case "Console":
-                    _mainWindowViewModel.ShowMenuConsole = value;
-                    break;
-                case "McpControl":
-                    _mainWindowViewModel.ShowMenuMcpControl = value;
-                    break;
-                case "ApiDocumentation":
-                    _mainWindowViewModel.ShowMenuGuide = value;
-                        break;
-                    case "Settings":
-                        _mainWindowViewModel.ShowMenuSettings = value;
-                        break;
-                    case "UnifiedToolsManager":
-                    case "ToolsOverview":
-                        _mainWindowViewModel.ShowMenuToolsOverview = value;
-                        break;
-                }
-            }
-
-            Application.Current?.Dispatcher?.Invoke(Apply);
-        }
-
-        // Also update settings directly
+        if (!SupportsMenuVisibility) return;
         switch (Key)
         {
             case "SessionsOverview":
@@ -481,7 +473,9 @@ public class ToolCardViewModel : INotifyPropertyChanged
             "Sessions" => "Manage RuneScape 3 sessions and embedded client windows",
             "SessionGallery" => "Visual gallery view of all active game sessions",
             "SessionGrid" => "Grid layout for managing multiple game sessions",
-            "AccountManager" => "Manage account credentials and quick login",
+            "OrbitView" => "Arrange live sessions in a split workspace",
+            "UnifiedToolsManager" => "Open tools and manage plugin lifecycle and menu visibility",
+            "AccountManager" => "Organize saved accounts, credentials, and nicknames",
             "ScriptControls" => "Load and control C# scripts via hot reload",
             "ThemeManager" => "Customize themes, accents, and appearance",
             "ScriptManager" => "Browse and manage script library",

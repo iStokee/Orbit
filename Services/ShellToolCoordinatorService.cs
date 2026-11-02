@@ -185,7 +185,7 @@ public sealed class ShellToolCoordinatorService
 	}
 
 	private T ResolveRequiredService<T>() where T : class
-		=> _serviceProvider.GetRequiredService<T>();
+		=> _serviceProvider.GetRequiredService<OwnedViewFactory>().Create<T>();
 
 	private void LogUnavailable(string message, ConsoleLogLevel level = ConsoleLogLevel.Warning)
 		=> _consoleLogService.Append($"[Orbit] {message}", ConsoleLogSource.Orbit, level);

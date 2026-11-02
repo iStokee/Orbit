@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 namespace Orbit.Services;
 
@@ -12,17 +15,23 @@ namespace Orbit.Services;
 /// Handles persistence, favorites, and library enumeration for script DLL profiles.
 /// ViewModels use this as the single source of truth for recents/favorites.
 /// </summary>
-public class ScriptManagerService
+public class ScriptManagerService : ObservableObject
 {
 	private const int MaxRecentScripts = 10;
 	private static readonly string DefaultScriptsDirectory =
 		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "MemoryError", "CSharp_scripts");
-	private ObservableCollection<ScriptProfile> _recentScripts = new();
+	private ObservableCollection<ScriptProfile> _profiles = new();
+	private readonly Func<string> _readProfiles;
+	private readonly Action<string> _writeProfiles;
+	private bool _loadFailed;
+	private string? _lastError;
+	public string? LastError { get => _lastError; private set => SetProperty(ref _lastError, value); }
 
 	/// <summary>
-	/// Live list of script profiles ordered by most recently used.
+	/// Durable script configuration; recent history is a bounded projection of this catalog.
 	/// </summary>
-	public ObservableCollection<ScriptProfile> RecentScripts => _recentScripts;
+	public ObservableCollection<ScriptProfile> Profiles => _profiles;
+	public IEnumerable<ScriptProfile> RecentScripts => _profiles.Where(p => !p.HideFromRecents).OrderByDescending(p => p.LastUsed).Take(MaxRecentScripts);
 
 	/// <summary>
 	/// On-disk directory scanned to populate the default script library.
@@ -30,8 +39,15 @@ public class ScriptManagerService
 	public string DefaultLibraryPath => DefaultScriptsDirectory;
 
 	public ScriptManagerService()
+		: this(() => Settings.Default.ScriptProfiles, json => { Settings.Default.ScriptProfiles = json; Settings.Default.Save(); })
+	{ }
+
+	internal ScriptManagerService(Func<string> readProfiles, Action<string> writeProfiles)
 	{
+		_readProfiles = readProfiles;
+		_writeProfiles = writeProfiles;
 		LoadScriptProfiles();
+		TrimRecentHistory();
 	}
 
 	/// <summary>
@@ -45,11 +61,12 @@ public class ScriptManagerService
 	/// </summary>
 	public void AddOrUpdateScript(string filePath, string? name, string? description, string? scriptId)
 	{
+		if (_loadFailed) return;
 		if (string.IsNullOrWhiteSpace(filePath))
 			return;
 
 		// Check if script already exists
-		var existing = _recentScripts.FirstOrDefault(s =>
+		var existing = _profiles.FirstOrDefault(s =>
 			string.Equals(s.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
 		if (existing != null)
@@ -57,15 +74,15 @@ public class ScriptManagerService
 			// Update existing
 			existing.LastUsed = DateTime.Now;
 			existing.HideFromRecents = false;
-			existing.ScriptId = NormalizeScriptId(scriptId, existing.FilePath);
+			existing.ScriptId = NormalizeScriptId(scriptId ?? existing.ScriptId, existing.FilePath);
 			if (!string.IsNullOrWhiteSpace(name))
 				existing.Name = name;
 			if (!string.IsNullOrWhiteSpace(description))
 				existing.Description = description;
 
 			// Move to top if not already
-			_recentScripts.Remove(existing);
-			_recentScripts.Insert(0, existing);
+			_profiles.Remove(existing);
+			_profiles.Insert(0, existing);
 		}
 		else
 		{
@@ -80,14 +97,10 @@ public class ScriptManagerService
 				HideFromRecents = false
 			};
 
-			_recentScripts.Insert(0, profile);
+			_profiles.Insert(0, profile);
 		}
 
-		// Trim to max recent scripts
-		while (_recentScripts.Count > MaxRecentScripts)
-		{
-			_recentScripts.RemoveAt(_recentScripts.Count - 1);
-		}
+		TrimRecentHistory();
 
 		SaveScriptProfiles();
 	}
@@ -97,7 +110,8 @@ public class ScriptManagerService
 	/// </summary>
 	public void RemoveScript(ScriptProfile profile)
 	{
-		_recentScripts.Remove(profile);
+		if (_loadFailed) return;
+		profile.HideFromRecents = true;
 		SaveScriptProfiles();
 	}
 
@@ -106,6 +120,7 @@ public class ScriptManagerService
 	/// </summary>
 	public void ToggleFavorite(ScriptProfile profile)
 	{
+		if (_loadFailed) return;
 		profile.IsFavorite = !profile.IsFavorite;
 		SaveScriptProfiles();
 	}
@@ -118,7 +133,7 @@ public class ScriptManagerService
 		if (string.IsNullOrWhiteSpace(filePath))
 			return null;
 
-		return _recentScripts.FirstOrDefault(s =>
+		return _profiles.FirstOrDefault(s =>
 			string.Equals(s.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 	}
 
@@ -142,6 +157,7 @@ public class ScriptManagerService
 				yield return tracked;
 				continue;
 			}
+			if (!HasScriptEntryPoint(file)) continue;
 
 			yield return new ScriptProfile
 			{
@@ -155,33 +171,54 @@ public class ScriptManagerService
 		}
 	}
 
+	internal static bool HasScriptEntryPoint(string path)
+	{
+		try
+		{
+			using var stream = File.OpenRead(path);
+			using var pe = new PEReader(stream);
+			if (!pe.HasMetadata) return false;
+			var metadata = pe.GetMetadataReader();
+			foreach (var handle in metadata.TypeDefinitions)
+			{
+				var type = metadata.GetTypeDefinition(handle);
+				if (metadata.GetString(type.Namespace) != "MESharp" || metadata.GetString(type.Name) != "ScriptEntry") continue;
+				return type.GetMethods().Any(methodHandle =>
+				{
+					var method = metadata.GetMethodDefinition(methodHandle);
+					return metadata.GetString(method.Name) == "Initialize"
+						&& (method.Attributes & MethodAttributes.MemberAccessMask) == MethodAttributes.Public
+						&& (method.Attributes & MethodAttributes.Static) != 0;
+				});
+			}
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException) { }
+		return false;
+	}
+
 	/// <summary>
 	/// Convenience accessor for the newest script entry.
 	/// </summary>
 	public ScriptProfile? GetMostRecent()
-		=> _recentScripts.FirstOrDefault();
+		=> RecentScripts.FirstOrDefault();
 
 	/// <summary>
 	/// Returns scripts flagged as favorites ordered alphabetically.
 	/// </summary>
 	public IEnumerable<ScriptProfile> GetFavorites()
-		=> _recentScripts.Where(s => s.IsFavorite).OrderBy(s => s.Name);
+		=> _profiles.Where(s => s.IsFavorite).OrderBy(s => s.Name);
 
 	/// <summary>
-	/// Restores recent scripts from user settings, ignoring corrupt payloads.
+	/// Restores the durable catalog, preserving corrupt settings for recovery.
 	/// </summary>
 	private void LoadScriptProfiles()
 	{
-		var json = Settings.Default.ScriptProfiles;
-		if (string.IsNullOrWhiteSpace(json))
-		{
-			_recentScripts = new ObservableCollection<ScriptProfile>();
-			return;
-		}
-
 		try
 		{
-			var profiles = JsonConvert.DeserializeObject<List<ScriptProfile>>(json);
+			var json = _readProfiles();
+			if (string.IsNullOrWhiteSpace(json)) return;
+			var profiles = JsonConvert.DeserializeObject<List<ScriptProfile>>(json)
+				?? throw new InvalidDataException("Script catalog must contain an array.");
 			if (profiles != null)
 			{
 				foreach (var profile in profiles)
@@ -189,42 +226,51 @@ public class ScriptManagerService
 					profile.ScriptId = NormalizeScriptId(profile.ScriptId, profile.FilePath);
 				}
 			}
-			_recentScripts = profiles != null
+			_profiles = profiles != null
 				? new ObservableCollection<ScriptProfile>(profiles.OrderByDescending(p => p.LastUsed))
 				: new ObservableCollection<ScriptProfile>();
 		}
-		catch
+		catch (Exception ex)
 		{
-			_recentScripts = new ObservableCollection<ScriptProfile>();
+			_loadFailed = true;
+			LastError = $"Cannot load script catalog; original settings preserved: {ex.Message}";
 		}
 	}
 
 	/// <summary>
-	/// Persists the current recent list to user settings. Failures are ignored to keep the UI responsive.
+	/// Limits history without discarding durable script configuration.
 	/// </summary>
+	private void TrimRecentHistory()
+	{
+		foreach (var profile in _profiles.Where(p => !p.HideFromRecents).OrderByDescending(p => p.LastUsed).Skip(MaxRecentScripts).ToList())
+			profile.HideFromRecents = true;
+	}
+
 	private void SaveScriptProfiles()
 	{
+		if (_loadFailed) return;
 		try
 		{
-			var json = JsonConvert.SerializeObject(_recentScripts, Formatting.Indented);
-			Settings.Default.ScriptProfiles = json;
-			Settings.Default.Save();
+			TrimRecentHistory();
+			var json = JsonConvert.SerializeObject(_profiles, Formatting.Indented);
+			_writeProfiles(json);
+			LastError = null;
 		}
-		catch
+		catch (Exception ex)
 		{
-			// Silently fail - not critical
+			LastError = $"Cannot save script catalog: {ex.Message}";
 		}
 	}
 
 	/// <summary>
-	/// Removes recents whose backing files are no longer present on disk.
+	/// Hides missing files from history without deleting their durable configuration.
 	/// </summary>
 	public void ClearNonExisting()
 	{
-		var toRemove = _recentScripts.Where(s => !s.FileExists).ToList();
+		var toRemove = _profiles.Where(s => !s.FileExists).ToList();
 		foreach (var script in toRemove)
 		{
-			_recentScripts.Remove(script);
+			script.HideFromRecents = true;
 		}
 
 		if (toRemove.Any())

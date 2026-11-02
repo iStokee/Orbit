@@ -11,13 +11,16 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
     mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance viewModels:AccountManagerViewModel}">
+    d:DataContext="{d:DesignInstance viewModels:AccountManagerViewModel}"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <UserControl.Resources>
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <converters:NullToVisibilityConverter x:Key="MessageVisibilityConverter" />
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
     <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -45,97 +48,18 @@
                         Text="Account Manager" />
                     <TextBlock
                         Style="{StaticResource Orbit.ToolHeaderSubtitle}"
-                        Text="Organize saved accounts, control auto-login, and push credentials into live sessions." />
+                        Text="Organize saved accounts and nicknames. Log in through the game client or launcher." />
+                    <TextBlock Text="{Binding StorageError}" TextWrapping="Wrap"
+                               Visibility="{Binding StorageError, Converter={StaticResource MessageVisibilityConverter}}"
+                               Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}"
+                               Style="{StaticResource Orbit.Workbench.MetaText}" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!--  Session Selection & Auto Login  -->
-        <Border
-            Grid.Row="1"
-            Style="{StaticResource Orbit.Workbench.Panel}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel>
-                    <TextBlock
-                        Text="Target Session"
-                        Style="{StaticResource Orbit.Workbench.FieldLabel}" />
-                    <ComboBox
-                        Margin="0,6,0,8"
-                        ItemsSource="{Binding Sessions}"
-                        SelectedItem="{Binding SelectedSession}"
-                        IsEnabled="{Binding HasSessions}"
-                        MinWidth="240">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock
-                                        Text="{Binding Name}"
-                                        FontWeight="SemiBold" />
-                                    <TextBlock
-                                        Margin="8,0,0,0"
-                                        Text="{Binding InjectionState}"
-                                        Style="{StaticResource Orbit.Workbench.MetaText}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <TextBlock Text="No active sessions are docked.">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource Orbit.Workbench.MetaText}">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasSessions}" Value="False">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource Orbit.Workbench.HelperText}"
-                        Text="{Binding LoginStatusMessage}"
-                        TextWrapping="Wrap" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Controls:ProgressRing
-                        Width="28"
-                        Height="28"
-                        Margin="0,0,12,0"
-                        IsActive="{Binding IsLoggingIn}">
-                        <Controls:ProgressRing.Style>
-                            <Style TargetType="Controls:ProgressRing">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLoggingIn}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Controls:ProgressRing.Style>
-                    </Controls:ProgressRing>
-                    <Button
-                        Command="{Binding LoginSelectedAccountCommand}"
-                        Style="{StaticResource Orbit.Workbench.Button.Primary}"
-                        MinWidth="140"
-                        VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <iconPacks:PackIconMaterial
-                                Kind="Login"
-                                Width="16"
-                                Height="16"
-                                Margin="0,0,8,0" />
-                            <TextBlock Text="Auto Login" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
+        <Border Grid.Row="1" Style="{StaticResource Orbit.Workbench.Panel}">
+            <TextBlock Text="{Binding LoginStatusMessage}" TextWrapping="Wrap"
+                       Style="{StaticResource Orbit.Workbench.HelperText}" />
         </Border>
 
         <!--  Account List & Filter  -->
@@ -168,6 +92,7 @@
                     AutoGenerateColumns="False"
                     CanUserAddRows="False"
                     CanUserDeleteRows="False"
+                    RowEditEnding="Accounts_RowEditEnding"
                     SelectionMode="Single"
                     GridLinesVisibility="None"
                     HeadersVisibility="Column">
@@ -180,7 +105,7 @@
                             IsReadOnly="True" />
                         <DataGridTextColumn
                             Header="Nickname"
-                            Binding="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}"
+                            Binding="{Binding Nickname, UpdateSourceTrigger=LostFocus}"
                             Width="*"
                             MinWidth="120" />
                         <DataGridTextColumn
@@ -189,19 +114,10 @@
                             Width="120"
                             IsReadOnly="True" />
                         <DataGridTextColumn
-                            Header="World"
-                            Binding="{Binding PreferredWorld}"
-                            Width="80"
-                            IsReadOnly="True" />
-                        <DataGridTextColumn
                             Header="Last Used"
                             Binding="{Binding LastUsedDisplay}"
                             Width="140"
                             IsReadOnly="True" />
-                        <DataGridCheckBoxColumn
-                            Header="Auto Login"
-                            Binding="{Binding AutoLogin, UpdateSourceTrigger=PropertyChanged}"
-                            Width="100" />
                         <DataGridTemplateColumn Header="Actions" Width="80">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -245,7 +161,7 @@
                             Style="{StaticResource Orbit.Workbench.HelperText}"
                             TextAlignment="Center"
                             TextWrapping="Wrap"
-                            Text="Add your first RuneScape account to enable auto-login and quick session management." />
+                            Text="Add an account to organize saved credentials and nicknames. Log in through the game client or launcher." />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -266,13 +182,13 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="120" />
+                    
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock
                     Grid.Row="0"
-                    Grid.ColumnSpan="5"
+                    Grid.ColumnSpan="4"
                     Margin="0,0,0,10"
                     Style="{StaticResource Orbit.Workbench.SectionTitle}"
                     Text="Add Account" />
@@ -302,15 +218,7 @@
                     x:Name="NewPasswordBox"
                     PasswordChanged="NewPasswordBox_PasswordChanged" />
 
-                <Controls:NumericUpDown
-                    Grid.Row="1"
-                    Grid.Column="3"
-                    Value="{Binding NewPreferredWorld}"
-                    Minimum="1"
-                    Maximum="200"
-                    Margin="0,0,8,0" />
-
-                <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal">
+                <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal">
                     <Button
                         Command="{Binding AddAccountCommand}"
                         Style="{StaticResource Orbit.Workbench.IconButton}"
@@ -329,5 +237,4 @@
             </ScrollViewer>
         </Border>
     </Grid>
-    </ScrollViewer>
 </UserControl>

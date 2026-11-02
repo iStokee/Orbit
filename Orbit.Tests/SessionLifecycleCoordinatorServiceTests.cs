@@ -78,6 +78,7 @@ public sealed class SessionLifecycleCoordinatorServiceTests
 	{
 		var coordinator = new SessionLifecycleCoordinatorService();
 		var activeSession = NewSession();
+		Assert.False(coordinator.IsUnexpectedExit(activeSession, _ => true));
 		activeSession.UpdateState(SessionState.ClientReady);
 
 		Assert.True(coordinator.IsUnexpectedExit(activeSession, _ => true));

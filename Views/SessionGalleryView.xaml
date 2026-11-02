@@ -13,7 +13,10 @@
     d:DataContext="{d:DesignInstance Type=viewmodels:SessionGalleryViewModel,
                                      IsDesignTimeCreatable=False}"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <UserControl.Resources>
         <converters:SessionStateToColorConverter x:Key="SessionStateToColorConverter" />
@@ -259,19 +262,19 @@
                                 VerticalAlignment="Center"
                                 Style="{StaticResource Orbit.Workbench.FieldLabel}"
                                 Text="Header:" />
-                            <ToggleButton
+                            <RadioButton
                                 Margin="0,0,4,0"
                                 Padding="8,2"
                                 Content="Full"
                                 IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
                                 Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                            <ToggleButton
+                            <RadioButton
                                 Margin="0,0,4,0"
                                 Padding="8,2"
                                 Content="Compact"
                                 IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
                                 Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                            <ToggleButton
+                            <RadioButton
                                 Padding="8,2"
                                 Content="Minimal"
                                 IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
@@ -298,16 +301,23 @@
                         <DataTemplate>
                             <Border Width="{Binding DataContext.ThumbnailCardWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource SessionCardStyle}">
                                 <StackPanel>
+                                    <Button Command="{Binding DataContext.ActivateSessionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" AutomationProperties.Name="{Binding DisplayName}"
+                                            ToolTip="{Binding DisplayName}" HorizontalAlignment="Center">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="FocusVisualStyle" Value="{StaticResource Orbit.KeyboardFocus}" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value><ControlTemplate TargetType="Button"><ContentPresenter /></ControlTemplate></Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
                                     <Border
                                         Width="{Binding DataContext.ThumbnailImageWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         Height="{Binding DataContext.ThumbnailImageHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         HorizontalAlignment="Center">
-                                        <Border.InputBindings>
-                                            <MouseBinding
-                                                Command="{Binding DataContext.ActivateSessionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding}"
-                                                MouseAction="LeftClick" />
-                                        </Border.InputBindings>
 
                                         <!--  Hover effect animation  -->
                                         <Border.Style>
@@ -422,6 +432,7 @@
                                             </Border>
                                         </Grid>
                                     </Border>
+                                    </Button>
 
                                     <StackPanel Margin="4,8,4,0">
                                         <StackPanel.IsEnabled>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -25,23 +25,31 @@ namespace Orbit
 		}
 
 		internal Process pDocked = null!;
-		private readonly TaskCompletionSource<Process> processReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly TaskCompletionSource<bool> windowReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		internal Action<Process?>? ProcessChanged { get; set; }
+		private Process? activationProcess;
+		private ClientLaunchObservation? launchObservation;
+		private ClientLaunchMode attemptLaunchMode;
+		private HostedWindowIdentity? dockedWindowIdentity;
+		private readonly object nativeWindowSync = new();
 		private readonly TaskCompletionSource<bool> injectionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-		private readonly TaskCompletionSource<bool> injectionStartedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-		private static readonly TimeSpan InjectionWaitTimeout = TimeSpan.FromSeconds(6);
 		private static readonly TimeSpan ProcessDetectionTimeout = TimeSpan.FromSeconds(45);
 		private static readonly TimeSpan ProcessPollInterval = TimeSpan.FromMilliseconds(250);
 		private static readonly TimeSpan WindowHandleTimeout = TimeSpan.FromSeconds(25);
 		private static readonly TimeSpan WindowHandlePollInterval = TimeSpan.FromMilliseconds(200);
 		private static readonly TimeSpan LauncherRefreshDelay = TimeSpan.FromMilliseconds(500);
-		private static readonly TimeSpan LaunchRetryDelay = TimeSpan.FromSeconds(1);
 		private static readonly string LauncherUri = "rs-launch://www.runescape.com/k=5/l=$(Language:0)/jav_config.ws";
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public string? LauncherCharacterId { get; set; }
 		private static readonly SemaphoreSlim LauncherStartGate = new(1, 1);
+		private Guid processOwner = Guid.NewGuid();
+		private bool sessionOwnsProcess;
+		internal void SetProcessOwner(Guid sessionId) { processOwner = sessionId; sessionOwnsProcess = true; }
+		private CancellationToken loadCancellation;
 		private IntPtr hWndOriginalParent;
 		private IntPtr hWndParent;
 		private uint? originalWindowStyle;
-		private bool dockedStylesApplied;
-		private bool isCurrentlyDocked;
 		private IntPtr dockedHandleCache;
 		//internal static List<RuneScapeHandler> rsHandlerList = new List<RuneScapeHandler>();
 		private bool hasStarted = false;
@@ -49,8 +57,6 @@ namespace Orbit
 		private int rs2ClientID;
 		private int runescapeProcessID;
 		private IntPtr _dockedHandle;
-		private IntPtr JagWindow;
-		private IntPtr wxWindowNR;
 
 		public int? ParentProcessId { get; private set; }
 
@@ -59,8 +65,10 @@ namespace Orbit
 
 		public IntPtr DockedClientHandle => _dockedHandle;
 
-		[DllImport("user32.dll")]
+		[DllImport("user32.dll", SetLastError = true)]
 		internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+		[DllImport("user32.dll")]
+		private static extern IntPtr GetParent(IntPtr hwnd);
 		[DllImport("user32.dll", SetLastError = true)]
 		internal static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -124,7 +132,7 @@ namespace Orbit
 			return 0;
 		}
 
-		internal Task<Process> ProcessReadyTask => processReadyTcs.Task;
+		internal Task WindowReadyTask => windowReadyTcs.Task;
 
 		[DefaultValue(true)]
 		internal bool WaitForInjectionBeforeDock { get; set; } = true;
@@ -134,11 +142,6 @@ namespace Orbit
 		[DllImport("user32.dll")]
 		private static extern IntPtr SetFocus(IntPtr hWnd);
 
-		internal void SignalInjectionStarting()
-		{
-			injectionStartedTcs.TrySetResult(true);
-		}
-
 		internal void SignalInjectionReady()
 		{
 			injectionReadyTcs.TrySetResult(true);
@@ -147,35 +150,33 @@ namespace Orbit
 		public RSForm()
 		{
 			InitializeComponent();
+			AutoSize = false;
+			panel_DockPanel.AutoSize = false;
+			panel_DockPanel.ClientSizeChanged += (_, e) => DockHostSizeChanged?.Invoke(this, e);
+			Disposed += (_, _) => { activationProcess?.Dispose(); dockedWindowIdentity?.Dispose(); if (!sessionOwnsProcess) SessionProcessOwnership.Instance.ReleaseOwner(processOwner); };
 			// set back color to DarkSlate from dynamic resources
 			//this.BackColor = System.Drawing.ColorTranslator.FromHtml("#2f2f2f");
 		}
 
 		private void RSForm_Load(object sender, EventArgs e) { }
+		internal event EventHandler? DockHostSizeChanged;
 
-		public async Task BeginLoad()
+		public Task BeginLoad() => BeginLoad(CancellationToken.None);
+
+		internal void EnsureDockHostHandle() { _ = Handle; _ = panel_DockPanel.Handle; }
+
+		public async Task BeginLoad(CancellationToken cancellationToken)
 		{
 			if (hasStarted)
 			{
 				return;
 			}
 
+			loadCancellation = cancellationToken;
+			loadCancellation.ThrowIfCancellationRequested();
 			this.FormBorderStyle = FormBorderStyle.None;
 			_dockedHandle = IntPtr.Zero;
 			ParentProcessId = null;
-
-			await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
-			{
-				if (_dockedHandle != IntPtr.Zero)
-				{
-					var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
-					if (hWndOriginalParent == IntPtr.Zero)
-					{
-						hWndOriginalParent = previousParent;
-					}
-					isCurrentlyDocked = true;
-				}
-			}));
 
 			Console.WriteLine("LoadRS");
 			await LoadRS();
@@ -196,30 +197,12 @@ namespace Orbit
 				// this is what triggers the actual loading of the client
 				await ExecuteRSLoadAsync();
 
-				// Dock the client to the panel
-				await Task.Run(() => panel_DockPanel.Invoke((MethodInvoker)delegate
-				{
-					if (_dockedHandle != IntPtr.Zero)
-					{
-						var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
-						if (hWndOriginalParent == IntPtr.Zero)
-						{
-							hWndOriginalParent = previousParent;
-						}
-						isCurrentlyDocked = true;
-					}
-				}));
-
-				if (ClientSettings.rs2cPID > 0)
-				{
-						await ResizeWindow();
-						Console.WriteLine("Game client resized successfully");
-					}
-				}
-				catch (Exception ex)
+				loadCancellation.ThrowIfCancellationRequested();
+			}
+			catch (Exception ex)
 				{
 					Console.WriteLine($"An error occurred: {ex}");
-					processReadyTcs.TrySetException(ex);
+					windowReadyTcs.TrySetException(ex);
 					throw;
 				}
 
@@ -263,7 +246,7 @@ namespace Orbit
 		{
 			try
 			{
-				if (_dockedHandle != IntPtr.Zero)
+				if (dockedWindowIdentity?.IsCurrent == true && hWndParent != 0 && NativeWindowGeometry.GetParent(_dockedHandle) == hWndParent)
 				{
 					SetFocus(_dockedHandle);
 				}
@@ -275,44 +258,22 @@ namespace Orbit
 		{
 			void PerformUndock()
 			{
+				lock (nativeWindowSync)
+				{
 				if (_dockedHandle == IntPtr.Zero)
 				{
 					return;
 				}
+				if (dockedWindowIdentity?.IsCurrent != true) return;
 
-				const int GWL_STYLE = -16;
-				const int SWP_NOSIZE = 0x0001;
-				const int SWP_NOMOVE = 0x0002;
-				const int SWP_NOZORDER = 0x0004;
-				const int SWP_NOACTIVATE = 0x0010;
-				const int SWP_FRAMECHANGED = 0x0020;
-				const int SWP_HIDEWINDOW = 0x0080;
-
-				if (restoreStyles && dockedStylesApplied && originalWindowStyle.HasValue)
+				if (restoreParent && originalWindowStyle.HasValue)
 				{
-					SetWindowLong(_dockedHandle, GWL_STYLE, (uint)((int)originalWindowStyle.Value));
-					var restoreFlags = (uint)(SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-					SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, (int)restoreFlags);
-					dockedStylesApplied = false;
-				}
-
-				if (isCurrentlyDocked)
-				{
-					if (restoreParent)
-					{
-						SetParent(_dockedHandle, hWndOriginalParent);
-					}
-					else
-					{
-						var hideFlags = (uint)(SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
-						SetWindowPos(_dockedHandle, IntPtr.Zero, 0, 0, 0, 0, (int)hideFlags);
-					}
-
+					NativeWindowRestorer.Restore(_dockedHandle, hWndOriginalParent, (int)originalWindowStyle.Value);
 					hWndParent = IntPtr.Zero;
-					isCurrentlyDocked = false;
 				}
 
 				dockedHandleCache = IntPtr.Zero;
+				}
 			}
 
 			try
@@ -333,171 +294,59 @@ namespace Orbit
 			}
 			catch
 			{
-				// best-effort; failures here should not prevent shutdown
+				throw; // A failed restoration must retain the host.
 			}
 		}
 
 		private async Task ExecuteRSLoadAsync()
 		{
-			if (_dockedHandle != IntPtr.Zero)
-			{
-				return;
-			}
-
-			var launchMode = ResolveLaunchMode();
-			var maxAttempts = launchMode == ClientLaunchMode.Launcher ? 2 : 1;
-			Exception? lastFailure = null;
-
-			for (var attempt = 1; attempt <= maxAttempts; attempt++)
-			{
-				try
-				{
-					Console.WriteLine($"[Orbit] Launch attempt {attempt}/{maxAttempts} ({launchMode}).");
-
-					Console.WriteLine("Starting RS process");
-					await StartAndRefreshRSProcessAsync();
-
-					Console.WriteLine("Finding RS client");
-					await FindAndSetRsClientAsync();
-
-					Console.WriteLine("Waiting for RS client to be ready");
-					await WaitForAndSetDockingWindowAsync();
-
-					Console.WriteLine("Docking RS client");
-					await DockWindowToPanelAsync();
-					return;
-				}
-				catch (Exception ex) when (attempt < maxAttempts && IsRetryableLaunchFailure(ex))
-				{
-					lastFailure = ex;
-					Console.WriteLine($"[Orbit] Launch stalled on attempt {attempt}: {ex.Message}");
-					CleanupStalledLaunchProcessesForRetry();
-					await Task.Delay(LaunchRetryDelay).ConfigureAwait(false);
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine(ex.Message);
-					processReadyTcs.TrySetException(ex);
-					throw;
-				}
-			}
-
-			if (lastFailure != null)
-			{
-				processReadyTcs.TrySetException(lastFailure);
-				throw lastFailure;
-			}
-		}
-
-		private static bool IsRetryableLaunchFailure(Exception ex)
-		{
-			return ex is TimeoutException;
-		}
-
-		private void CleanupStalledLaunchProcessesForRetry()
-		{
+			if (_dockedHandle != IntPtr.Zero) return;
 			try
 			{
-				var candidateIds = new[]
-				{
-					pDocked?.Id ?? 0,
-					ParentProcessId ?? 0,
-					rs2ClientID,
-					runescapeProcessID,
-					ClientSettings.rs2cPID,
-					ClientSettings.runescapePID
-				}
-				.Where(id => id > 0)
-				.Distinct()
-				.ToArray();
-
-				foreach (var pid in candidateIds)
-				{
-					try
-					{
-						using var process = Process.GetProcessById(pid);
-						if (!process.HasExited)
-						{
-							process.Kill(true);
-							process.WaitForExit(1500);
-						}
-					}
-					catch
-					{
-						// Best effort cleanup only.
-					}
-				}
+				await StartAndDetectClientAsync(ResolveLaunchMode());
+				await WaitForAndSetDockingWindowAsync();
+				await DockWindowToPanelAsync();
 			}
-			finally
-			{
-				pDocked = null!;
-				ParentProcessId = null;
-				_dockedHandle = IntPtr.Zero;
-				DockedRSHwnd = IntPtr.Zero;
-				dockedHandleCache = IntPtr.Zero;
-				rs2ClientID = 0;
-				runescapeProcessID = 0;
-				ClientSettings.rs2cPID = 0;
-				ClientSettings.runescapePID = 0;
-				ClientSettings.rs2client = null!;
-				ClientSettings.gameHandle = IntPtr.Zero;
-				ClientSettings.jagOpenGL = IntPtr.Zero;
-			}
+			catch (Exception ex) { windowReadyTcs.TrySetException(ex); throw; }
 		}
 
 		#region RSForm Loading
 
-		private async Task StartAndRefreshRSProcessAsync()
+		private async Task StartAndDetectClientAsync(ClientLaunchMode mode)
 		{
+			// URI launches do not return the game process. Keep discovery inside the same
+			// gate as launch so concurrent Orbit requests cannot exchange account/PID bindings.
+			if (mode == ClientLaunchMode.Launcher) await LauncherStartGate.WaitAsync(loadCancellation).ConfigureAwait(false);
 			try
 			{
-				var launchMode = ResolveLaunchMode();
-				var launchTarget = ResolveLaunchTarget(launchMode);
-				if (launchMode == ClientLaunchMode.Launcher)
-				{
-					await LauncherStartGate.WaitAsync().ConfigureAwait(false);
-				}
-
-				try
-				{
-					ApplyConfiguredLauncherAccountEnvironment(launchMode);
-					pDocked = new Process
-					{
-						StartInfo = new ProcessStartInfo
-						{
-							FileName = launchTarget,
-							UseShellExecute = true
-						}
-					};
-					pDocked.Start();
-					Console.WriteLine($"[Orbit] Session launch started via {launchMode} target '{launchTarget}' (PID {pDocked.Id}). Waiting for bootstrap...");
-					await Task.Delay(LauncherRefreshDelay).ConfigureAwait(false);
-					try
-					{
-						pDocked.Refresh();
-					}
-					catch (InvalidOperationException)
-					{
-						// Launcher may already have exited once the client starts.
-					}
-				}
-				finally
-				{
-					if (launchMode == ClientLaunchMode.Launcher)
-					{
-						ClearConfiguredLauncherAccountEnvironment();
-						LauncherStartGate.Release();
-					}
-				}
+				attemptLaunchMode = mode;
+				await StartAndRefreshRSProcessAsync();
+				await FindAndSetRsClientAsync();
 			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"An exception occurred: {ex}");
-				throw;
-			}
+			finally { if (mode == ClientLaunchMode.Launcher) LauncherStartGate.Release(); }
 		}
 
-		private static void ApplyConfiguredLauncherAccountEnvironment(ClientLaunchMode launchMode)
+		private async Task StartAndRefreshRSProcessAsync()
+		{
+			loadCancellation.ThrowIfCancellationRequested();
+			var launchTarget = ResolveLaunchTarget(attemptLaunchMode);
+			var existingIds = new System.Collections.Generic.List<int>();
+			foreach (var existing in Process.GetProcessesByName("rs2client"))
+				using (existing) existingIds.Add(existing.Id);
+			launchObservation = new ClientLaunchObservation(existingIds, DateTime.UtcNow);
+			using var environment = attemptLaunchMode == ClientLaunchMode.Launcher ? new LauncherEnvironmentScope() : null;
+			ApplyConfiguredLauncherAccountEnvironment(attemptLaunchMode);
+			activationProcess?.Dispose();
+			activationProcess = new Process { StartInfo = new ProcessStartInfo { FileName = launchTarget, UseShellExecute = true } };
+			if (!activationProcess.Start())
+			{
+				activationProcess.Dispose();
+				activationProcess = null;
+			}
+			Console.WriteLine($"[Orbit] Launch request accepted via {attemptLaunchMode}; waiting for a distinct game client.");
+			await Task.Delay(LauncherRefreshDelay, loadCancellation).ConfigureAwait(false);
+		}
+		private void ApplyConfiguredLauncherAccountEnvironment(ClientLaunchMode launchMode)
 		{
 			// JX_* values are only meaningful when launching through the Jagex launcher URI flow.
 			if (launchMode != ClientLaunchMode.Launcher)
@@ -506,15 +355,20 @@ namespace Orbit
 			}
 
 			LauncherAccountModel? selected = null;
+			if (!string.IsNullOrWhiteSpace(LauncherCharacterId))
+			{
+				selected = LauncherAccountStore.Load().FirstOrDefault(a => a.CharacterId == LauncherCharacterId)
+					?? throw new InvalidOperationException("The original launcher account is no longer configured.");
+			}
 			var selectedDisplayName = Settings.Default.LauncherSelectedDisplayName;
 
 			// Preferred: rotate through all accounts checked in launcher config (multi-account support).
-			if (LauncherAccountStore.TryGetNextSelected(out var roundRobinAccount) && roundRobinAccount != null)
+			if (selected == null && LauncherAccountStore.TryGetNextSelected(out var roundRobinAccount) && roundRobinAccount != null)
 			{
 				selected = roundRobinAccount;
 				Console.WriteLine($"[Orbit][Launcher] Multi-account round-robin selected '{selected.DisplayName}'.");
 			}
-			else if (LauncherAccountStore.TryGetByDisplayName(selectedDisplayName, out var configuredSingle) && configuredSingle != null)
+			else if (selected == null && LauncherAccountStore.TryGetByDisplayName(selectedDisplayName, out var configuredSingle) && configuredSingle != null)
 			{
 				// Backward-compatible fallback: single selected display name.
 				selected = configuredSingle;
@@ -527,187 +381,70 @@ namespace Orbit
 				return;
 			}
 
+			LauncherCharacterId = selected.CharacterId;
 			Environment.SetEnvironmentVariable("JX_ACCESS_TOKEN", string.Empty);
 			Environment.SetEnvironmentVariable("JX_DISPLAY_NAME", selected.DisplayName ?? string.Empty);
 			Environment.SetEnvironmentVariable("JX_CHARACTER_ID", selected.CharacterId ?? string.Empty);
 			Environment.SetEnvironmentVariable("JX_REFRESH_TOKEN", string.Empty);
 			Environment.SetEnvironmentVariable("JX_SESSION_ID", selected.SessionId ?? string.Empty);
 
-			Console.WriteLine($"[Orbit][Launcher] Applied JX env vars for '{selected.DisplayName}' (CharacterId='{selected.CharacterId}', SessionId='{selected.SessionId}').");
-		}
-
-		private static void ClearConfiguredLauncherAccountEnvironment()
-		{
-			Environment.SetEnvironmentVariable("JX_ACCESS_TOKEN", null);
-			Environment.SetEnvironmentVariable("JX_DISPLAY_NAME", null);
-			Environment.SetEnvironmentVariable("JX_CHARACTER_ID", null);
-			Environment.SetEnvironmentVariable("JX_REFRESH_TOKEN", null);
-			Environment.SetEnvironmentVariable("JX_SESSION_ID", null);
+			Console.WriteLine($"[Orbit][Launcher] Applied account environment for '{selected.DisplayName}'.");
 		}
 
 		private async Task FindAndSetRsClientAsync()
 		{
-			if (pDocked == null)
-			{
-				throw new InvalidOperationException("Launcher process not initialized.");
-			}
-
-			var launchMode = ResolveLaunchMode();
-			var launcherProcess = pDocked;
-			var launcherPid = launcherProcess.Id;
-			DateTime launcherStartTime;
-			try
-			{
-				launcherStartTime = launcherProcess.StartTime;
-			}
-			catch (Exception)
-			{
-				launcherStartTime = DateTime.Now;
-			}
-
-			Console.WriteLine($"[Orbit] Waiting for RuneScape client process (mode={launchMode}, started PID={launcherPid})...");
+			var observation = launchObservation ?? throw new InvalidOperationException("No launch observation exists.");
+			int? launcherPid = activationProcess?.Id;
 			var stopwatch = Stopwatch.StartNew();
-			var fallbackEnabled = false;
-
 			while (stopwatch.Elapsed < ProcessDetectionTimeout)
 			{
-				try
+				loadCancellation.ThrowIfCancellationRequested();
+				var candidates = new System.Collections.Generic.List<(int Pid, bool IsLauncherChild)>();
+				foreach (var candidate in Process.GetProcessesByName("rs2client"))
 				{
-					launcherProcess.Refresh();
-				}
-				catch (InvalidOperationException)
-				{
-					// Launcher may have exited once the game client bootstraps.
-				}
-
-				Process? confirmedClient = null;
-				if (launchMode == ClientLaunchMode.Legacy && string.Equals(launcherProcess.ProcessName, "rs2client", StringComparison.OrdinalIgnoreCase))
-				{
-					try
-					{
-						confirmedClient = Process.GetProcessById(launcherPid);
-						if (confirmedClient != null && IsProcessAlreadyBoundToSession(confirmedClient.Id))
-						{
-							confirmedClient.Dispose();
-							confirmedClient = null;
-						}
-					}
-					catch (Exception)
-					{
-						confirmedClient = null;
-					}
-				}
-
-				if (confirmedClient == null)
-				{
-					foreach (var candidate in Process.GetProcessesByName("rs2client"))
+					using (candidate)
 					{
 						try
 						{
-							var candidateParent = GetParentProcess(candidate.Id);
-							if (candidateParent == launcherPid)
-							{
-								if (IsProcessAlreadyBoundToSession(candidate.Id))
-								{
-									continue;
-								}
-
-								confirmedClient = Process.GetProcessById(candidate.Id);
-								break;
-							}
-
-							if (candidateParent == 0 && fallbackEnabled)
-							{
-								try
-								{
-									if (candidate.StartTime >= launcherStartTime.AddSeconds(-2))
-									{
-										if (IsProcessAlreadyBoundToSession(candidate.Id))
-										{
-											continue;
-										}
-
-										confirmedClient = Process.GetProcessById(candidate.Id);
-										break;
-									}
-								}
-								catch (Exception)
-								{
-									// Ignore StartTime access failures; continue scanning.
-								}
-							}
+							if (candidate.HasExited || !observation.IsFresh(candidate.Id, candidate.StartTime.ToUniversalTime())) continue;
+							var direct = attemptLaunchMode == ClientLaunchMode.Legacy && candidate.Id == launcherPid;
+							var child = launcherPid.HasValue && GetParentProcess(candidate.Id) == launcherPid.Value;
+							if (direct || child || !launcherPid.HasValue || stopwatch.Elapsed > TimeSpan.FromSeconds(8))
+								candidates.Add((candidate.Id, direct || child));
 						}
-						finally
-						{
-							candidate.Dispose();
-						}
+						catch (InvalidOperationException) { }
+						catch (Win32Exception) { }
 					}
 				}
-
-				if (confirmedClient != null)
+				var selectedPid = ClientLaunchObservation.SelectCandidate(candidates);
+				if (selectedPid.HasValue)
 				{
-						ClientSettings.rs2client = confirmedClient;
-						ParentProcessId = confirmedClient.Id == launcherPid ? null : launcherProcess.Id;
+					Process? client = null;
 					try
 					{
-						JagWindow = FindWindowEx(confirmedClient.MainWindowHandle, IntPtr.Zero, "JagWindow", null);
-					}
-					catch (Exception)
-					{
-						JagWindow = IntPtr.Zero;
-					}
-
-						try
+						client = Process.GetProcessById(selectedPid.Value);
+						if (!client.HasExited && observation.IsFresh(client.Id, client.StartTime.ToUniversalTime()) && !IsProcessAlreadyBoundToSession(client.Id))
 						{
-							var launcherMainWindowHandle = launcherProcess.MainWindowHandle;
-							wxWindowNR = launcherMainWindowHandle != IntPtr.Zero
-								? FindWindowEx(launcherMainWindowHandle, IntPtr.Zero, "wxWindowNR", null)
-								: IntPtr.Zero;
+							ParentProcessId = GetParentProcess(client.Id) is var parent && parent > 0 ? parent : null;
+							pDocked = client;
+							rs2ClientID = client.Id;
+							runescapeProcessID = launcherPid ?? 0;
+							ProcessChanged?.Invoke(client);
+							client = null; // Session now owns the retained process reference.
+							activationProcess?.Dispose();
+							activationProcess = null;
+							return;
 						}
-						catch (Exception)
-						{
-							wxWindowNR = IntPtr.Zero;
-						}
-
-					rs2ClientID = confirmedClient.Id;
-					ClientSettings.rs2cPID = confirmedClient.Id;
-					runescapeProcessID = launcherPid;
-					ClientSettings.runescapePID = launcherPid;
-					pDocked = confirmedClient;
-					processReadyTcs.TrySetResult(confirmedClient);
-					Console.WriteLine($"[Orbit] RuneScape client detected (PID {confirmedClient.Id})");
-					return;
+					}
+					catch (ArgumentException) { }
+					catch (InvalidOperationException) { }
+					catch (Win32Exception) { }
+					finally { client?.Dispose(); }
 				}
-
-				if (!fallbackEnabled && stopwatch.Elapsed > TimeSpan.FromSeconds(8))
-				{
-					Console.WriteLine("[Orbit] Falling back to StartTime matching while waiting for client parent linkage...");
-					fallbackEnabled = true;
-				}
-
-				await Task.Delay(ProcessPollInterval).ConfigureAwait(false);
+				await Task.Delay(ProcessPollInterval, loadCancellation).ConfigureAwait(false);
 			}
-
-			if (launchMode == ClientLaunchMode.Legacy && !launcherProcess.HasExited)
-			{
-				Console.WriteLine("[Orbit] Falling back to started process as dock target for legacy mode.");
-					ClientSettings.rs2client = launcherProcess;
-					ParentProcessId = null;
-				rs2ClientID = launcherProcess.Id;
-				ClientSettings.rs2cPID = launcherProcess.Id;
-				runescapeProcessID = launcherPid;
-				ClientSettings.runescapePID = launcherPid;
-				pDocked = launcherProcess;
-				processReadyTcs.TrySetResult(launcherProcess);
-				return;
-			}
-
-			var message = "[Orbit] RuneScape client process could not be located within the allotted timeout.";
-			Console.WriteLine(message);
-			var timeoutException = new TimeoutException(message);
-			throw timeoutException;
+			throw new TimeoutException("No unambiguous new RuneScape client could be associated with this launch request.");
 		}
-
 		private static ClientLaunchMode ResolveLaunchMode()
 		{
 			var configured = Settings.Default.ClientLaunchMode;
@@ -737,21 +474,14 @@ namespace Orbit
 				"Switch Client Launch Mode to 'Launcher' in Settings or install a supported client path.");
 		}
 
-		private static bool IsProcessAlreadyBoundToSession(int processId)
+		private bool IsProcessAlreadyBoundToSession(int processId)
 		{
 			try
 			{
-				var sessions = SessionCollectionService.Instance.Sessions;
-				return sessions.Any(s =>
-					s?.RSProcess != null &&
-					!s.RSProcess.HasExited &&
-					s.RSProcess.Id == processId);
+				using var process = Process.GetProcessById(processId);
+				return !SessionProcessOwnership.Instance.TryClaim(processId, process.StartTime.ToUniversalTime(), processOwner);
 			}
-			catch
-			{
-				// Never block process detection on bookkeeping failures.
-				return false;
-			}
+			catch { return true; } // Unknown identity is not permission to bind.
 		}
 
 		private static string ResolveLegacyClientPath()
@@ -783,7 +513,8 @@ namespace Orbit
 			{
 				try
 				{
-					pDocked.Refresh();
+					loadCancellation.ThrowIfCancellationRequested();
+						 pDocked.Refresh();
 				}
 				catch (InvalidOperationException)
 				{
@@ -799,23 +530,20 @@ namespace Orbit
 				_dockedHandle = pDocked.MainWindowHandle;
 				if (_dockedHandle != IntPtr.Zero)
 				{
-					ClientSettings.gameHandle = _dockedHandle;
 						try
 						{
 							using var clientProcess = Process.GetProcessById(rs2ClientID);
 							rsWindow = FindWindowEx(clientProcess.MainWindowHandle, IntPtr.Zero, "JagRenderView", null);
-							ClientSettings.jagOpenGL = rsWindow != IntPtr.Zero ? rsWindow : _dockedHandle;
 						}
 					catch (Exception)
 					{
-						ClientSettings.jagOpenGL = _dockedHandle;
 					}
 
 					Console.WriteLine($"[Orbit] Obtained RuneScape window handle 0x{_dockedHandle.ToInt64():X} after {stopwatch.ElapsedMilliseconds}ms.");
 					break;
 				}
 
-				await Task.Delay(WindowHandlePollInterval).ConfigureAwait(false);
+				await Task.Delay(WindowHandlePollInterval, loadCancellation).ConfigureAwait(false);
 			}
 
 			if (_dockedHandle == IntPtr.Zero)
@@ -836,23 +564,16 @@ namespace Orbit
 				// Ignore if the process doesn't have a message loop yet.
 			}
 
-			await WaitForInjectionGateAsync().ConfigureAwait(false);
+			dockedWindowIdentity = new HostedWindowIdentity(_dockedHandle, pDocked);
+			windowReadyTcs.TrySetResult(true);
+			await WaitForInjectionGateAsync(loadCancellation).ConfigureAwait(false);
 
 			IntPtr dockedHandle = IntPtr.Zero;
 			try
 			{
 				panel_DockPanel.Invoke((MethodInvoker)delegate
 				{
-					var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
-					if (hWndOriginalParent == IntPtr.Zero)
-					{
-						hWndOriginalParent = previousParent;
-					}
-					hWndParent = panel_DockPanel.Handle;
-					DockedRSHwnd = _dockedHandle;
-					dockedHandleCache = _dockedHandle;
-					dockedHandle = _dockedHandle;
-
+					loadCancellation.ThrowIfCancellationRequested();
 					const int GWL_STYLE = -16;
 					const uint WS_CHILD = 0x40000000;
 					const uint WS_VISIBLE = 0x10000000;
@@ -863,13 +584,24 @@ namespace Orbit
 					uint curStyle = (uint)GetWindowLong(_dockedHandle, GWL_STYLE);
 					if (!originalWindowStyle.HasValue)
 					{
+						hWndOriginalParent = GetParent(_dockedHandle);
 						originalWindowStyle = curStyle;
 					}
 
 					uint newStyle = (curStyle & ~WS_POPUP) | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 					SetWindowLong(_dockedHandle, GWL_STYLE, (uint)(int)newStyle);
-					dockedStylesApplied = true;
-					isCurrentlyDocked = true;
+					Marshal.SetLastPInvokeError(0);
+					var previousParent = SetParent(_dockedHandle, panel_DockPanel.Handle);
+					var parentError = Marshal.GetLastPInvokeError();
+					if (previousParent == IntPtr.Zero && parentError != 0)
+					{
+						SetWindowLong(_dockedHandle, GWL_STYLE, originalWindowStyle.Value);
+						throw new Win32Exception(parentError, "Unable to dock the game client.");
+					}
+					hWndParent = panel_DockPanel.Handle;
+					DockedRSHwnd = _dockedHandle;
+					dockedHandleCache = _dockedHandle;
+					dockedHandle = _dockedHandle;
 
 						const int SWP_NOSIZE = 0x0001;
 						const int SWP_NOMOVE = 0x0002;
@@ -893,7 +625,7 @@ namespace Orbit
 
 		private async Task DockWindowToPanelAsync()
 		{
-			if (ClientSettings.rs2cPID > 0)
+			if (_dockedHandle != IntPtr.Zero)
 			{
 				// Invoke your existing ResizeWindow method
 				await ResizeWindow();
@@ -901,82 +633,33 @@ namespace Orbit
 			}
 		}
 
-		private async Task WaitForInjectionGateAsync()
+		internal async Task WaitForInjectionGateAsync(CancellationToken cancellationToken = default)
 		{
-			if (!WaitForInjectionBeforeDock)
-			{
-				Console.WriteLine("[Orbit] Injection-before-dock disabled; proceeding to dock immediately.");
-				return;
-			}
-
-			if (injectionReadyTcs.Task.IsCompleted)
-			{
-				Console.WriteLine("[Orbit] Injection already signalled ready prior to docking.");
-				return;
-			}
-
-			// Only defer docking if the injection pipeline has actually started.
-			if (!injectionStartedTcs.Task.IsCompleted)
-			{
-				Console.WriteLine("[Orbit] Injection has not started yet; docking immediately to avoid idle wait.");
-				return;
-			}
-
-			Console.WriteLine($"[Orbit] Injection started; waiting up to {InjectionWaitTimeout.TotalSeconds:N1}s before docking...");
-			var injectionCompleted = await Task.WhenAny(injectionReadyTcs.Task, Task.Delay(InjectionWaitTimeout)).ConfigureAwait(false);
-			if (injectionCompleted == injectionReadyTcs.Task)
-			{
-				Console.WriteLine("[Orbit] Injection completed before docking.");
-				return;
-			}
-
-			Console.WriteLine("[Orbit] Injection still running after grace window; docking now and allowing injection to finish in the background.");
+			if (!WaitForInjectionBeforeDock) return;
+			await injectionReadyTcs.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
 		}
-
 		#endregion
 
-		internal async Task ResizeWindowOvl(int width, int height)
-		{
-			try
-			{
-				IntPtr handle = _dockedHandle;
+		internal System.Drawing.Size DockHostPixelSize => NativeWindowGeometry.ClientSize(hWndParent);
 
-				await Task.Run(() =>
+		internal Task<bool> ResizeToHostAsync(CancellationToken token = default)
+		{
+			var handle = _dockedHandle;
+			var parent = hWndParent;
+			var identity = dockedWindowIdentity;
+			bool Resize()
+			{
+				lock (nativeWindowSync)
 				{
-					const int SWP_SHOWWINDOW = 0x0040;
-					const int SWP_FRAMECHANGED = 0x0020;
-					SetWindowPos(handle, IntPtr.Zero, -8, -32, width + 16, height + 40, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
-					Debug.WriteLine("Resized RSForm window");
-				});
+					token.ThrowIfCancellationRequested();
+					if (hWndParent != parent || parent == 0 || identity?.IsCurrent != true) return false;
+					return NativeWindowGeometry.FitToParent(handle, parent);
+				}
 			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"An error occurred while resizing the window: {ex}");
-			}
+			return NativeWindowGeometry.IsCurrentThreadWindow(handle) ? Task.FromResult(Resize()) : Task.Run(Resize, token);
 		}
 
-		internal async Task ResizeWindow()
-		{
-			try
-			{
-				IntPtr handle = _dockedHandle;
-				int width = panel_DockPanel.Width + 16;
-				int height = panel_DockPanel.Height + 40;
-
-					await Task.Run(() =>
-					{
-						// Force the docked window to top within the panel and refresh frame
-						const int SWP_SHOWWINDOW = 0x0040;
-						const int SWP_FRAMECHANGED = 0x0020;
-						SetWindowPos(handle, IntPtr.Zero, -8, -32, width, height, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
-					Console.WriteLine("Moved window");
-				});
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"An error occurred while resizing the window: {ex}");
-			}
-		}
+		internal async Task ResizeWindow() => await ResizeToHostAsync(loadCancellation).ConfigureAwait(false);
 	}
 
 	[SupportedOSPlatform("windows")]

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -19,10 +19,15 @@
 
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PlatformTarget>x64</PlatformTarget>
-    <BaseOutputPath>..\Build\</BaseOutputPath>
-    <ProdBuildRoot>$(MSBuildProjectDirectory)\..\..\Build\Prod\</ProdBuildRoot>
-    <ProdBuildOrbitDir>$(ProdBuildRoot)Orbit\</ProdBuildOrbitDir>
+    <BaseOutputPath>..\artifacts\build\Orbit\</BaseOutputPath>
 
+  </PropertyGroup>
+
+  <!-- One runnable local workspace; RID-specific publishing stays under artifacts. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
+    <OutputPath>$(MSBuildProjectDirectory)\..\Build\Test\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -46,21 +51,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <PublishDir>$(ProdBuildOrbitDir)</PublishDir>
+    <PublishDir>$(MSBuildProjectDirectory)\..\artifacts\profiles\orbit\</PublishDir>
   </PropertyGroup>
-
-  <Target Name="CopyOrbitReleaseBuildToProd" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
-    <ItemGroup>
-      <OrbitReleaseBuildArtifacts Include="$(TargetDir)**\*.*" />
-    </ItemGroup>
-    <MakeDir Directories="$(ProdBuildOrbitDir)" />
-    <Copy SourceFiles="@(OrbitReleaseBuildArtifacts)" DestinationFiles="@(OrbitReleaseBuildArtifacts->'$(ProdBuildOrbitDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-  </Target>
 
   <ItemGroup>
     <Compile Remove="Classes\CustomInterTabClient.cs" />
@@ -127,6 +122,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
+    <Content Include="..\..\ME\MemoryError\ME.runtimeconfig.json">
+      <Link>ME.runtimeconfig.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -143,7 +143,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\C#\csharp_interop\csharp_interop.csproj" />
+    <ProjectReference Include="..\Orbit.Updater\Orbit.Updater.csproj"
+                      ReferenceOutputAssembly="false"
+                      Condition="'$(RuntimeIdentifier)' == ''" />
+    <ProjectReference Include="..\..\C#\csharp_interop\csharp_interop.csproj" AdditionalProperties="SkipDeployToMe=true" />
     <!-- Plugin contract (IOrbitTool / IOrbitPlugin). Shared to the plugin ALC by PluginLoadContext. -->
     <ProjectReference Include="..\..\C#\Orbit.Plugin.Abstractions\Orbit.Plugin.Abstractions.csproj" />
   </ItemGroup>

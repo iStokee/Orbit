@@ -24,7 +24,7 @@
                     Direction="270"
                     Opacity="0.1"
                     ShadowDepth="1"
-                    Color="{Binding Source={StaticResource Orbit.Colors.Text.Primary}, FallbackValue=Black}" />
+                    Color="{DynamicResource Orbit.Colors.Text.Primary}" />
             </Setter.Value>
         </Setter>
         <Style.Triggers>

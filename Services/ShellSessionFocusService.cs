@@ -3,6 +3,8 @@ using System.Linq;
 using System.Windows;
 using Orbit.Models;
 using Orbit.ViewModels;
+using Dragablz;
+using Orbit.Utilities;
 using Application = System.Windows.Application;
 
 namespace Orbit.Services;
@@ -44,6 +46,9 @@ public sealed class ShellSessionFocusService
 			{
 				return candidate;
 			}
+			// A background split tab may not currently have its HostControl in the visual tree.
+			if (VisualTreeUtil.FindVisualChildren<TabablzControl>(window).Any(control => control.Items.Contains(session)))
+				return candidate;
 
 			var orbitOwnership = candidate.Tabs.OfType<ToolTabItem>()
 				.Any(tool =>
@@ -86,6 +91,16 @@ public sealed class ShellSessionFocusService
 		{
 			try
 			{
+				var window = Application.Current?.Windows.OfType<Window>()
+					.FirstOrDefault(candidate => ReferenceEquals(candidate.DataContext, shell));
+				if (window != null)
+				{
+					window.UpdateLayout();
+					var tab = VisualTreeUtil.FindVisualChildren<TabablzControl>(window)
+						.FirstOrDefault(control => control.Items.Contains(session));
+					if (tab != null) tab.SelectedItem = session;
+					window.UpdateLayout();
+				}
 				session.HostControl?.EnsureActiveAfterLayout();
 				if (requestFocus)
 				{

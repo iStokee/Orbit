@@ -187,7 +187,7 @@ internal static class OrbitCommandClient
 			? "STATUS"
 			: $"SCRIPT_STATUS\t{scriptId.Trim()}";
 		var response = await SendForResponseAsync(payload, "Status", processId, cancellationToken).ConfigureAwait(false);
-		return response.Status;
+		return response.Success ? response.Status : null;
 	}
 
 	private static string BuildScriptCommand(string verb, string scriptPath, string? scriptId)
@@ -264,6 +264,8 @@ internal static class OrbitCommandClient
 			var response = await TrySendAsync(perSessionPipe, payload, cancellationToken).ConfigureAwait(false);
 			if (response.Success)
 			{
+				if (response.Status != null && response.Status.ProcessId != processId.Value)
+					return new OrbitCommandResponse(false, response.RawResponse, "MESharp status belongs to a different process.");
 				return response;
 			}
 
@@ -339,12 +341,18 @@ internal static class OrbitCommandClient
 			return new OrbitCommandResponse(false, RawResponse: responseLine, ErrorMessage: "No response from MESharp command bridge.");
 		}
 
-		if (responseLine.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase))
+		var payload = responseLine.Trim();
+		if (payload.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase))
 		{
 			return new OrbitCommandResponse(false, RawResponse: responseLine, ErrorMessage: responseLine);
 		}
 
-		return new OrbitCommandResponse(true, RawResponse: responseLine, Status: TryParseStatus(responseLine));
+		if (payload.Equals("OK", StringComparison.OrdinalIgnoreCase) || payload.StartsWith("OK\t", StringComparison.OrdinalIgnoreCase))
+			return new OrbitCommandResponse(true, RawResponse: responseLine);
+		var status = TryParseStatus(payload);
+		return status == null
+			? new OrbitCommandResponse(false, responseLine, "Invalid response from MESharp command bridge.")
+			: new OrbitCommandResponse(status.Ok, responseLine, status.Ok ? null : "MESharp reported an unsuccessful command.", status);
 	}
 
 	internal static OrbitRuntimeStatus? TryParseStatus(string responseLine)
@@ -357,7 +365,7 @@ internal static class OrbitCommandClient
 		try
 		{
 			var dto = JsonSerializer.Deserialize<StatusDto>(responseLine, JsonOptions);
-			return dto == null
+			return dto == null || dto.Pid <= 0
 				? null
 				: new OrbitRuntimeStatus(dto.Ok, dto.Pid, dto.RuntimeRunning, dto.ScriptId, dto.ScriptsInfo);
 		}

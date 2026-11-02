@@ -1,5 +1,4 @@
-﻿using System;
-using Dragablz;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -7,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using UserControl = System.Windows.Controls.UserControl;
 using Size = System.Windows.Size;
 using WF = System.Windows.Forms;
@@ -25,11 +23,10 @@ namespace Orbit.Views
     {
 
         #region DLL Imports
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll")]
-        internal static extern int SetWindowText(IntPtr hWnd, string text);
+		[DllImport("user32.dll")]
+		private static extern IntPtr GetParent(IntPtr hwnd);
 
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -41,9 +38,6 @@ namespace Orbit.Views
 		private static extern IntPtr SetFocus(IntPtr hWnd);
 
 		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
 		[DllImport("user32.dll", SetLastError = true)]
@@ -53,21 +47,27 @@ namespace Orbit.Views
 		internal RSForm rsForm;
         internal bool hasStarted = false;
 		private bool loadRequested;
+		private bool detached;
+		private bool activationPending;
+		private bool activationScheduled;
+		private bool activationFocusRequested;
 		private readonly TaskCompletionSource<RSForm> sessionReadyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-		private readonly SessionParkingHost parkingHost = new();
+		private readonly TaskCompletionSource<bool> dockingCompleteTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly object externalWindowSync = new();
 		private readonly object resizeSync = new();
 		private CancellationTokenSource? resizeThrottleCts;
+		private Task resizeTask = Task.CompletedTask;
+		private Drawing.Size lastRequestedPixelSize;
+		private Drawing.Size lastAppliedPixelSize;
 		private Size lastMeasuredViewportSize = Size.Empty;
-		private Size lastRequestedViewportSize = Size.Empty;
+		
 		private Size lastAppliedViewportSize = Size.Empty;
 			private SessionModel? boundSession;
-			private TabablzControl? attachedTabControl;
 
 		// When SessionType=ExternalScript we embed an existing HWND inside a WinForms panel.
 		private WF.Panel? externalHostPanel;
 		private IntPtr externalOriginalParent = IntPtr.Zero;
 		private int? externalOriginalStyle;
-		private bool externalStylesApplied;
 
 		private static readonly TimeSpan ResizeThrottleInterval = TimeSpan.FromMilliseconds(50);
 		private const int SW_SHOW = 5;
@@ -91,8 +91,7 @@ namespace Orbit.Views
         public ChildClientView()
         {
             InitializeComponent();
-            // FIXED: Don't call LoadNewSession() until visual tree is ready
-			// This was causing race conditions with WindowsFormsHost initialization
+			// Visual events only maintain presentation; the session manager starts clients.
 			Loaded += OnLoaded;
 			Unloaded += OnUnloaded;
 			IsVisibleChanged += OnIsVisibleChanged;
@@ -115,6 +114,8 @@ namespace Orbit.Views
 
         private void RSPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            // Collapsed/unloaded hosts must not resize a live game to a 1px viewport.
+            if (!IsVisible || e.NewSize.Width <= 0 || e.NewSize.Height <= 0) return;
             // Resize docked client when the WindowsFormsHost layout changes
 			var newSize = new Size(Math.Max(1, e.NewSize.Width), Math.Max(1, e.NewSize.Height));
 			if (AreClose(newSize, lastMeasuredViewportSize))
@@ -134,217 +135,107 @@ namespace Orbit.Views
 
 		private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
 		{
-			if (e.OldValue is SessionModel oldSession)
-			{
-			// Removed: overlay confirmation event unsubscription
-			}
-
-			if (e.NewValue is SessionModel newSession)
-			{
-				boundSession = newSession;
-			// Removed: overlay confirmation event subscription and focus logic
-			}
-			else
-			{
-				boundSession = null;
-			}
+			if (e.NewValue is not SessionModel session) return;
+			if (boundSession != null && !ReferenceEquals(boundSession, session))
+				throw new InvalidOperationException("A native session host cannot be rebound to a different session.");
+			boundSession = session;
 		}
 
-		// Removed: Session_PropertyChanged method for overlay
-
-		// Removed: ConfirmCloseButton_Click method for overlay
-
-		// Removed: CancelCloseButton_Click method for overlay
-
-		private void ChildClientView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+		private void OnLoaded(object sender, RoutedEventArgs e)
 		{
-		// Removed: overlay confirmation PreviewKeyDown check
-
-		// Removed: if (e.Key == Key.Escape)
-		// Removed: {
-		// Removed: boundSession.ResolveCloseConfirmation(false);
-		// Removed: e.Handled = true;
-		// Removed: }
-		// Removed: else if (e.Key == Key.Enter)
-		// Removed: {
-		// Removed: boundSession.ResolveCloseConfirmation(true);
-		// Removed: e.Handled = true;
-		// Removed: }
-		}
-
-	        private void OnLoaded(object sender, RoutedEventArgs e)
-	        {
-				RestoreSessionFromParking();
-
-			// FIXED: Start session loading AFTER visual tree is ready
-			// Only load if we haven't started yet (avoid re-loading on tab switch)
 			EnsureSessionLoading();
-
-				var tabControl = ResolveOwningTabControl();
-	            if (tabControl != null)
-	            {
-					if (!ReferenceEquals(attachedTabControl, tabControl))
-					{
-						if (attachedTabControl != null)
-						{
-							attachedTabControl.SizeChanged -= OnTabControlSizeChanged;
-						}
-
-						attachedTabControl = tabControl;
-						attachedTabControl.SizeChanged += OnTabControlSizeChanged;
-					}
-
-	                // Prefer host size when available
-	                if (RSPanel?.ActualWidth > 0 && RSPanel?.ActualHeight > 0)
-	                {
-					var snapshot = new Size(RSPanel.ActualWidth, RSPanel.ActualHeight);
-					lastMeasuredViewportSize = snapshot;
-                    _ = ResizeWindowAsync((int)Math.Round(snapshot.Width), (int)Math.Round(snapshot.Height));
-                }
-                else if (tabControl.ActualWidth > 0 && tabControl.ActualHeight > 0)
-                {
-					var snapshot = new Size(tabControl.ActualWidth, tabControl.ActualHeight);
-					lastMeasuredViewportSize = snapshot;
-                    _ = ResizeWindowAsync((int)Math.Round(snapshot.Width), (int)Math.Round(snapshot.Height));
-                }
-            }
-        }
-
-				private void OnUnloaded(object sender, RoutedEventArgs e)
-				{
-					if (attachedTabControl != null)
-					{
-						attachedTabControl.SizeChanged -= OnTabControlSizeChanged;
-						attachedTabControl = null;
-					}
-
-				// External script windows: restore parent/styles so the window isn't orphaned.
-				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
-				{
-					// Do not detach external script windows on transient WPF unloads. Tab switches,
-					// Dragablz moves, and tear-offs can unload/reload content while the session remains active.
-					return;
-				}
-
-					// Do not park/reset during normal tab switching. Keeping the host attached avoids
-					// SetParent churn and visible blink when users bounce between tabs.
-				}
-
-        private async void OnTabControlSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (Parent is TabItem parentTab && parentTab.Parent is TabablzControl tabControl)
-            {
-                // Prefer host size when available
-                if (RSPanel?.ActualWidth > 0 && RSPanel?.ActualHeight > 0)
-                {
-					var snapshot = new Size(RSPanel.ActualWidth, RSPanel.ActualHeight);
-					if (!AreClose(snapshot, lastMeasuredViewportSize))
-					{
-						lastMeasuredViewportSize = snapshot;
-					}
-                    await ResizeWindowAsync((int)Math.Round(snapshot.Width), (int)Math.Round(snapshot.Height));
-                }
-                else if (tabControl.ActualWidth > 0 && tabControl.ActualHeight > 0)
-                {
-					var snapshot = new Size(tabControl.ActualWidth, tabControl.ActualHeight);
-					if (!AreClose(snapshot, lastMeasuredViewportSize))
-					{
-						lastMeasuredViewportSize = snapshot;
-					}
-                    await ResizeWindowAsync((int)Math.Round(snapshot.Width), (int)Math.Round(snapshot.Height));
-                }
-            }
-        }
-
-		public Task ResizeWindowAsync(int width, int height)
-		{
-			if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
-			{
-				try
-				{
-					var hwnd = (IntPtr)boundSession.ExternalHandle;
-					MoveWindow(hwnd, 0, 0, Math.Max(1, width), Math.Max(1, height), true);
-					lock (resizeSync)
-					{
-						lastAppliedViewportSize = new Size(width, height);
-					}
-				}
-				catch { /* best effort */ }
-
-				return Task.CompletedTask;
-			}
-
-			return ScheduleResizeInternal(width, height);
+			EnsureActiveAfterLayout();
+			if (activationPending) RefreshDockedContentActivation(activationFocusRequested);
 		}
 
-		private Task ScheduleResizeInternal(int width, int height)
+		private void CancelPendingResize()
 		{
-			if (width <= 0 || height <= 0)
-			{
-				return Task.CompletedTask;
-			}
-
-			var requested = new Size(width, height);
-			CancellationTokenSource? nextCts = null;
-
 			lock (resizeSync)
 			{
-				// Ignore duplicate requests when a resize is already pending for the same dimensions.
-				if (AreClose(requested, lastRequestedViewportSize) && resizeThrottleCts != null)
-				{
-					return Task.CompletedTask;
-				}
-
-				lastRequestedViewportSize = requested;
-
-				// Skip scheduling when the docked client is already at this size and nothing is pending.
-				if (AreClose(requested, lastAppliedViewportSize) && resizeThrottleCts == null)
-				{
-					return Task.CompletedTask;
-				}
-
 				resizeThrottleCts?.Cancel();
-				nextCts = new CancellationTokenSource();
-				resizeThrottleCts = nextCts;
+				resizeThrottleCts = null;
+				lastAppliedPixelSize = Drawing.Size.Empty;
 			}
-
-			return PerformResizeAsync(width, height, nextCts);
 		}
 
-		private async Task PerformResizeAsync(int width, int height, CancellationTokenSource requestCts)
+		private void OnUnloaded(object sender, RoutedEventArgs e) => CancelPendingResize();
+
+		private void OnNativeHostSizeChanged(object? sender, EventArgs e)
+		{
+			if (detached) return;
+			var viewport = GetHostViewportSize();
+			_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
+		}
+
+		/// <summary>Requests a layout resize; dimensions are WPF units, native bounds come from the host.</summary>
+		public Task ResizeWindowAsync(int width, int height)
+		{
+			if (!Dispatcher.CheckAccess())
+				return Dispatcher.InvokeAsync(() => ResizeWindowAsync(width, height)).Task.Unwrap();
+			if (detached || width <= 0 || height <= 0 || !IsLoaded || !IsVisible) return Task.CompletedTask;
+			var external = boundSession?.IsExternalScript == true;
+			var parent = externalHostPanel?.IsHandleCreated == true ? externalHostPanel.Handle : IntPtr.Zero;
+			var pixels = external ? Orbit.Services.NativeWindowGeometry.ClientSize(parent) : rsForm?.DockHostPixelSize ?? Drawing.Size.Empty;
+			if (pixels.Width <= 0 || pixels.Height <= 0) return Task.CompletedTask;
+			lock (resizeSync)
+			{
+				if (resizeThrottleCts != null && !resizeThrottleCts.IsCancellationRequested && pixels == lastRequestedPixelSize) return resizeTask;
+				if (resizeThrottleCts == null && pixels == lastAppliedPixelSize) return Task.CompletedTask;
+				resizeThrottleCts?.Cancel();
+				var request = new CancellationTokenSource();
+				resizeThrottleCts = request;
+				lastRequestedPixelSize = pixels;
+				resizeTask = PerformResizeAsync(new Size(width, height), pixels, parent, boundSession, rsForm, request);
+				return resizeTask;
+			}
+		}
+
+		private async Task PerformResizeAsync(Size logicalSize, Drawing.Size pixels, IntPtr parent, SessionModel? session, RSForm? form, CancellationTokenSource request)
 		{
 			try
 			{
-				await Task.Delay(ResizeThrottleInterval, requestCts.Token).ConfigureAwait(false);
-
-				var form = rsForm;
-				if (form == null || form.IsDisposed)
+				await Task.Delay(ResizeThrottleInterval, request.Token).ConfigureAwait(false);
+				bool applied;
+				if (session?.IsExternalScript == true)
 				{
-					return;
+					bool ResizeExternal()
+					{
+						lock (externalWindowSync)
+						{
+							request.Token.ThrowIfCancellationRequested();
+							if (session.ExternalWindowIdentity?.IsCurrent != true) return false;
+							return Orbit.Services.NativeWindowGeometry.FitToParent(session.ExternalHandle, parent);
+						}
+					}
+					applied = await Dispatcher.InvokeAsync(() =>
+						Orbit.Services.NativeWindowGeometry.IsCurrentThreadWindow(session.ExternalHandle)
+							? Task.FromResult(ResizeExternal()) : Task.Run(ResizeExternal, request.Token),
+						DispatcherPriority.Render, request.Token).Task.Unwrap().ConfigureAwait(false);
 				}
-
-				await form.ResizeWindowOvl(width, height).ConfigureAwait(false);
-
+				else
+				{
+					if (form == null) return;
+					applied = await Dispatcher.InvokeAsync(() => form.ResizeToHostAsync(request.Token),
+						DispatcherPriority.Render, request.Token).Task.Unwrap().ConfigureAwait(false);
+				}
 				lock (resizeSync)
 				{
-					lastAppliedViewportSize = new Size(width, height);
-					if (ReferenceEquals(resizeThrottleCts, requestCts))
+					if (applied && !request.IsCancellationRequested && !detached)
 					{
-						resizeThrottleCts = null;
+						lastAppliedViewportSize = logicalSize;
+						lastAppliedPixelSize = pixels;
 					}
 				}
 			}
-			catch (OperationCanceledException)
-			{
-				// A newer resize request superseded this one.
-			}
-			catch (Exception ex)
-			{
-				Debug.WriteLine($"[Orbit] ResizeWindowAsync failed: {ex}");
-			}
+			catch (OperationCanceledException) { }
+			catch (Exception ex) { Debug.WriteLine($"[Orbit] Resize failed: {ex}"); }
 			finally
 			{
-				requestCts.Dispose();
+				lock (resizeSync)
+				{
+					if (ReferenceEquals(resizeThrottleCts, request)) resizeThrottleCts = null;
+					request.Dispose();
+				}
 			}
 		}
 
@@ -379,9 +270,11 @@ namespace Orbit.Views
 			return sessionReadyTcs.Task;
 		}
 
+		internal Task WaitForDockAsync() => dockingCompleteTcs.Task;
+
 		private void EnsureSessionLoading()
 		{
-			if (hasStarted || loadRequested)
+			if (detached || hasStarted || loadRequested)
 			{
 				return;
 			}
@@ -389,21 +282,24 @@ namespace Orbit.Views
 			// External script windows: embed the provided HWND instead of launching a client.
 			if (boundSession?.IsExternalScript == true)
 			{
+				var externalSession = boundSession;
 				loadRequested = true;
 
 				_ = Dispatcher.InvokeAsync(() =>
 				{
 					try
 					{
-						AttachExternalWindow(boundSession);
+						if (detached) return;
+						AttachExternalWindow(externalSession);
+						hasStarted = true;
 					}
 					catch (Exception ex)
 					{
+						externalSession.Fail(ex);
 						Console.WriteLine($"[Orbit] Failed to attach external script window: {ex}");
 					}
 					finally
 					{
-						hasStarted = true;
 						loadRequested = false;
 					}
 				}, DispatcherPriority.Loaded);
@@ -411,33 +307,17 @@ namespace Orbit.Views
 				return;
 			}
 
-			loadRequested = true;
-
-			if (!Dispatcher.CheckAccess())
-			{
-				_ = Dispatcher.InvokeAsync(() =>
-				{
-					if (!hasStarted)
-					{
-						_ = LoadNewSession();
-					}
-				}, DispatcherPriority.Loaded);
-			}
-			else
-			{
-				if (!hasStarted)
-				{
-					_ = LoadNewSession();
-				}
-			}
+			// Client startup is explicitly owned by SessionManagerService.
 		}
 
-		private void AttachExternalWindow(SessionModel session)
+		internal void AttachExternalWindow(SessionModel session)
 		{
 			if (session == null || !session.IsExternalScript)
 			{
 				return;
 			}
+			if (session.ExternalWindowIdentity?.IsCurrent != true)
+				throw new InvalidOperationException("The registered script window has been destroyed or replaced.");
 
 			var hwnd = (IntPtr)session.ExternalHandle;
 			if (hwnd == IntPtr.Zero)
@@ -449,17 +329,12 @@ namespace Orbit.Views
 			if (externalHostPanel == null || externalHostPanel.IsDisposed)
 			{
 				externalHostPanel = new WF.Panel { Dock = WF.DockStyle.Fill };
+				externalHostPanel.ClientSizeChanged += OnNativeHostSizeChanged;
 			}
 
 			RSPanel.Child = externalHostPanel;
 			var hostHandle = externalHostPanel.Handle;
 			Console.WriteLine($"[OrbitAPI] Attaching script window '{session.Name}' HWND=0x{hwnd.ToInt64():X} to host HWND=0x{hostHandle.ToInt64():X}.");
-
-			var previousParent = SetParent(hwnd, hostHandle);
-			if (externalOriginalParent == IntPtr.Zero)
-			{
-				externalOriginalParent = previousParent;
-			}
 
 			const int GWL_STYLE = -16;
 			const int WS_CHILD = unchecked((int)0x40000000);
@@ -469,11 +344,19 @@ namespace Orbit.Views
 			const int WS_POPUP = unchecked((int)0x80000000);
 
 			var curStyle = GetWindowLong(hwnd, GWL_STYLE);
+			if (!externalOriginalStyle.HasValue) externalOriginalParent = GetParent(hwnd);
 			externalOriginalStyle ??= curStyle;
 
 			var newStyle = (curStyle & ~WS_POPUP) | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 			SetWindowLong(hwnd, GWL_STYLE, newStyle);
-			externalStylesApplied = true;
+			Marshal.SetLastPInvokeError(0);
+			var previousParent = SetParent(hwnd, hostHandle);
+			var parentError = Marshal.GetLastPInvokeError();
+			if (previousParent == IntPtr.Zero && parentError != 0)
+			{
+				SetWindowLong(hwnd, GWL_STYLE, externalOriginalStyle.Value);
+				throw new Win32Exception(parentError, "Unable to embed the script window.");
+			}
 			SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 			ShowWindow(hwnd, SW_SHOW);
 
@@ -499,31 +382,11 @@ namespace Orbit.Views
 			}
 
 			var hwnd = (IntPtr)session.ExternalHandle;
-			try
+			if (restoreParent && session.ExternalWindowIdentity?.IsCurrent == true && externalOriginalStyle.HasValue)
 			{
-				if (restoreParent)
-				{
-					if (externalStylesApplied && externalOriginalStyle.HasValue)
-					{
-						const int GWL_STYLE = -16;
-						SetWindowLong(hwnd, GWL_STYLE, externalOriginalStyle.Value);
-						externalStylesApplied = false;
-					}
-
-					if (externalOriginalParent != IntPtr.Zero)
-					{
-						SetParent(hwnd, externalOriginalParent);
-					}
-
-					SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-					ShowWindow(hwnd, SW_SHOW);
-				}
+				lock (externalWindowSync)
+				Orbit.Services.NativeWindowRestorer.Restore(hwnd, externalOriginalParent, externalOriginalStyle.Value);
 			}
-			catch
-			{
-				// Best-effort teardown. The script window may already be closed.
-			}
-
 			try
 			{
 				if (RSPanel != null)
@@ -535,6 +398,7 @@ namespace Orbit.Views
 
 			try
 			{
+				if (externalHostPanel != null) externalHostPanel.ClientSizeChanged -= OnNativeHostSizeChanged;
 				externalHostPanel?.Dispose();
 			}
 			catch { }
@@ -542,80 +406,67 @@ namespace Orbit.Views
 			externalHostPanel = null;
 			externalOriginalParent = IntPtr.Zero;
 			externalOriginalStyle = null;
-			externalStylesApplied = false;
 			hasStarted = false;
 			loadRequested = false;
 		}
 
-		public async Task LoadNewSession()
-        {
-            // If the session has already started, just return
-            if (hasStarted)
-            {
-				if (rsForm != null)
-				{
-					sessionReadyTcs.TrySetResult(rsForm);
-				}
-                return;
-            }
+		internal void AttachSessionHost(RSForm form)
+		{
+			Dispatcher.VerifyAccess();
+			if (detached || rsForm != null) throw new InvalidOperationException("Session host cannot be attached twice.");
+			rsForm = form;
+			form.DockHostSizeChanged += OnNativeHostSizeChanged;
+			form.TopLevel = false;
+			RSPanel.Child = form;
+			form.EnsureDockHostHandle();
+			loadRequested = true;
+			_ = ObserveWindowReadyAsync(form);
+		}
 
-            try
-            {
-				Task beginLoadTask = Task.CompletedTask;
-
-                // Initialize the WinForms host on the dispatcher thread.
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    rsForm = new RSForm();
-                    rsForm.TopLevel = false;
-
-                    // Add the form to the panel
-                    RSPanel.Child = rsForm;
-
-                    // Start loading the form and keep the task so we can await full dock completion.
-                    Console.WriteLine("BeginLoad");
-					beginLoadTask = rsForm.BeginLoad();
-                });
-
-                // Match Olympus behavior: wait for full BeginLoad (launch + detect + dock + initial resize).
-                await beginLoadTask.ConfigureAwait(true);
-
-				// ProcessReadyTask is completed during BeginLoad; keep this as an explicit readiness guard.
-                await rsForm.ProcessReadyTask.ConfigureAwait(true);
-
-				// Mark the session as started
+		internal async Task ObserveStartupAsync(Task startup)
+		{
+			try
+			{
+				await startup.ConfigureAwait(true);
+				if (detached) return;
 				hasStarted = true;
-					RestoreSessionFromParking();
-					var viewportSnapshot = lastMeasuredViewportSize;
-					if (viewportSnapshot.Width <= 0 || viewportSnapshot.Height <= 0)
-					{
-						viewportSnapshot = GetHostViewportSize();
-					}
-					if (viewportSnapshot.Width <= 0 || viewportSnapshot.Height <= 0)
-					{
-						// Ensure the first dock pass doesn't depend on the tab being activated/measured yet.
-						viewportSnapshot = new Size(800, 600);
-					}
-					_ = ResizeWindowAsync((int)Math.Round(viewportSnapshot.Width), (int)Math.Round(viewportSnapshot.Height));
-					sessionReadyTcs.TrySetResult(rsForm);
-	            }
-            catch (Exception ex)
-            {
-                // Log the full exception details
-                Console.WriteLine(ex.ToString());
+				EnsureHostAttached();
+				var viewport = GetHostViewportSize();
+				if (viewport.Width <= 0 || viewport.Height <= 0) viewport = new Size(800, 600);
+				_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
+				sessionReadyTcs.TrySetResult(rsForm);
+				dockingCompleteTcs.TrySetResult(true);
+			}
+			catch (Exception ex)
+			{
 				sessionReadyTcs.TrySetException(ex);
+				dockingCompleteTcs.TrySetException(ex);
 				loadRequested = false;
-            }
-        }
+			}
+		}
+		internal void TrackSessionProcess(RSForm form, SessionModel session)
+			=> Orbit.Services.SessionManagerService.TrackSessionProcess(form, session, Dispatcher);
+		private async Task ObserveWindowReadyAsync(RSForm form)
+		{
+			try
+			{
+				await form.WindowReadyTask.ConfigureAwait(true);
+				if (!detached) sessionReadyTcs.TrySetResult(form);
+			}
+			catch (Exception ex) { sessionReadyTcs.TrySetException(ex); }
+		}
 
 		public void FocusEmbeddedClient()
 		{
+			if (detached || !IsLoaded || !IsVisible || Window.GetWindow(this)?.IsActive != true) return;
 			try
 			{
 				// Give focus to the host then the docked window for reliable keyboard input
 				RSPanel?.Focus();
 				if (boundSession?.IsExternalScript == true && boundSession.ExternalHandle != 0)
 				{
+					if (boundSession.ExternalWindowIdentity?.IsCurrent != true) return;
+					if (externalHostPanel?.IsHandleCreated != true || GetParent(boundSession.ExternalHandle) != externalHostPanel.Handle) return;
 					try { SetFocus((IntPtr)boundSession.ExternalHandle); } catch { /* best effort */ }
 					return;
 				}
@@ -626,35 +477,9 @@ namespace Orbit.Views
 
 		private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
 		{
-			if (rsForm == null)
-			{
-				return;
-			}
-
-				if (e.NewValue is bool isVisible)
-				{
-					if (isVisible)
-				{
-					RestoreSessionFromParking();
-					var viewport = GetHostViewportSize();
-					if (viewport.Width > 0 && viewport.Height > 0)
-					{
-						lastMeasuredViewportSize = viewport;
-						_ = ResizeWindowAsync((int)Math.Round(viewport.Width), (int)Math.Round(viewport.Height));
-					}
-					}
-				}
-			}
-
-			private TabablzControl? ResolveOwningTabControl()
-			{
-				if (Parent is TabItem tabItem && tabItem.Parent is TabablzControl tabControl)
-				{
-					return tabControl;
-				}
-
-				return null;
-			}
+			if (e.NewValue is true) EnsureActiveAfterLayout();
+			else CancelPendingResize();
+		}
 
 		private static bool AreClose(Size left, Size right)
 		{
@@ -663,13 +488,12 @@ namespace Orbit.Views
 
 		private static bool AreClose(double left, double right)
 		{
-			// Ignore sub-pixel/1px jitter during live drag-resize to reduce expensive
-			// Win32 resize traffic when high-resolution clients are embedded.
-			return Math.Abs(left - right) < 2.0;
+			return Math.Abs(left - right) < 0.01;
 		}
 
 		internal void EnsureActiveAfterLayout()
 		{
+			if (detached) return;
 			EnsureSessionLoading();
 
 			if (!IsLoaded)
@@ -684,7 +508,7 @@ namespace Orbit.Views
 				return;
 			}
 
-			RestoreSessionFromParking();
+			EnsureHostAttached();
 
 			var viewport = GetHostViewportSize();
 			if (viewport.Width > 0 && viewport.Height > 0)
@@ -696,57 +520,30 @@ namespace Orbit.Views
 
 		internal void RefreshDockedContentActivation(bool requestFocus)
 		{
-			if (!IsLoaded)
+			if (!Dispatcher.CheckAccess())
 			{
 				_ = Dispatcher.BeginInvoke(new Action(() => RefreshDockedContentActivation(requestFocus)), DispatcherPriority.Loaded);
 				return;
 			}
-
-			void Activate()
+			if (detached) return;
+			activationPending = true;
+			activationFocusRequested |= requestFocus;
+			// Loaded/visibility events resume this request. Never poll an unloaded visual.
+			if (!IsLoaded || !IsVisible || activationScheduled) return;
+			activationScheduled = true;
+			_ = Dispatcher.BeginInvoke(new Action(() =>
 			{
-				try
-				{
-					EnsureActiveAfterLayout();
-
-					RSPanel?.InvalidateMeasure();
-					RSPanel?.InvalidateArrange();
-					RSPanel?.InvalidateVisual();
-
-					attachedTabControl?.InvalidateMeasure();
-					attachedTabControl?.InvalidateArrange();
-					_ = Dispatcher.BeginInvoke(new Action(() =>
-					{
-						try
-						{
-							UpdateLayout();
-							attachedTabControl?.UpdateLayout();
-						}
-						catch
-						{
-							// Best effort.
-						}
-					}), DispatcherPriority.Render);
-
-					if (requestFocus)
-					{
-						FocusEmbeddedClient();
-						_ = Dispatcher.BeginInvoke(new Action(FocusEmbeddedClient), DispatcherPriority.ContextIdle);
-					}
-				}
-				catch
-				{
-					// Best effort.
-				}
-			}
-
-			if (Dispatcher.CheckAccess())
-			{
-				Activate();
-			}
-			else
-			{
-				_ = Dispatcher.BeginInvoke(new Action(Activate), DispatcherPriority.Loaded);
-			}
+				activationScheduled = false;
+				if (detached || !IsLoaded || !IsVisible) return;
+				var focus = activationFocusRequested;
+				activationPending = false;
+				activationFocusRequested = false;
+				EnsureActiveAfterLayout();
+				RSPanel?.InvalidateMeasure();
+				RSPanel?.InvalidateArrange();
+				// WPF completes the invalidated layout normally; no synchronous UpdateLayout.
+				if (focus && Window.GetWindow(this)?.IsActive == true) FocusEmbeddedClient();
+			}), DispatcherPriority.Render);
 		}
 
 		/// <summary>
@@ -787,246 +584,55 @@ namespace Orbit.Views
 			}
 		}
 
-		private void RestoreSessionFromParking()
+		private void EnsureHostAttached()
 		{
-			if (rsForm == null)
-				return;
-
-			try
-			{
-				parkingHost.Release(rsForm);
-				if (RSPanel != null && RSPanel.Child != rsForm)
-				{
-					RSPanel.Child = rsForm;
-				}
-			}
-			catch
-			{
-				// If the RSPanel is disposing, we'll reattach on next load.
-			}
-		}
-
-		private void ParkSessionIntoOffscreenHost()
-		{
-			if (rsForm == null)
-				return;
-
-			try
-			{
-				if (RSPanel?.Child == rsForm)
-				{
-					RSPanel.Child = null;
-				}
-			}
-			catch
-			{
-				// The panel may already be gone; continue parking regardless.
-			}
-
-			var snapshot = lastMeasuredViewportSize;
-			if (snapshot.Width <= 0 || snapshot.Height <= 0)
-			{
-				snapshot = lastAppliedViewportSize;
-			}
-			if (snapshot.Width <= 0 || snapshot.Height <= 0)
-			{
-				snapshot = new Size(800, 600);
-			}
-
-			parkingHost.Park(rsForm, snapshot);
+			if (rsForm != null && !rsForm.IsDisposed && RSPanel.Child != rsForm) RSPanel.Child = rsForm;
 		}
 
 		internal void DetachSession(bool restoreParent = true)
 		{
+			if (!Dispatcher.CheckAccess())
+			{
+				Dispatcher.Invoke(() => DetachSession(restoreParent));
+				return;
+			}
+			if (detached) return;
+			CancelPendingResize();
+			sessionReadyTcs.TrySetCanceled();
+			dockingCompleteTcs.TrySetCanceled();
+			var form = rsForm;
+			if (boundSession?.IsExternalScript == true) DetachExternalWindow(restoreParent);
+			else if (form != null && !form.IsDisposed) form.Undock(restoreParent, restoreStyles: restoreParent);
+			lock (resizeSync)
+			{
+				detached = true;
+				resizeThrottleCts?.Cancel();
+			}
+			activationPending = false;
+			activationFocusRequested = false;
+			Loaded -= OnLoaded;
+			Unloaded -= OnUnloaded;
+			IsVisibleChanged -= OnIsVisibleChanged;
+			DataContextChanged -= OnDataContextChanged;
 			if (boundSession?.IsExternalScript == true)
 			{
-				try
-				{
-					DetachExternalWindow(restoreParent);
-				}
-				finally
-				{
-					boundSession = null;
-				}
+				boundSession = null;
 				return;
 			}
 
-			try
+			// Complete restoration before disposing the host or stopping the dispatcher.
+			if (form != null && !form.IsDisposed)
 			{
-				// Don't block the UI thread during teardown; best-effort detach.
-				_ = Dispatcher.InvokeAsync(() =>
-				{
-					try
-					{
-						if (RSPanel != null)
-						{
-							RSPanel.Child = null;
-						}
-					}
-					catch
-					{
-						// Ignore cleanup errors; we're detaching anyway.
-					}
-				}, DispatcherPriority.Background);
+				form.DockHostSizeChanged -= OnNativeHostSizeChanged;
+				RSPanel.Child = null;
+				form.Close();
+				form.Dispose();
 			}
-			catch
-			{
-				// Dispatcher may already be shutting down; best effort only.
-			}
-
-			try
-			{
-				if (rsForm != null && !rsForm.IsDisposed)
-				{
-					if (rsForm.InvokeRequired)
-					{
-						rsForm.BeginInvoke(new Action(() =>
-						{
-							try { rsForm.Hide(); } catch { }
-						}));
-					}
-					else
-					{
-						try { rsForm.Hide(); } catch { }
-					}
-				}
-			}
-			catch
-			{
-				// Hide best-effort only.
-			}
-
-			try
-			{
-				if (rsForm != null && !rsForm.IsDisposed)
-				{
-					// WinForms teardown can be expensive; keep it off the WPF UI thread if possible.
-					if (rsForm.InvokeRequired)
-					{
-						rsForm.BeginInvoke(new Action(() =>
-						{
-							try
-							{
-								rsForm.Undock(restoreParent, restoreStyles: restoreParent);
-								rsForm.Close();
-								rsForm.Dispose();
-							}
-							catch { }
-						}));
-					}
-					else
-					{
-						rsForm.Undock(restoreParent, restoreStyles: restoreParent);
-						rsForm.Close();
-						rsForm.Dispose();
-					}
-				}
-			}
-			catch
-			{
-				// WinForms teardown can fail if the form is already closing; ignore.
-			}
-
 			hasStarted = false;
 			loadRequested = false;
 			rsForm = null;
-			parkingHost.Dispose();
 			IsVisibleChanged -= OnIsVisibleChanged;
 		}
 
-		private sealed class SessionParkingHost : IDisposable
-		{
-			private readonly WF.Form hostForm;
-			private readonly WF.Panel hostPanel;
-			private bool disposed;
-
-			public SessionParkingHost()
-			{
-				hostPanel = new WF.Panel { Dock = WF.DockStyle.Fill };
-				hostForm = new WF.Form
-				{
-					FormBorderStyle = WF.FormBorderStyle.None,
-					ShowInTaskbar = false,
-					StartPosition = WF.FormStartPosition.Manual,
-					Location = new Drawing.Point(-20000, -20000),
-					Size = new Drawing.Size(2, 2),
-					Opacity = 0.01,
-					TopMost = false,
-					Text = "SessionParkingHost"
-				};
-				hostForm.Controls.Add(hostPanel);
-				hostForm.Load += (_, _) => hostForm.Hide();
-				hostForm.CreateControl();
-				hostForm.Show();
-				hostForm.Hide();
-			}
-
-			public void Park(WF.Control control, Size viewportSize)
-			{
-				if (disposed || control == null)
-					return;
-
-				EnsureFormReady(viewportSize);
-
-				if (control.Parent == hostPanel)
-				{
-					control.Dock = WF.DockStyle.Fill;
-					return;
-				}
-
-				if (control.Parent != null)
-				{
-					control.Parent.Controls.Remove(control);
-				}
-
-				hostPanel.Controls.Add(control);
-				control.Dock = WF.DockStyle.Fill;
-			}
-
-			public void Release(WF.Control control)
-			{
-				if (disposed || control == null)
-					return;
-
-				if (control.Parent == hostPanel)
-				{
-					hostPanel.Controls.Remove(control);
-				}
-			}
-
-			private void EnsureFormReady(Size viewportSize)
-			{
-				if (disposed)
-					return;
-
-				var width = Math.Max(1, (int)Math.Ceiling(viewportSize.Width));
-				var height = Math.Max(1, (int)Math.Ceiling(viewportSize.Height));
-
-				hostForm.Location = new Drawing.Point(-20000, -20000);
-				hostForm.Size = new Drawing.Size(width, height);
-				if (!hostForm.Visible)
-				{
-					hostForm.Show();
-				}
-				hostForm.Refresh();
-			}
-
-			public void Dispose()
-			{
-				if (disposed)
-					return;
-
-				disposed = true;
-				try
-				{
-					hostForm?.Close();
-				}
-				catch
-				{
-					// Ignore shutdown issues.
-				}
-				hostForm?.Dispose();
-			}
-		}
     }
 }

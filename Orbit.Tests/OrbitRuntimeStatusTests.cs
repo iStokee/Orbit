@@ -5,6 +5,22 @@ namespace Orbit.Tests;
 
 public sealed class OrbitRuntimeStatusTests
 {
+	[Theory]
+	[InlineData("DASHBOARD_V1\nCOUNT\t0", true)]
+	[InlineData("DASHBOARD_V1\nCOUNT\t1", false)]
+	[InlineData("Runtime unavailable", false)]
+	[InlineData("DASHBOARD_V1\nCOUNT\t1\nSCRIPT\talpha\tRunning", false)]
+	public void HasScriptInventory_RequiresCompleteDashboard(string raw, bool expected)
+	{
+		Assert.Equal(expected, new OrbitRuntimeStatus(true, 123, true, null, raw).HasScriptInventory);
+	}
+
+	[Fact]
+	public void IsScriptLoaded_DoesNotMatchScriptTokenInsideAnErrorMessage()
+	{
+		var status = new OrbitRuntimeStatus(true, 123, true, null, "ERROR could not parse SCRIPT\talpha\tRunning");
+		Assert.False(status.IsScriptLoaded("alpha"));
+	}
 	[Fact]
 	public void IsScriptLoaded_MatchesDashboardScriptRowsById()
 	{

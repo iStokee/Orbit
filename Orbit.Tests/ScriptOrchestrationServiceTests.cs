@@ -13,6 +13,37 @@ namespace Orbit.Tests;
 public sealed class ScriptOrchestrationServiceTests
 {
 	[Fact]
+	public async Task ConcurrentLoads_AreSerializedAndCloseRejectsLateReplies()
+	{
+		var script = CreateTempScriptFile();
+		using var process = Process.GetCurrentProcess();
+		var session = CreateInjectedSession(process);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var reply = new TaskCompletionSource<OrbitCommandResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var client = new FakeOrbitCommandClient { ReloadHandler = _ => { entered.TrySetResult(); return reply.Task; } };
+		var service = new ScriptOrchestrationService(new ScriptManagerService(), new ConsoleLogService(), client);
+		var first = service.LoadAsync(session, script);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		var second = service.ReloadAsync(session, script);
+		Assert.Equal(1, client.ReloadCalls);
+		session.UpdateState(SessionState.ShuttingDown);
+		reply.SetResult(new OrbitCommandResponse(true, Status: BuildLoadedStatus(process.Id, ScriptManagerService.DeriveScriptIdFromPath(script), script)));
+		Assert.False(await first.WaitAsync(TimeSpan.FromSeconds(3)));
+		Assert.False(await second.WaitAsync(TimeSpan.FromSeconds(3)));
+		Assert.False(session.HasActiveScript);
+		Assert.Equal(1, client.ReloadCalls);
+	}
+	[Fact]
+	public async Task UnloadActiveScriptAsync_DoesNotClearStateWithoutStatusConfirmation()
+	{
+		using var process = Process.GetCurrentProcess();
+		var session = CreateInjectedSession(process);
+		session.SetScriptLoaded("original.dll", "original");
+		var service = new ScriptOrchestrationService(new ScriptManagerService(), new ConsoleLogService(), new FakeOrbitCommandClient());
+		Assert.False(await service.UnloadActiveScriptAsync(session));
+		Assert.Equal("original", session.ActiveScriptId);
+	}
+	[Fact]
 	public async Task LoadAsync_RecordsScriptOnlyAfterRuntimeConfirmsItIsLoaded()
 	{
 		var scriptPath = CreateTempScriptFile();
@@ -145,6 +176,7 @@ public sealed class ScriptOrchestrationServiceTests
 
 	private sealed class FakeOrbitCommandClient : IOrbitCommandClient
 	{
+		public Func<CancellationToken, Task<OrbitCommandResponse>>? ReloadHandler { get; init; }
 		public OrbitRuntimeStatus? Status { get; init; }
 		public int StartRuntimeCalls { get; private set; }
 		public int ReloadCalls { get; private set; }
@@ -156,6 +188,7 @@ public sealed class ScriptOrchestrationServiceTests
 		public Task<OrbitCommandResponse> SendReloadWithRetryAsync(string scriptPath, string scriptId, int? processId, int maxAttempts = 4, TimeSpan? initialDelay = null, CancellationToken cancellationToken = default)
 		{
 			ReloadCalls++;
+			if (ReloadHandler != null) return ReloadHandler(cancellationToken);
 			return Task.FromResult(new OrbitCommandResponse(true, Status: Status));
 		}
 

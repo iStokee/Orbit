@@ -1,4 +1,4 @@
-﻿<Controls:MetroWindow x:Class="Orbit.Views.SettingsWindow"
+<Controls:MetroWindow x:Class="Orbit.Views.SettingsWindow"
                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -15,7 +15,10 @@
                       MinHeight="420"
                       WindowStartupLocation="CenterOwner"
                       Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-                      TitleCharacterCasing="Normal">
+                      TitleCharacterCasing="Normal"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <Controls:MetroWindow.Resources>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />

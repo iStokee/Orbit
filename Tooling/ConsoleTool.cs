@@ -23,6 +23,6 @@ public sealed class ConsoleTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return serviceProvider.GetRequiredService<ConsoleView>();
+        return serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<ConsoleView>();
     }
 }

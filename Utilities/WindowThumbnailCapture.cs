@@ -12,15 +12,12 @@ using DrawingSize = System.Drawing.Size;
 namespace Orbit.Utilities
 {
 	/// <summary>
-	/// Utility class for capturing window thumbnails using Win32 PrintWindow API
+	/// Captures window surfaces without invoking the target window paint handler.
 	/// </summary>
 	public static class WindowThumbnailCapture
 	{
 		[DllImport("user32.dll")]
 		private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-
-		[DllImport("user32.dll")]
-		private static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr GetDC(IntPtr hWnd);
@@ -75,9 +72,6 @@ namespace Orbit.Utilities
 			public int Y;
 		}
 
-		private const uint PW_CLIENTONLY = 0x00000001;
-		private const uint PW_RENDERFULLCONTENT = 0x00000002;
-
 		/// <summary>
 		/// Captures a thumbnail of the specified window handle
 		/// </summary>
@@ -102,47 +96,13 @@ namespace Orbit.Utilities
 				if (width <= 0 || height <= 0)
 					return null;
 
-				var isChildWindow = IsChildWindow(hWnd);
-				if (isChildWindow)
-				{
-					using var dcCapture = TryCaptureWindowDc(hWnd, width, height);
-					if (dcCapture != null)
-					{
-						return ScaleAndConvert(dcCapture, maxWidth, maxHeight);
-					}
-				}
-
-				using var bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-				using var graphics = Graphics.FromImage(bitmap);
-
-				IntPtr hdc = graphics.GetHdc();
-				bool captured = false;
-				try
-				{
-					// Capture the window content
-					captured = PrintWindow(hWnd, hdc, PW_CLIENTONLY | PW_RENDERFULLCONTENT);
-				}
-				finally
-				{
-					graphics.ReleaseHdc(hdc);
-				}
-
-				if (!captured)
-				{
-					// Do not CopyFromScreen docked child windows. In Orbit those children live inside a shared
-					// shell surface, so screen-copy fallback can capture whichever tab is currently visible.
-					using var fallback = allowScreenFallback && ShouldUseScreenFallback(hWnd)
-						? TryCaptureFallback(hWnd, width, height)
-						: null;
-					if (fallback == null)
-					{
-						return null;
-					}
-
-					return ScaleAndConvert(fallback, maxWidth, maxHeight);
-				}
-
-				return ScaleAndConvert(bitmap, maxWidth, maxHeight);
+				// Read the window surface without asking its owning thread to paint.
+				// A hung WM_PRINT handler must not monopolize the gallery worker.
+				using var bitmap = TryCaptureWindowDc(hWnd, width, height);
+				if (bitmap != null) return ScaleAndConvert(bitmap, maxWidth, maxHeight);
+				using var fallback = allowScreenFallback && ShouldUseScreenFallback(hWnd)
+					? TryCaptureFallback(hWnd, width, height) : null;
+				return fallback == null ? null : ScaleAndConvert(fallback, maxWidth, maxHeight);
 			}
 			catch (Exception ex)
 			{

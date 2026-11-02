@@ -32,6 +32,6 @@ public sealed class GuideTool : IOrbitTool
 			return new GuideBrowserView(viewModel);
 		}
 
-		return _serviceProvider.GetRequiredService<GuideBrowserView>();
+		return _serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<GuideBrowserView>();
 	}
 }

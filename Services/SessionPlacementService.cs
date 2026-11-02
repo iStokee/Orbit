@@ -21,6 +21,7 @@ public enum SessionPlacementKind
 public sealed class SessionPlacementService
 {
 	public event EventHandler<SessionPlacementChangedEventArgs>? PlacementChanged;
+	public event EventHandler<SessionPlacementChangedEventArgs>? MoveCompleted;
 
 	private sealed class MoveScope : IDisposable
 	{
@@ -34,7 +35,8 @@ public sealed class SessionPlacementService
 			_session = session;
 			lock (_owner._sync)
 			{
-				_owner._movingSessions.Add(session.Id);
+				_owner._scopedMoves.TryGetValue(session.Id, out var depth);
+				_owner._scopedMoves[session.Id] = depth + 1;
 			}
 			_owner.SetPlacement(session, target, "move-start");
 		}
@@ -49,8 +51,13 @@ public sealed class SessionPlacementService
 			_disposed = true;
 			lock (_owner._sync)
 			{
-				_owner._movingSessions.Remove(_session.Id);
+				if (_owner._scopedMoves.TryGetValue(_session.Id, out var depth))
+				{
+					if (depth <= 1) _owner._scopedMoves.Remove(_session.Id);
+					else _owner._scopedMoves[_session.Id] = depth - 1;
+				}
 			}
+			_owner.NotifyMoveCompleted(_session, "move-end");
 			LogPlacement($"move-end session={_owner.GetSessionLogIdentity(_session)} placement={_owner.GetPlacement(_session)}");
 		}
 	}
@@ -58,11 +65,13 @@ public sealed class SessionPlacementService
 	private readonly object _sync = new();
 	private readonly Dictionary<Guid, SessionPlacementKind> _placements = new();
 	private readonly HashSet<Guid> _movingSessions = new();
+	private readonly Dictionary<Guid, int> _scopedMoves = new();
 
-	// Tool tabs are tracked separately, keyed by their stable Key (Stage 2e). Sessions key by
-	// Guid; tools by Key. Tools deliberately do not raise PlacementChanged (the ownership
+	// Tool tabs are tracked per instance; plugin keys can have multiple open views.
+	// Tools deliberately do not raise PlacementChanged (the ownership
 	// coordinator is session-only) but share the same data-driven oracle.
-	private readonly Dictionary<string, SessionPlacementKind> _toolPlacements = new(StringComparer.Ordinal);
+	private sealed class ToolPlacement { internal SessionPlacementKind Kind; }
+	private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ToolTabItem, ToolPlacement> _toolPlacements = new();
 
 	public IDisposable BeginMove(SessionModel session, SessionPlacementKind target)
 	{
@@ -118,6 +127,7 @@ public sealed class SessionPlacementService
 
 		if (closed)
 		{
+			NotifyMoveCompleted(session, reason ?? "external-move-end");
 			LogPlacement($"{GetSessionLogIdentity(session)} external-move close placement={GetPlacement(session)}{FormatReason(reason)}");
 		}
 	}
@@ -197,7 +207,7 @@ public sealed class SessionPlacementService
 
 		lock (_sync)
 		{
-			return _movingSessions.Contains(session.Id);
+			return _movingSessions.Contains(session.Id) || _scopedMoves.ContainsKey(session.Id);
 		}
 	}
 
@@ -216,6 +226,7 @@ public sealed class SessionPlacementService
 				: SessionPlacementKind.Unknown;
 			_placements.Remove(session.Id);
 			_movingSessions.Remove(session.Id);
+			_scopedMoves.Remove(session.Id);
 		}
 
 		if (previous != SessionPlacementKind.Unknown)
@@ -239,15 +250,15 @@ public sealed class SessionPlacementService
 		SessionPlacementKind previous;
 		lock (_sync)
 		{
-			previous = _toolPlacements.TryGetValue(key, out var existing)
-				? existing
+			previous = _toolPlacements.TryGetValue(tool, out var existing)
+				? existing.Kind
 				: SessionPlacementKind.Unknown;
 			if (previous == placement)
 			{
 				return;
 			}
 
-			_toolPlacements[key] = placement;
+			_toolPlacements.GetValue(tool, _ => new ToolPlacement()).Kind = placement;
 		}
 
 		LogPlacement($"tool='{tool.Name}' key={key} {previous} -> {placement}{FormatReason(reason)}");
@@ -262,8 +273,8 @@ public sealed class SessionPlacementService
 
 		lock (_sync)
 		{
-			return _toolPlacements.TryGetValue(key, out var placement)
-				? placement
+			return _toolPlacements.TryGetValue(tool, out var placement)
+				? placement.Kind
 				: SessionPlacementKind.Unknown;
 		}
 	}
@@ -285,7 +296,7 @@ public sealed class SessionPlacementService
 
 		lock (_sync)
 		{
-			_toolPlacements.Remove(key);
+			_toolPlacements.Remove(tool);
 		}
 	}
 
@@ -294,9 +305,17 @@ public sealed class SessionPlacementService
 		lock (_sync)
 		{
 			return _placements
-				.Select(entry => new SessionPlacementSnapshot(entry.Key, entry.Value, _movingSessions.Contains(entry.Key)))
+				.Select(entry => new SessionPlacementSnapshot(entry.Key, entry.Value, _movingSessions.Contains(entry.Key) || _scopedMoves.ContainsKey(entry.Key)))
 				.ToArray();
 		}
+	}
+
+	private void NotifyMoveCompleted(SessionModel session, string reason)
+	{
+		if (IsMoveInProgress(session)) return;
+		var placement = GetPlacement(session);
+		if (placement != SessionPlacementKind.Unknown)
+			MoveCompleted?.Invoke(this, new SessionPlacementChangedEventArgs(session, placement, placement, reason));
 	}
 
 	private string GetSessionLogIdentity(SessionModel session)

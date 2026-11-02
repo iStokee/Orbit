@@ -7,6 +7,19 @@ namespace Orbit.Tests;
 public sealed class SessionModelTests
 {
 	[Fact]
+	public void UnknownInjectionOutcome_PreventsRetryAndReportsUnhealthy()
+	{
+		var session = new SessionModel();
+		session.UpdateState(SessionState.ClientReady);
+		session.UpdateInjectionState(InjectionState.Ready);
+		session.UpdateInjectionState(InjectionState.Injecting);
+		session.RecordInjectionFailure(new Orbit.ME.InjectionOutcomeUnknownException("restart client"));
+		Assert.Equal(InjectionState.Unknown, session.InjectionState);
+		Assert.False(session.IsInjectable);
+		Assert.False(session.IsHealthy);
+		Assert.Equal("restart client", session.LastError);
+	}
+	[Fact]
 	public void RecordInjectionFailure_LeavesClientReadyAndStoresError()
 	{
 		var session = new SessionModel();

@@ -55,14 +55,16 @@ internal class PluginLoadContext : AssemblyLoadContext
         return IntPtr.Zero;
     }
 
-    private static bool ShouldUseDefaultContext(string? assemblyName)
+    internal static bool ShouldUseDefaultContext(string? assemblyName)
     {
         return string.Equals(assemblyName, "Orbit", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(assemblyName, "Orbit.Plugin.Abstractions", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(assemblyName, "csharp_interop", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(assemblyName, "netstandard", StringComparison.OrdinalIgnoreCase) ||
                (assemblyName?.StartsWith("System", StringComparison.OrdinalIgnoreCase) == true) ||
-               (assemblyName?.StartsWith("Microsoft", StringComparison.OrdinalIgnoreCase) == true) ||
+               string.Equals(assemblyName, "Microsoft.CSharp", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assemblyName, "Microsoft.VisualBasic", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assemblyName, "Microsoft.VisualBasic.Core", StringComparison.OrdinalIgnoreCase) ||
                (assemblyName?.StartsWith("WindowsBase", StringComparison.OrdinalIgnoreCase) == true) ||
                (assemblyName?.StartsWith("PresentationCore", StringComparison.OrdinalIgnoreCase) == true) ||
                (assemblyName?.StartsWith("PresentationFramework", StringComparison.OrdinalIgnoreCase) == true) ||

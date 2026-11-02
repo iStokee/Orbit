@@ -23,12 +23,12 @@ public sealed class SessionAutoRelaunchService
 
 	public async Task CheckAndRelaunchAsync(
 		IEnumerable<SessionModel?> sessions,
-		bool isShuttingDown,
-		bool autoRelaunchEnabled,
+		Func<bool> isShuttingDown,
+		Func<bool> autoRelaunchEnabled,
 		Func<SessionModel, Task> closeSessionAsync,
-		Func<string?, Task<bool>> addSessionAsync)
+		Func<SessionModel, Task<bool>> addSessionAsync)
 	{
-		if (isShuttingDown || checkRunning || !autoRelaunchEnabled)
+		if (isShuttingDown() || checkRunning || !autoRelaunchEnabled())
 		{
 			return;
 		}
@@ -38,6 +38,7 @@ public sealed class SessionAutoRelaunchService
 		{
 			foreach (var session in sessions.Where(s => s != null).Cast<SessionModel>().ToList())
 			{
+				if (isShuttingDown() || !autoRelaunchEnabled()) break;
 				if (!IsUnexpectedExit(session))
 				{
 					continue;
@@ -60,10 +61,10 @@ public sealed class SessionAutoRelaunchService
 
 	private async Task TryAutoRelaunchSessionAsync(
 		SessionModel session,
-		bool isShuttingDown,
-		bool autoRelaunchEnabled,
+		Func<bool> isShuttingDown,
+		Func<bool> autoRelaunchEnabled,
 		Func<SessionModel, Task> closeSessionAsync,
-		Func<string?, Task<bool>> addSessionAsync)
+		Func<SessionModel, Task<bool>> addSessionAsync)
 	{
 		if (!lifecycleCoordinator.TryBeginRelaunch(session))
 		{
@@ -80,12 +81,12 @@ public sealed class SessionAutoRelaunchService
 
 			await closeSessionAsync(session).ConfigureAwait(true);
 
-			if (isShuttingDown || !autoRelaunchEnabled)
+			if (isShuttingDown() || !autoRelaunchEnabled())
 			{
 				return;
 			}
 
-			var relaunched = await addSessionAsync(originalName).ConfigureAwait(true);
+			var relaunched = await addSessionAsync(session).ConfigureAwait(true);
 			if (!relaunched)
 			{
 				consoleLog.Append(

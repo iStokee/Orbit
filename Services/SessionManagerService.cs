@@ -1,4 +1,4 @@
-﻿using Orbit;
+using Orbit;
 using Orbit.Models;
 using Orbit.Views;
 using System;
@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Orbit.Services
 {
-	public class SessionManagerService
+	public class SessionManagerService : IDisposable
 	{
 		private const uint WM_CLOSE = 0x0010;
 		private const int SW_HIDE = 0;
@@ -28,6 +28,63 @@ namespace Orbit.Services
 		private static bool IsMesharpIntegrationEnabled => Settings.Default.MesharpIntegrationEnabled;
 		private static bool HideNativeDebugMenuOnInject => Settings.Default.HideNativeDebugMenuOnInject;
 		private readonly InjectorPathResolver injectorPathResolver;
+		private SessionCollectionService? trackedSessions;
+		private readonly HashSet<SessionModel> observedSessions = new();
+
+		public void StartTracking(SessionCollectionService sessions)
+		{
+			if (trackedSessions != null) throw new InvalidOperationException("Session tracking is already active.");
+			trackedSessions = sessions;
+			sessions.Sessions.CollectionChanged += OnSessionCollectionChanged;
+			ObserveSessions();
+		}
+
+		private void OnSessionCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => ObserveSessions();
+		private void ObserveSessions()
+		{
+			foreach (var session in observedSessions.Where(s => !trackedSessions!.Sessions.Contains(s)).ToArray())
+			{
+				session.PropertyChanged -= OnTrackedSessionChanged;
+				observedSessions.Remove(session);
+				SessionProcessOwnership.Instance.ReleaseOwner(session.Id);
+			}
+			foreach (var session in trackedSessions!.Sessions)
+			{
+				if (observedSessions.Add(session)) session.PropertyChanged += OnTrackedSessionChanged;
+				if (session.IsRuneScapeClient) RegisterSessionProcesses(session);
+			}
+		}
+
+		private void OnTrackedSessionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			if (sender is not SessionModel session || !session.IsRuneScapeClient) return;
+			if (e.PropertyName is nameof(SessionModel.RSProcess) or nameof(SessionModel.ExternalHandle) or nameof(SessionModel.Name)) RegisterSessionProcesses(session);
+			if (e.PropertyName == nameof(SessionModel.State) && session.State == SessionState.Closed)
+				SessionProcessOwnership.Instance.ReleaseOwner(session.Id);
+		}
+
+		public void Dispose()
+		{
+			if (trackedSessions != null) trackedSessions.Sessions.CollectionChanged -= OnSessionCollectionChanged;
+			foreach (var session in observedSessions) session.PropertyChanged -= OnTrackedSessionChanged;
+			observedSessions.Clear();
+		}
+
+		internal void DetachPresentation(SessionModel session)
+		{
+			DisposeSessionHost(session);
+			session.ExternalWindowIdentity?.Dispose();
+			session.ExternalWindowIdentity = null;
+			if (session.RSProcess != null)
+			{
+				TryUnregisterProcess(session.RSProcess.Id);
+				session.RSProcess.Dispose();
+				session.RSProcess = null;
+			}
+			session.ExternalHandle = nint.Zero;
+			session.RenderSurfaceHandle = nint.Zero;
+			session.UpdateState(SessionState.Closed, clearError: false);
+		}
 
 		private enum ProcessRole
 		{
@@ -71,64 +128,26 @@ namespace Orbit.Services
 
             try
             {
-				var rsForm = await clientView.WaitForSessionAsync();
-				// Window exists; give it a brief moment to finish initializing before we grab handles.
-				await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
-				rsForm.WaitForInjectionBeforeDock = session.RequireInjectionBeforeDock;
-				EventHandler<DockedEventArgs> dockedHandler = null;
-				dockedHandler = async (_, args) =>
+				if (session.StartupTask == null)
 				{
-					session.ExternalHandle = args.Handle;
-					session.RenderSurfaceHandle = rsForm.GetRenderSurfaceHandle();
-					if (session.RSProcess != null)
+					session.LifetimeCancellation.ThrowIfCancellationRequested();
+					var form = new RSForm
 					{
-						UpdateProcessFallbackHandle(session.RSProcess.Id, session.ExternalHandle);
-					}
-					try
-					{
-						clientView.RefreshDockedContentActivation(requestFocus: true);
-					}
-					catch { }
-
-					// IMPROVED: Always try to re-apply commands if injected, even if injection completed earlier
-					// Window re-parenting (SetParent) can reset hooks, so we re-apply to restore state
-					if (IsMesharpIntegrationEnabled && session.InjectionState == InjectionState.Injected && session.RSProcess != null)
-					{
-						Console.WriteLine($"[Orbit] Re-applying MESharp commands after docking for session '{session.Name}'...");
-
-						var inputMode = session.NativeDebugMenuVisible ? 0 : 1;
-						var applied = await OrbitCommandClient
-							.SendInputModeWithRetryAsync(inputMode, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-						if (!applied)
-						{
-							Console.WriteLine("[Orbit] Warning: Unable to persist MemoryError input passthrough after docking.");
-						}
-
-						var focusApplied = await OrbitCommandClient
-							.SendFocusSpoofWithRetryAsync(false, session.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-							.ConfigureAwait(false);
-						if (!focusApplied)
-						{
-							Console.WriteLine("[Orbit] Warning: Unable to persist MemoryError focus spoof state after docking.");
-						}
-
-						Console.WriteLine($"[Orbit] Post-dock command re-application complete for session '{session.Name}'.");
-					}
-					else if (session.InjectionState != InjectionState.Injected)
-					{
-						Console.WriteLine($"[Orbit] Docked event fired for '{session.Name}' but injection state is {session.InjectionState}. Skipping command re-application.");
-					}
-					else if (!IsMesharpIntegrationEnabled)
-					{
-						Console.WriteLine($"[Orbit] Docked event fired for '{session.Name}' with MESharp integration disabled. Skipping MESharp post-dock commands.");
-					}
-
-					rsForm.Docked -= dockedHandler;
-				};
-				rsForm.Docked += dockedHandler;
-
+						LauncherCharacterId = session.LauncherCharacterId,
+						WaitForInjectionBeforeDock = session.RequireInjectionBeforeDock
+					};
+					TrackSessionProcess(form, session, clientView.Dispatcher);
+					clientView.AttachSessionHost(form);
+					session.StartupTask = form.BeginLoad(session.LifetimeCancellation);
+					_ = clientView.ObserveStartupAsync(session.StartupTask);
+				}
+				var rsForm = await clientView.WaitForSessionAsync().WaitAsync(session.LifetimeCancellation);
+				// Window exists; give it a brief moment to finish initializing before we grab handles.
+				await Task.Delay(TimeSpan.FromSeconds(2), session.LifetimeCancellation).ConfigureAwait(true);
+				if (session.State is SessionState.Closed or SessionState.ShuttingDown)
+					throw new OperationCanceledException("Session closed during initialization.");
 				session.RSForm = rsForm;
+				session.LauncherCharacterId = rsForm.LauncherCharacterId;
 				session.RSProcess = rsForm?.pDocked ?? throw new InvalidOperationException("RuneScape process handle is unavailable.");
 				if (SessionCollectionService.Instance.Sessions.Any(s =>
 					!ReferenceEquals(s, session) &&
@@ -160,23 +179,57 @@ namespace Orbit.Services
             }
             catch (Exception ex)
             {
-                session.Fail(ex);
+                if (session.State is not (SessionState.Closed or SessionState.ShuttingDown)) session.Fail(ex);
                 throw;
             }
         }
 
+		internal static void TrackSessionProcess(RSForm form, SessionModel session, System.Windows.Threading.Dispatcher dispatcher)
+		{
+			form.SetProcessOwner(session.Id);
+			session.RSForm = form;
+			form.ProcessChanged = process => dispatcher.Invoke(() =>
+			{
+				if (session.State == SessionState.Closed || (process == null && session.State == SessionState.ShuttingDown)) return;
+				session.RSProcess = process;
+				session.ParentProcessId = process == null ? null : form.ParentProcessId;
+				session.LauncherCharacterId = form.LauncherCharacterId;
+			});
+		}
+
+		internal async Task CompleteDockingAsync(SessionModel session)
+		{
+			var token = session.LifetimeCancellation;
+			await session.HostControl.WaitForDockAsync().WaitAsync(token).ConfigureAwait(true);
+			token.ThrowIfCancellationRequested();
+			session.ExternalHandle = session.RSForm.DockedClientHandle;
+			session.RenderSurfaceHandle = session.RSForm.GetRenderSurfaceHandle();
+			if (session.RSProcess != null) UpdateProcessFallbackHandle(session.RSProcess.Id, session.ExternalHandle);
+			session.HostControl.RefreshDockedContentActivation(requestFocus: true);
+			if (IsMesharpIntegrationEnabled)
+				await new MesharpSessionCommandService(new OrbitCommandClientAdapter())
+					.ReassertInputPassthroughAsync(new[] { session }).ConfigureAwait(true);
+			token.ThrowIfCancellationRequested();
+		}
+
 		public async Task InjectAsync(SessionModel session)
 		{
+			if (!session.IsInjectable)
+				throw new InvalidOperationException("Session is not ready for injection. An unknown injection outcome requires restarting the client.");
 			var process = session.RSProcess ?? throw new InvalidOperationException("Cannot inject before the RuneScape client is ready.");
+			var processId = process.Id;
+			var workToken = session.WorkCancellation;
+			var form = session.RSForm;
+			workToken.ThrowIfCancellationRequested();
 			var duplicateOwner = SessionCollectionService.Instance.Sessions.FirstOrDefault(s =>
 				!ReferenceEquals(s, session) &&
 				s.RSProcess != null &&
 				!s.RSProcess.HasExited &&
-				s.RSProcess.Id == process.Id &&
+				s.RSProcess.Id == processId &&
 				s.State != SessionState.Closed);
 			if (duplicateOwner != null)
 			{
-				var message = $"Cannot inject session '{session.Name}' because PID {process.Id} is already attached to session '{duplicateOwner.Name}'.";
+				var message = $"Cannot inject session '{session.Name}' because PID {processId} is already attached to session '{duplicateOwner.Name}'.";
 				Console.WriteLine($"[Orbit][Inject] {message}");
 				session.RecordInjectionFailure(new InvalidOperationException(message));
 				throw new InvalidOperationException(message);
@@ -199,16 +252,22 @@ namespace Orbit.Services
 
 			try
 			{
-				session.RSForm?.SignalInjectionStarting();
-				Console.WriteLine($"[Orbit] Injecting '{dllPath}' into PID {process.Id}...");
-				var injected = await Task.Run(() => Orbit.ME.DllInjector.Inject(process.Id, dllPath));
+				Console.WriteLine($"[Orbit] Injecting '{dllPath}' into PID {processId}...");
+				var injected = await Task.Run(() =>
+				{
+					workToken.ThrowIfCancellationRequested();
+					return Orbit.ME.DllInjector.Inject(processId, dllPath);
+				});
+				workToken.ThrowIfCancellationRequested();
+				if (session.State is SessionState.Closed or SessionState.ShuttingDown)
+					throw new OperationCanceledException("Session closed during injection.");
 				Console.WriteLine(injected
 					? "[Orbit] Injection completed successfully."
 					: "[Orbit] Injection call returned false.");
 				if (!injected)
 				{
 					var message =
-						$"Injection failed for PID {process.Id}. Verify '{Path.GetFileName(dllPath)}' is the correct Orbit/ME injector binary and includes required runtime assets.";
+						$"Injection failed for PID {processId}. Verify '{Path.GetFileName(dllPath)}' is the correct Orbit/ME injector binary and includes required runtime assets.";
 					var failure = new InvalidOperationException(message);
 					session.RecordInjectionFailure(failure);
 					throw failure;
@@ -218,7 +277,7 @@ namespace Orbit.Services
 				session.UpdateState(SessionState.Injected);
 
 				// Give the injected DLL a moment to initialize
-				await Task.Delay(500);
+				await Task.Delay(500, workToken);
 
 				// Restore focus to the game window so input works
 				Console.WriteLine($"[Orbit] Restoring focus to game window (0x{session.ExternalHandle:X})");
@@ -230,7 +289,7 @@ namespace Orbit.Services
 					if (autoStartRuntime)
 					{
 						var runtimeStarted = await OrbitCommandClient
-							.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
+							.SendStartRuntimeWithRetryAsync(processId, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: workToken)
 							.ConfigureAwait(true);
 						if (!runtimeStarted)
 						{
@@ -242,53 +301,9 @@ namespace Orbit.Services
 						Console.WriteLine("[Orbit] MCP policy: runtime auto-start on injection is disabled.");
 					}
 
-					// Keep normal gameplay passthrough by default, but allow ImGui capture when
-					// the native debug menu is intentionally shown after injection.
-					var postInjectInputMode = HideNativeDebugMenuOnInject ? 1 : 0;
-					var inputModeApplied = await OrbitCommandClient
-						.SendInputModeWithRetryAsync(postInjectInputMode, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-						.ConfigureAwait(true);
-					if (!inputModeApplied)
-					{
-						Console.WriteLine("[Orbit] Warning: Unable to set MemoryError input mode after injection.");
-					}
-
-						if (HideNativeDebugMenuOnInject)
-						{
-							var debugMenuHidden = await OrbitCommandClient
-								.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-								.ConfigureAwait(true);
-							if (!debugMenuHidden)
-							{
-								Console.WriteLine("[Orbit] Warning: Unable to hide MemoryError debug menu (input capture may persist).");
-							}
-							else
-							{
-								session.SetNativeDebugMenuVisible(false, "post-injection preference");
-							}
-						}
-						else
-						{
-							var debugMenuShown = await OrbitCommandClient
-								.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-								.ConfigureAwait(true);
-							if (!debugMenuShown)
-							{
-								Console.WriteLine("[Orbit] Warning: Unable to restore MemoryError debug menu after injection.");
-							}
-							else
-							{
-								session.SetNativeDebugMenuVisible(true, "post-injection preference");
-							}
-						}
-
-					var focusSpoofApplied = await OrbitCommandClient
-						.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 5, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-						.ConfigureAwait(true);
-					if (!focusSpoofApplied)
-					{
-						Console.WriteLine("[Orbit] Warning: Unable to disable MemoryError focus spoof (focus handling may remain hijacked).");
-					}
+					await new MesharpSessionCommandService(new OrbitCommandClientAdapter())
+						.ApplyInjectionPreferenceAsync(session, HideNativeDebugMenuOnInject).ConfigureAwait(true);
+					workToken.ThrowIfCancellationRequested();
 				}
 				else
 				{
@@ -298,83 +313,86 @@ namespace Orbit.Services
 			catch (Exception ex)
 			{
 				Console.WriteLine($"[Orbit] Injection pipeline threw: {ex}");
-				session.RecordInjectionFailure(ex);
+				if (!workToken.IsCancellationRequested && ReferenceEquals(session.RSProcess, process) &&
+					session.State is not (SessionState.Closed or SessionState.ShuttingDown) && session.InjectionState != InjectionState.Injected)
+					session.RecordInjectionFailure(ex);
 				throw;
 			}
 			finally
 			{
-				if (session.RSForm != null)
+				if (form != null)
 				{
 					Console.WriteLine($"[Orbit] Injection cleanup signaled ready for session '{session.Name}'.");
-					session.RSForm.SignalInjectionReady();
+					form.SignalInjectionReady();
 				}
 			}
 
-			// Final safeguard: reassert passthrough shortly after MESharp finishes wiring hooks.
-				if (IsMesharpIntegrationEnabled)
-				{
-					_ = Task.Run(async () =>
-					{
-						try
-					{
-							await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-							if (!process.HasExited)
-							{
-								if (HideNativeDebugMenuOnInject && !session.NativeDebugMenuVisible)
-								{
-									await OrbitCommandClient
-										.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-
-									await OrbitCommandClient
-										.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-									session.SetNativeDebugMenuVisible(false, "deferred post-injection safeguard");
-
-									await OrbitCommandClient
-										.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-								}
-								else if (!HideNativeDebugMenuOnInject && session.NativeDebugMenuVisible)
-								{
-									await OrbitCommandClient
-										.SendInputModeWithRetryAsync(0, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-
-									await OrbitCommandClient
-										.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-
-									await OrbitCommandClient
-										.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-										.ConfigureAwait(false);
-								}
-
-								// Attempt to refocus the embedded client on the UI thread.
-								_ = session.HostControl?.Dispatcher?.InvokeAsync(() =>
-								{
-								try { session.HostControl.FocusEmbeddedClient(); } catch { }
-							});
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine($"[Orbit] Deferred input passthrough request failed: {ex}");
-					}
-				});
+			if (IsMesharpIntegrationEnabled)
+			{
+				_ = ReassertAfterInjectionAsync();
 			}
-	    }
+
+			async Task ReassertAfterInjectionAsync()
+			{
+				try
+				{
+					await Task.Delay(TimeSpan.FromSeconds(2), workToken).ConfigureAwait(true);
+					if (!ReferenceEquals(session.RSProcess, process)) return;
+					await new MesharpSessionCommandService(new OrbitCommandClientAdapter())
+						.ReassertInputPassthroughAsync(new[] { session }).ConfigureAwait(true);
+				}
+				catch (OperationCanceledException) when (workToken.IsCancellationRequested) { }
+				catch (Exception ex) { Console.WriteLine($"[Orbit] Deferred input passthrough request failed: {ex.Message}"); }
+			}
+		}
 
 		public async Task ShutdownSessionAsync(SessionModel session, TimeSpan? timeout = null, CancellationToken cancellationToken = default, bool forceKillOnTimeout = false)
 		{
+			ArgumentNullException.ThrowIfNull(session);
+			await session.ShutdownGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+			try
+			{
+				if (session.State == SessionState.Closed) return;
+				session.UpdateState(SessionState.ShuttingDown, clearError: false);
+				if (session.StartupTask != null)
+				{
+					try { await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(true); }
+					catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
+					catch (Exception ex) when (ex is not OperationCanceledException) { Console.WriteLine($"[Orbit] Startup finished with an error during close: {ex.Message}"); }
+				}
+				await ShutdownSessionCoreAsync(session, timeout, cancellationToken, forceKillOnTimeout).ConfigureAwait(true);
+			}
+			finally { session.ShutdownGate.Release(); }
+		}
+
+		private async Task ShutdownSessionCoreAsync(SessionModel session, TimeSpan? timeout, CancellationToken cancellationToken, bool forceKillOnTimeout)
+		{
 			if (session == null)
 				throw new ArgumentNullException(nameof(session));
+
+			// Registration grants ownership of the presentation, never of the caller's process.
+			// A script window can share its process with an injected game and other windows.
+			if (session.IsExternalScript)
+			{
+				DisposeSessionHost(session);
+				session.ExternalWindowIdentity?.Dispose();
+				session.ExternalWindowIdentity = null;
+				session.RSProcess?.Dispose();
+				session.RSProcess = null;
+				session.ExternalHandle = nint.Zero;
+				session.RenderSurfaceHandle = nint.Zero;
+				session.UpdateState(SessionState.Closed, clearError: false);
+				return;
+			}
 
 			var shutdownTimeout = timeout ?? DefaultShutdownTimeout;
 			var process = session.RSProcess;
 			var externalHandle = session.ExternalHandle;
 
 			session.UpdateState(SessionState.ShuttingDown, clearError: false);
+			await session.ScriptCommandGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+			try
+			{
 
 			if (IsMesharpIntegrationEnabled && session.InjectionState == InjectionState.Injected && session.RSProcess != null && !session.RSProcess.HasExited)
 			{
@@ -388,9 +406,10 @@ namespace Orbit.Services
 
 					if (!string.IsNullOrWhiteSpace(scriptIdToUnload))
 					{
-						await OrbitCommandClient
+						var unloaded = await OrbitCommandClient
 							.SendUnloadScriptWithRetryAsync(scriptIdToUnload, session.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
-							.ConfigureAwait(false);
+							.ConfigureAwait(true);
+						if (unloaded) session.SetScriptStopped();
 					}
 				}
 				catch (Exception ex)
@@ -399,8 +418,6 @@ namespace Orbit.Services
 				}
 			}
 
-			session.SetScriptStopped();
-			session.UpdateInjectionState(InjectionState.NotReady);
 
 			HideWindowSilently(externalHandle);
 			if (process?.MainWindowHandle is nint mainHandle and not 0 && mainHandle != externalHandle)
@@ -409,59 +426,10 @@ namespace Orbit.Services
 			}
 			HideOrMinimizeProcessWindowSilently(process);
 
-			Process parentProcess = null;
-			if (session.ParentProcessId is int parentPid)
-			{
-				if (process == null || process.Id != parentPid)
-				{
-					try
-					{
-						parentProcess = Process.GetProcessById(parentPid);
-					}
-					catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-					{
-						parentProcess = null;
-					}
-				}
-			}
-
 			var processId = process?.Id;
-			var parentProcessIdValue = parentProcess?.Id;
-
-			// Close client first, then parent/launcher to avoid orphaning the child process.
-			// We avoid force-killing the launcher to prevent respawn loops/crash flashes.
-			var shutdownTargets = new List<(Process process, string label, nint fallbackHandle, bool allowKill, int? processId)>
-			{
-				(process, "client", externalHandle, forceKillOnTimeout, processId),
-				(parentProcess, "launcher", nint.Zero, false, parentProcessIdValue)
-			}.Where(p => p.process != null).ToList();
-
-			var clientExited = process == null;
-			foreach (var target in shutdownTargets)
-			{
-				var isClient = string.Equals(target.label, "client", StringComparison.Ordinal);
-				var exited = await TryShutdownProcessAsync(
-					target.process,
-					target.fallbackHandle,
-					target.label,
-					session.Name,
-					shutdownTimeout,
-					cancellationToken,
-					target.allowKill,
-					disposeProcess: !isClient).ConfigureAwait(false);
-				if (isClient)
-				{
-					clientExited = exited;
-				}
-
-				// Use the PID captured before shutdown: a gracefully-exited process is disposed
-				// inside TryShutdownProcessAsync, after which target.process.Id throws
-				// "No process is associated with this object".
-				if (exited && target.processId is int targetProcessId)
-				{
-					TryUnregisterProcess(targetProcessId);
-				}
-			}
+			var clientExited = await TryShutdownProcessAsync(process, externalHandle, "client", session.Name,
+				shutdownTimeout, cancellationToken, forceKillOnTimeout, disposeProcess: false).ConfigureAwait(true);
+			if (clientExited && processId.HasValue) TryUnregisterProcess(processId.Value);
 
 			if (!clientExited)
 			{
@@ -472,14 +440,19 @@ namespace Orbit.Services
 				throw new TimeoutException($"Session '{session.Name}' client did not exit within {shutdownTimeout.TotalSeconds:F1}s.");
 			}
 
+			session.SetScriptStopped();
+			session.UpdateInjectionState(InjectionState.NotReady);
 			DisposeSessionHost(session);
 
 			session.RSForm = null;
 			session.RSProcess = null;
+			process?.Dispose();
 			session.ParentProcessId = null;
 			session.ExternalHandle = nint.Zero;
 			session.RenderSurfaceHandle = nint.Zero;
 			session.UpdateState(SessionState.Closed, clearError: false);
+			}
+			finally { session.ScriptCommandGate.Release(); }
 		}
 
 		public async Task ShutdownManagedProcessesAsync(bool forceKillOnTimeout = false, CancellationToken cancellationToken = default)
@@ -492,6 +465,7 @@ namespace Orbit.Services
 
 			foreach (var record in tracked)
 			{
+				if (record.Role == ProcessRole.Launcher) { TryUnregisterProcess(record.ProcessId); continue; }
 				cancellationToken.ThrowIfCancellationRequested();
 
 				Process process;
@@ -520,7 +494,7 @@ namespace Orbit.Services
 				if (record.StartTime.HasValue)
 				{
 					var currentStart = TryGetProcessStartTime(process);
-					if (currentStart.HasValue && Math.Abs((currentStart.Value - record.StartTime.Value).TotalSeconds) > 1)
+					if (!currentStart.HasValue || currentStart.Value != record.StartTime.Value)
 					{
 						// PID has been reused for a different process; skip to avoid touching unrelated instances.
 						process.Dispose();
@@ -528,11 +502,16 @@ namespace Orbit.Services
 						continue;
 					}
 				}
+				else
+				{
+					process.Dispose();
+					continue; // Unknown creation identity is not authority to close a PID.
+				}
 
 				var label = record.Role == ProcessRole.Client ? "client" : "launcher";
 				try
 				{
-					await TryShutdownProcessAsync(
+					var exited = await TryShutdownProcessAsync(
 						process,
 						record.FallbackHandle,
 						label,
@@ -540,6 +519,7 @@ namespace Orbit.Services
 						DefaultShutdownTimeout,
 						cancellationToken,
 						forceKillOnTimeout: forceKillOnTimeout).ConfigureAwait(true);
+					if (exited) TryUnregisterProcess(record.ProcessId);
 				}
 				catch (OperationCanceledException)
 				{
@@ -548,10 +528,6 @@ namespace Orbit.Services
 				catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
 				{
 					Console.WriteLine($"[Orbit] Failed to gracefully close tracked {label} PID {record.ProcessId}: {ex.Message}");
-				}
-				finally
-				{
-					TryUnregisterProcess(record.ProcessId);
 				}
 			}
 		}
@@ -569,28 +545,6 @@ namespace Orbit.Services
 					session.Name ?? $"Session {session.Id}",
 					session.ExternalHandle,
 					session.ParentProcessId);
-			}
-
-			if (session.ParentProcessId is int parentPid && session.RSProcess?.Id != parentPid)
-			{
-				try
-				{
-					var parentProcess = Process.GetProcessById(parentPid);
-					RegisterManagedProcess(
-						parentProcess,
-						ProcessRole.Launcher,
-						session.Name ?? $"Session {session.Id}",
-						nint.Zero,
-						null);
-					if (!ReferenceEquals(parentProcess, session.RSProcess))
-					{
-						parentProcess.Dispose();
-					}
-				}
-				catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-				{
-					// Parent process may have already exited; nothing to track.
-				}
 			}
 
 			// Keep tracked labels in sync with the latest session name.
@@ -639,7 +593,7 @@ namespace Orbit.Services
 			}
 
 			var sessionName = session.Name ?? $"Session {session.Id}";
-			var candidateIds = new[] { session.RSProcess?.Id ?? 0, session.ParentProcessId ?? 0 }
+			var candidateIds = new[] { session.RSProcess?.Id ?? 0 }
 				.Where(id => id > 0)
 				.Distinct()
 				.ToArray();
@@ -698,7 +652,7 @@ namespace Orbit.Services
 
 				var closeSignalled = TrySignalProcessWindow(process);
 
-				if (!closeSignalled && fallbackHandle != nint.Zero)
+				if (!closeSignalled && fallbackHandle != nint.Zero && WindowBelongsToProcess(fallbackHandle, process.Id))
 				{
 					closeSignalled = PostMessage(fallbackHandle, WM_CLOSE, nint.Zero, nint.Zero);
 				}
@@ -712,7 +666,7 @@ namespace Orbit.Services
 					{
 						await process.WaitForExitAsync(linkedCts.Token).ConfigureAwait(false);
 					}
-					catch (OperationCanceledException)
+					catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
 					{
 						// Timed out while waiting for graceful exit.
 					}
@@ -732,29 +686,26 @@ namespace Orbit.Services
 			}
 			catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
 			{
-				// Process might have already exited or the handle may be invalid.
-				return true;
+				// Access failures do not establish that the process has exited.
+				Console.WriteLine($"[Orbit] Could not confirm shutdown for '{sessionName}': {ex.Message}");
+				return false;
 			}
 			finally
 			{
-				if (disposeProcess || SafeHasExited(process))
+				if (disposeProcess)
 				{
 					process.Dispose();
 				}
 			}
 		}
 
-		private static bool SafeHasExited(Process process)
+		private static bool WindowBelongsToProcess(nint hwnd, int processId)
 		{
-			try
-			{
-				return process == null || process.HasExited;
-			}
-			catch
-			{
-				return true;
-			}
+			GetWindowThreadProcessId(hwnd, out var owner);
+			return owner == processId;
 		}
+		[DllImport("user32.dll")]
+		private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
 
 		private static void DisposeSessionHost(SessionModel session)
 		{
@@ -799,9 +750,10 @@ namespace Orbit.Services
 					standaloneForm.Dispose();
 				}
 			}
-			catch
+			catch (Exception ex)
 			{
-				// WinForms teardown can fail if the form is already closing; ignore.
+				Console.WriteLine($"[Orbit] Session host retained because restoration or teardown failed: {ex.Message}");
+				throw;
 			}
 		}
 

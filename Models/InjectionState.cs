@@ -6,6 +6,7 @@ namespace Orbit.Models
 		Ready,
 		Injecting,
 		Injected,
-		Failed
+		Failed,
+		Unknown
 	}
 }

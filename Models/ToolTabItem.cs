@@ -15,6 +15,7 @@ public sealed class ToolTabItem
         Name = name;
         HostControl = hostControl;
         Icon = icon;
+        Orbit.Services.ToolInstanceRegistry.Instance.Register(this);
     }
 
     /// <summary>
@@ -25,6 +26,18 @@ public sealed class ToolTabItem
     public string Name { get; }
 
     public FrameworkElement HostControl { get; }
+
+    public bool IsClosed { get; private set; }
+    public void Close(object? ownerContext = null)
+    {
+        if (IsClosed) return;
+        IsClosed = true;
+        if (HostControl is Orbit.Services.IToolViewLifetime viewLifetime) viewLifetime.Dispose();
+        else if (HostControl.DataContext is System.IDisposable disposable &&
+                 HostControl.DataContext is not Orbit.ViewModels.SettingsViewModel &&
+                 HostControl.DataContext is not Orbit.ViewModels.MainWindowViewModel &&
+                 !ReferenceEquals(HostControl.DataContext, ownerContext)) disposable.Dispose();
+    }
 
     /// <summary>
     /// Icon to display in the tab header.

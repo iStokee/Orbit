@@ -73,7 +73,9 @@ public sealed class SessionLaunchCoordinatorService
 
 			var normalizedDelaySeconds = Math.Clamp(launchDelaySeconds, 5, 30);
 			var normalizedLaunchBehavior = NormalizeSessionLaunchBehavior(launchBehavior);
-			var serializeBatchLaunch = fullWaitForDock || string.Equals(normalizedLaunchBehavior, "OrbitView", StringComparison.Ordinal);
+			var serializeBatchLaunch = fullWaitForDock
+				|| string.Equals(normalizedLaunchBehavior, "OrbitView", StringComparison.Ordinal)
+				|| string.Equals(normalizedLaunchBehavior, "Ask", StringComparison.Ordinal);
 
 			if (serializeBatchLaunch)
 			{

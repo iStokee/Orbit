@@ -13,6 +13,25 @@ namespace Orbit.Tests;
 public sealed class SessionPlacementServiceTests
 {
 	[Fact]
+	public void NestedMoves_CompleteOnlyAfterAllScopesAndExternalGraceEnd()
+	{
+		var placement = new SessionPlacementService();
+		var session = new SessionModel { Id = System.Guid.NewGuid() };
+		var completed = 0;
+		placement.MoveCompleted += (_, _) => completed++;
+		using (placement.BeginMove(session, SessionPlacementKind.MainTabs))
+		{
+			using (placement.BeginMove(session, SessionPlacementKind.OrbitWorkspace)) { }
+			Assert.True(placement.IsMoveInProgress(session));
+			placement.BeginExternalMove(session);
+			Assert.Equal(0, completed);
+		}
+		Assert.True(placement.IsMoveInProgress(session));
+		placement.EndExternalMove(session);
+		Assert.False(placement.IsMoveInProgress(session));
+		Assert.Equal(1, completed);
+	}
+	[Fact]
 	public void UnknownSession_HasUnknownPlacement()
 	{
 		var placement = new SessionPlacementService();
@@ -204,16 +223,18 @@ public sealed class SessionPlacementServiceTests
 	}
 
 	[Fact]
-	public void ToolPlacement_IsKeyedByToolKey_AndRemovable()
+	public void ToolPlacement_IsPerInstance_AndRemovable()
 	{
 		var placement = new SessionPlacementService();
 		var tool = new ToolTabItem("shared-key", "Tool", null!);
 		var sameKey = new ToolTabItem("shared-key", "Renamed", null!);
 
 		placement.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace);
-		Assert.Equal(SessionPlacementKind.OrbitWorkspace, placement.GetPlacement(sameKey)); // keyed by Key
+		Assert.Equal(SessionPlacementKind.Unknown, placement.GetPlacement(sameKey));
+		placement.SetPlacement(sameKey, SessionPlacementKind.MainTabs);
 
 		placement.Remove(tool);
-		Assert.Equal(SessionPlacementKind.Unknown, placement.GetPlacement(sameKey));
+		Assert.Equal(SessionPlacementKind.Unknown, placement.GetPlacement(tool));
+		Assert.Equal(SessionPlacementKind.MainTabs, placement.GetPlacement(sameKey));
 	}
 }

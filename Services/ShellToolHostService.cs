@@ -11,6 +11,10 @@ namespace Orbit.Services;
 
 public sealed class ShellToolHostService
 {
+	private readonly OrbitLayoutStateService? _layout;
+	private readonly SessionReconciliationService? _reconciliation;
+	public ShellToolHostService(OrbitLayoutStateService? layout = null, SessionReconciliationService? reconciliation = null) { _layout = layout; _reconciliation = reconciliation; }
+
 	public ToolTabItem OpenOrFocusToolTab(
 		ObservableCollection<object> tabs,
 		object ownerContext,
@@ -69,37 +73,22 @@ public sealed class ShellToolHostService
 			return false;
 		}
 
-		var windows = Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>();
-		foreach (var window in windows)
+		var existing = ToolInstanceRegistry.Instance.OpenTools.FirstOrDefault(tool => tool.Key == key &&
+			tool.HostControl.Dispatcher.CheckAccess() &&
+			(Window.GetWindow(tool.HostControl) != null || _layout?.Items.Contains(tool) == true));
+		if (existing == null) return false;
+		var previousOwner = Window.GetWindow(existing.HostControl)?.DataContext;
+		_layout?.RemoveItem(existing);
+		if (_reconciliation != null) _reconciliation.RemoveItemFromTabOwners(existing, SessionTabOwnerScope.All, "adopt-tool");
+		else
 		{
-			if (window.DataContext is not MainWindowViewModel otherVm || ReferenceEquals(otherVm, ownerContext))
-			{
-				continue;
-			}
-
-			var existingTool = otherVm.Tabs.OfType<ToolTabItem>()
-				.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.Ordinal));
-			if (existingTool == null)
-			{
-				continue;
-			}
-
-			otherVm.Tabs.Remove(existingTool);
-			if (ReferenceEquals(otherVm.SelectedTab, existingTool))
-			{
-				otherVm.SelectedTab = otherVm.Tabs.FirstOrDefault();
-			}
-
-			if (existingTool.HostControl != null && ReferenceEquals(existingTool.HostControl.DataContext, otherVm))
-			{
-				existingTool.HostControl.DataContext = ownerContext;
-			}
-
-			adopted = existingTool;
-			return true;
+			foreach (var window in Application.Current?.Windows.OfType<Window>() ?? Enumerable.Empty<Window>())
+				if (window.DataContext is MainWindowViewModel shell) shell.Tabs.Remove(existing);
 		}
-
-		return false;
+		if (previousOwner != null && ReferenceEquals(existing.HostControl.DataContext, previousOwner))
+			existing.HostControl.DataContext = ownerContext;
+		adopted = existing;
+		return true;
 	}
 
 	public void DisposeToolItem(object? item, object ownerContext)
@@ -109,18 +98,8 @@ public sealed class ShellToolHostService
 			return;
 		}
 
-		try
-		{
-			if (tool.HostControl.DataContext is IDisposable disposable &&
-				!ReferenceEquals(disposable, ownerContext))
-			{
-				disposable.Dispose();
-			}
-		}
-		catch
-		{
-			// Best effort cleanup.
-		}
+		try { tool.Close(ownerContext); }
+		catch (Exception ex) { Console.WriteLine("[Orbit] Tool cleanup failed: " + ex.Message); }
 	}
 
 	private static ToolTabItem? FindToolTab(ObservableCollection<object> tabs, string key)

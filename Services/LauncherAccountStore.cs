@@ -13,28 +13,26 @@ public static class LauncherAccountStore
 	private const string EnvVarsFileName = "env_vars.json";
 	private static int _roundRobinCounter = -1;
 	private static readonly object LaunchBatchSync = new();
+	private static readonly object StorageSync = new();
 	private static Queue<LauncherAccountModel>? _pendingSelectedLaunchQueue;
 
 	public static IReadOnlyList<LauncherAccountModel> Load()
-	{
-		var path = GetEnvVarsPath();
-		if (!File.Exists(path))
-		{
-			return Array.Empty<LauncherAccountModel>();
-		}
+		=> Load(GetEnvVarsPath());
 
+	internal static IReadOnlyList<LauncherAccountModel> Load(string path)
+	{
 		try
 		{
 			var json = File.ReadAllText(path);
 			if (string.IsNullOrWhiteSpace(json))
 			{
-				return Array.Empty<LauncherAccountModel>();
+				throw new InvalidDataException("Launcher account storage is empty. The original file has been preserved.");
 			}
 
-			var doc = JsonDocument.Parse(json);
+			using var doc = JsonDocument.Parse(json);
 			if (doc.RootElement.ValueKind != JsonValueKind.Array)
 			{
-				return Array.Empty<LauncherAccountModel>();
+				throw new InvalidDataException("Launcher account storage must contain an array. The original file has been preserved.");
 			}
 
 			var list = new List<LauncherAccountModel>();
@@ -57,13 +55,15 @@ public static class LauncherAccountStore
 
 			return list;
 		}
-		catch
-		{
-			return Array.Empty<LauncherAccountModel>();
-		}
+		catch (FileNotFoundException) { return Array.Empty<LauncherAccountModel>(); }
+		catch (DirectoryNotFoundException) { return Array.Empty<LauncherAccountModel>(); }
+		catch (JsonException ex) { throw new InvalidDataException("Launcher account storage is invalid. Repair the file before saving.", ex); }
 	}
 
 	public static void Save(IEnumerable<LauncherAccountModel> accounts)
+		=> Save(accounts, GetEnvVarsPath());
+
+	internal static void Save(IEnumerable<LauncherAccountModel> accounts, string path)
 	{
 		ArgumentNullException.ThrowIfNull(accounts);
 
@@ -80,11 +80,24 @@ public static class LauncherAccountStore
 			})
 			.ToList();
 
-		var directory = GetMemoryErrorDirectory();
-		Directory.CreateDirectory(directory);
-		var path = GetEnvVarsPath();
 		var json = JsonSerializer.Serialize(normalized, new JsonSerializerOptions { WriteIndented = true });
-		File.WriteAllText(path, json);
+		lock (StorageSync)
+		{
+			// Refuse to overwrite storage we cannot decode, including after a failed UI load.
+			Load(path);
+			Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+			var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+			try
+			{
+				File.WriteAllText(temporaryPath, json);
+				if (File.Exists(path)) File.Replace(temporaryPath, path, null);
+				else File.Move(temporaryPath, path);
+			}
+			finally
+			{
+				if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+			}
+		}
 	}
 
 	public static bool TryGetByDisplayName(string? displayName, out LauncherAccountModel? account)

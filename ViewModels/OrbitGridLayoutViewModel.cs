@@ -369,6 +369,7 @@ namespace Orbit.ViewModels
 
 				_observedTabControls.Add(control);
 				SubscribeTabControlEvents(control);
+				foreach (var item in control.Items.Cast<object>()) _reconciliationService.RegisterOrbitLanding(item);
 			}
 
 			foreach (var control in _observedTabControls.ToList())
@@ -437,6 +438,7 @@ namespace Orbit.ViewModels
 				foreach (var item in e.NewItems.Cast<object>())
 				{
 					_preferredOwnerByItem[item] = new WeakReference<TabablzControl>(control);
+					_reconciliationService.RegisterOrbitLanding(item);
 				}
 			}
 
@@ -459,6 +461,7 @@ namespace Orbit.ViewModels
 			// Re-running the full workspace reconcile immediately after each add creates avoidable
 			// ownership/activation churn once multiple live sessions are visible.
 			var shouldScheduleReconcile =
+				e.NewItems?.Cast<object>().Any(item => !Items.Contains(item)) == true ||
 				e.Action == NotifyCollectionChangedAction.Remove ||
 				e.Action == NotifyCollectionChangedAction.Reset ||
 				e.Action == NotifyCollectionChangedAction.Replace ||
@@ -503,11 +506,8 @@ namespace Orbit.ViewModels
 					}
 
 					var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
-					// NOTE: the loop reads ownership from the visual-tree scrape, NOT placement.
-					// Placement drifts for sessions/tools drag-docked directly into an Orbit control
-					// (that path doesn't run ReconcileAddedSession), so a placement-based eviction
-					// would wrongly remove a freshly-docked item. Moving the loop onto placement
-					// requires branch membership as data (Stage 2f).
+					// Use actual ownership to recover missing surfaces; landing events determine
+					// which side wins a conflict after a move.
 					var ownership = _reconciliationService.CaptureUiOwnership(Items.Cast<object>());
 					foreach (var (_, tabControl) in _tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView))
 					{
@@ -538,7 +538,10 @@ namespace Orbit.ViewModels
 
 							var existingSelected = ReferenceEquals(existing.SelectedItem, item);
 							var currentSelected = ReferenceEquals(control.SelectedItem, item);
-							if (currentSelected && !existingSelected)
+							_preferredOwnerByItem.TryGetValue(item, out var preferredReference);
+							TabablzControl? preferred = null;
+							preferredReference?.TryGetTarget(out preferred);
+							if (ReferenceEquals(preferred, control) || (!ReferenceEquals(preferred, existing) && currentSelected && !existingSelected))
 							{
 								removals.Add((existing, item));
 								ownerByItem[item] = control;
@@ -623,7 +626,7 @@ namespace Orbit.ViewModels
 
 					// If an item is now hosted in a non-Orbit tab surface, evict it from Orbit controls.
 					// This prevents duplicate session/tool tabs when users tear out from Orbit into independent hosts.
-					foreach (var movedElsewhere in ownerByItem.Keys.Where(ownership.IsInNonOrbitTabs).ToList())
+					foreach (var movedElsewhere in ownerByItem.Keys.Where(_reconciliationService.IsItemInNonOrbitHost).ToList())
 					{
 						if (ownerByItem.TryGetValue(movedElsewhere, out var owner))
 						{
@@ -1296,23 +1299,8 @@ namespace Orbit.ViewModels
 
 			private static void DisposeToolItem(object item)
 			{
-				if (item is not ToolTabItem tool || tool.HostControl == null)
-				{
-					return;
-				}
-
-				try
-				{
-					if (tool.HostControl.DataContext is IDisposable disposable &&
-						disposable is not MainWindowViewModel)
-					{
-						disposable.Dispose();
-					}
-				}
-				catch
-				{
-					// Best effort cleanup.
-				}
+				if (item is ToolTabItem tool)
+					try { tool.Close(); } catch (Exception ex) { Console.WriteLine($"[Orbit] Tool cleanup failed: {ex.Message}"); }
 			}
 
 		public event PropertyChangedEventHandler? PropertyChanged;

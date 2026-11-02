@@ -164,7 +164,8 @@ public sealed class ShellSessionCloseService
 		}
 		catch
 		{
-			return false;
+			// An inaccessible process is not proof of exit; retain the session for recovery.
+			return true;
 		}
 	}
 }

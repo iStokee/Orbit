@@ -5,6 +5,16 @@ namespace Orbit.Tests;
 
 public sealed class OrbitCommandClientResponseTests
 {
+	[Theory]
+	[InlineData("garbage")]
+	[InlineData("{not-json")]
+	[InlineData("{}")]
+	[InlineData("{\"ok\":true}")]
+	[InlineData("{\"ok\":false,\"pid\":123}")]
+	public void ParseResponse_RejectsUnconfirmedSuccess(string raw)
+	{
+		Assert.False(OrbitCommandClient.ParseResponse(raw).Success);
+	}
 	[Fact]
 	public void ParseResponse_ReturnsFailureForEmptyResponse()
 	{

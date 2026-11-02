@@ -12,13 +12,16 @@ namespace Orbit.Plugins;
 
 /// <summary>
 /// Manages loading, unloading, and hot-reloading of Orbit plugins.
-/// Uses collectible AssemblyLoadContexts to enable memory-safe unloading.
+/// Uses collectible AssemblyLoadContexts for cooperative unloading of trusted plugins.
 /// </summary>
 public class PluginLoader
 {
     private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private volatile bool _shuttingDown;
+    internal void StopLoading() => _shuttingDown = true;
+    internal Func<string, bool>? IsPluginInUse { get; set; }
 
     /// <summary>
     /// Event raised when a plugin is loaded.
@@ -53,6 +56,7 @@ public class PluginLoader
         await _operationGate.WaitAsync().ConfigureAwait(false);
         try
         {
+            if (_shuttingDown) return PluginLoadResult.CreateFailure("Orbit is shutting down.");
             if (string.IsNullOrWhiteSpace(pluginPath))
             {
                 return PluginLoadResult.CreateFailure("Plugin path is required.");
@@ -74,7 +78,7 @@ public class PluginLoader
             }
 
             // Calculate file hash for change detection
-            string fileHash = await CalculateFileHashAsync(normalizedPath);
+            string fileHash = await CalculatePackageHashAsync(normalizedPath);
             LoadedPlugin? existingPlugin;
             lock (_lock)
             {
@@ -91,11 +95,13 @@ public class PluginLoader
                 }
 
                 // File changed - hot reload
-                return HotReloadPlugin(normalizedPath, fileHash);
+                if (OnUiThread(() => IsPluginInUse?.Invoke(existingPlugin.Metadata.Key) == true))
+                    return PluginLoadResult.CreateFailure("Close this plugin's views before reloading it.");
+                return await LoadStagedAsync(normalizedPath, fileHash, existingPlugin).ConfigureAwait(false);
             }
 
             // Load new plugin
-            return LoadNewPlugin(normalizedPath, fileHash);
+            return await LoadStagedAsync(normalizedPath, fileHash, null).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -140,9 +146,10 @@ public class PluginLoader
             }
 
             // Call plugin's OnUnload
+            if (!_shuttingDown && OnUiThread(() => IsPluginInUse?.Invoke(plugin.Metadata.Key) == true)) return false;
             try
             {
-                plugin.Instance.OnUnload();
+                OnUiThread(() => { plugin.Instance.OnUnload(); return true; });
             }
             catch (Exception ex)
             {
@@ -150,7 +157,6 @@ public class PluginLoader
                 Console.WriteLine($"Plugin OnUnload threw exception: {ex.Message}");
             }
 
-            var contextWeakRef = plugin.WeakRef;
             var metadata = plugin.Metadata;
 
             // Remove from registry before unload/GC polling to drop strong references quickly.
@@ -159,20 +165,14 @@ public class PluginLoader
                 _loadedPlugins.Remove(normalizedPath);
             }
 
-            // Unload the context
-            plugin.Context.Unload();
-            plugin = null;
-
-            // Wait briefly for collectible context to unload
-            for (int i = 0; i < 10 && contextWeakRef.IsAlive; i++)
-            {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                await Task.Delay(100);
-            }
+            // Release the registry reference before requesting collectible unload.
+            // Existing views may still hold the plugin; GC cannot remove those references.
             metadata.IsLoaded = false;
-
-            PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(metadata));
+            try
+            {
+                OnUiThread(() => { PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(metadata, plugin.Instance)); return true; });
+            }
+            finally { plugin.Context.Unload(); plugin.Package.Dispose(); }
 
             return true;
         }
@@ -211,152 +211,121 @@ public class PluginLoader
 
         foreach (var dllFile in Directory.GetFiles(pluginDirectory, "*.dll", SearchOption.AllDirectories))
         {
-            // Skip known system/framework DLLs
             var fileName = Path.GetFileName(dllFile);
-            if (fileName.StartsWith("System.") ||
-                fileName.StartsWith("Microsoft.") ||
-                fileName.StartsWith("netstandard") ||
-                fileName == "Orbit.dll" ||
-                fileName == "csharp_interop.dll" ||
-                fileName.StartsWith("MESharp.Fsm.Host.Standalone") ||
-                fileName.StartsWith("SharpBuilder.Studio"))
-            {
-                // The standalone SharpBuilder editor ships beside its launcher plugin; its managed dll is not a plugin.
-                continue;
-            }
 
-            yield return dllFile;
+            var manifestPath = Path.Combine(Path.GetDirectoryName(dllFile)!, "orbit.plugin.json");
+            if (File.Exists(manifestPath))
+            {
+                if (IsManifestEntry(manifestPath, fileName)) yield return dllFile;
+            }
+            else if (PluginPackage.IsEntryAssembly(dllFile)) yield return dllFile;
         }
     }
 
-    private PluginLoadResult LoadNewPlugin(string pluginPath, string fileHash)
+    private static bool IsManifestEntry(string path, string fileName)
     {
-        // Load plugin assembly in memory to avoid file locking
-        byte[] assemblyBytes = File.ReadAllBytes(pluginPath);
-
-        // Check for .pdb for debugging support
-        string pdbPath = Path.ChangeExtension(pluginPath, ".pdb");
-        byte[]? pdbBytes = File.Exists(pdbPath) ? File.ReadAllBytes(pdbPath) : null;
-
-        // Create collectible load context
-        var context = new PluginLoadContext(pluginPath);
-
-        // Load assembly from memory
-        using var assemblyStream = new MemoryStream(assemblyBytes);
-        using var pdbStream = pdbBytes != null ? new MemoryStream(pdbBytes) : null;
-
-        Assembly assembly = pdbStream != null
-            ? context.LoadFromStream(assemblyStream, pdbStream)
-            : context.LoadFromStream(assemblyStream);
-
-        // Find IOrbitPlugin implementations
-        var pluginType = assembly.GetTypes()
-            .FirstOrDefault(t => typeof(IOrbitPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-
-        if (pluginType == null)
-        {
-            context.Unload();
-            return PluginLoadResult.CreateFailure("No IOrbitPlugin implementation found in assembly");
-        }
-
-        // Create plugin instance
-        var pluginInstance = (IOrbitPlugin?)Activator.CreateInstance(pluginType);
-        if (pluginInstance == null)
-        {
-            context.Unload();
-            return PluginLoadResult.CreateFailure("Failed to create plugin instance");
-        }
-
-        // Create metadata
-        var metadata = new PluginMetadata
-        {
-            PluginPath = pluginPath,
-            Key = pluginInstance.Key,
-            DisplayName = pluginInstance.DisplayName,
-            Version = pluginInstance.Version,
-            Author = pluginInstance.Author,
-            Description = pluginInstance.Description,
-            LoadedAt = DateTime.Now,
-            IsLoaded = true,
-            FileHash = fileHash
-        };
-
-        // Store loaded plugin
-        var loadedPlugin = new LoadedPlugin
-        {
-            Context = context,
-            Instance = pluginInstance,
-            Metadata = metadata,
-            WeakRef = new WeakReference(context)
-        };
-
-        // Call OnLoad
         try
         {
-            pluginInstance.OnLoad();
+            using var manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            return string.Equals(manifest.RootElement.GetProperty("entryAssembly").GetString(), fileName, StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException or System.Collections.Generic.KeyNotFoundException)
         {
-            try
-            {
-                context.Unload();
-            }
-            catch
-            {
-                // best effort cleanup after failed init
-            }
-
-            return PluginLoadResult.CreateFailure($"Plugin OnLoad failed: {ex.Message}");
+            Console.WriteLine($"Cannot discover plugin manifest '{path}': {ex.Message}");
+            return false;
         }
-
-        lock (_lock)
-        {
-            _loadedPlugins[pluginPath] = loadedPlugin;
-        }
-        PluginLoaded?.Invoke(this, new PluginLoadedEventArgs(metadata, pluginInstance));
-
-        return PluginLoadResult.CreateSuccess(metadata, wasReloaded: false);
     }
 
-    private PluginLoadResult HotReloadPlugin(string pluginPath, string newFileHash)
+    private async Task<PluginLoadResult> LoadStagedAsync(string path, string hash, LoadedPlugin? previous)
     {
-        // Unload old version
-        LoadedPlugin oldPlugin;
-        lock (_lock)
-        {
-            oldPlugin = _loadedPlugins[pluginPath];
-        }
-        var oldMetadata = oldPlugin.Metadata;
-
+        var package = await Task.Run(() => PluginPackage.Stage(path)).ConfigureAwait(false);
         try
         {
-            oldPlugin.Instance.OnUnload();
+            if (await CalculatePackageHashAsync(Path.Combine(package.Folder, package.EntryPath)).ConfigureAwait(false) != hash)
+                throw new IOException("Plugin package changed while staging; retry the load.");
+            return OnUiThread(() => LoadNewPlugin(path, hash, package, previous));
         }
-        catch (Exception ex)
+        catch { package.Dispose(); throw; }
+    }
+
+    private PluginLoadResult LoadNewPlugin(string path, string hash, PluginPackage package, LoadedPlugin? previous)
+    {
+        if (_shuttingDown) { package.Dispose(); return PluginLoadResult.CreateFailure("Orbit is shutting down."); }
+        var context = new PluginLoadContext(Path.Combine(package.Folder, package.EntryPath));
+        IOrbitPlugin? instance = null;
+        PluginMetadata? metadata = null;
+        var initialized = false;
+        var committed = false;
+        var previousStopped = false;
+        try
         {
-            Console.WriteLine($"Plugin OnUnload threw exception: {ex.Message}");
+            using var stream = new MemoryStream(File.ReadAllBytes(Path.Combine(package.Folder, package.EntryPath)));
+            var assembly = context.LoadFromStream(stream);
+            var type = assembly.GetTypes().FirstOrDefault(t => typeof(IOrbitPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+                ?? throw new InvalidOperationException("No IOrbitPlugin implementation found in assembly.");
+            instance = (IOrbitPlugin?)Activator.CreateInstance(type) ?? throw new InvalidOperationException("Plugin construction returned null.");
+            if (string.IsNullOrWhiteSpace(instance.Key)) throw new InvalidOperationException("Plugin key is required.");
+            lock (_lock)
+                if (_loadedPlugins.Values.Any(p => !ReferenceEquals(p, previous) && p.Metadata.Key == instance.Key))
+                    throw new InvalidOperationException($"Plugin key '{instance.Key}' is already loaded.");
+            metadata = new PluginMetadata
+            {
+                PluginPath = path, Key = instance.Key, DisplayName = instance.DisplayName,
+                Version = instance.Version, Author = instance.Author, Description = instance.Description,
+                LoadedAt = DateTime.Now, IsLoaded = true, FileHash = hash
+            };
+            // Validate and construct the replacement before stopping the working version.
+            // Keep its context and immutable package until replacement initialization commits.
+            if (previous != null)
+            {
+                previousStopped = true;
+                previous.Instance.OnUnload();
+                lock (_lock) _loadedPlugins.Remove(path);
+                previous.Metadata.IsLoaded = false;
+                PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(previous.Metadata, previous.Instance));
+            }
+            initialized = true;
+            instance.OnLoad();
+            PluginLoaded?.Invoke(this, new PluginLoadedEventArgs(metadata, instance));
+            lock (_lock) _loadedPlugins.Add(path, new LoadedPlugin { Context = context, Instance = instance, Metadata = metadata, Package = package });
+            committed = true;
+            if (previous != null) { previous.Context.Unload(); previous.Package.Dispose(); }
+            return PluginLoadResult.CreateSuccess(metadata, previous != null);
         }
-
-        oldPlugin.Context.Unload();
-        lock (_lock)
+        finally
         {
-            _loadedPlugins.Remove(pluginPath);
+            if (!committed)
+            {
+                if (metadata != null && instance != null)
+                {
+                    metadata.IsLoaded = false;
+                    try { PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(metadata, instance)); } catch { }
+                }
+                if (initialized) try { instance!.OnUnload(); } catch (Exception error) { Console.WriteLine($"Candidate plugin cleanup failed: {error.Message}"); }
+                context.Unload(); package.Dispose();
+                if (previousStopped && previous != null)
+                {
+                    try
+                    {
+                        previous.Instance.OnLoad();
+                        previous.Metadata.IsLoaded = true;
+                        PluginLoaded?.Invoke(this, new PluginLoadedEventArgs(previous.Metadata, previous.Instance));
+                        lock (_lock) _loadedPlugins[path] = previous;
+                    }
+                    catch (Exception error)
+                    {
+                        previous.Metadata.IsLoaded = false;
+                        lock (_lock) _loadedPlugins.Remove(path);
+                        throw new InvalidOperationException("Plugin replacement failed and the previous plugin could not be restarted.", error);
+                    }
+                }
+            }
         }
-        oldMetadata.IsLoaded = false;
-        PluginUnloaded?.Invoke(this, new PluginUnloadedEventArgs(oldMetadata));
-
-        // Trigger GC
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-
-        // Load new version
-        var result = LoadNewPlugin(pluginPath, newFileHash);
-        if (result.Success)
-        {
-            result = result with { WasReloaded = true };
-        }
-
-        return result;
+    }
+    private static T OnUiThread<T>(Func<T> action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        return dispatcher == null || dispatcher.CheckAccess() ? action() : dispatcher.Invoke(action);
     }
 
     private static string NormalizePluginPath(string pluginPath)
@@ -364,20 +333,26 @@ public class PluginLoader
         return Path.GetFullPath(pluginPath.Trim());
     }
 
-    private async Task<string> CalculateFileHashAsync(string filePath)
+    internal static Task<string> CalculatePackageHashAsync(string pluginPath) => PluginPackage.HashAsync(pluginPath);
+    public async Task ShutdownAsync()
     {
-        using var md5 = MD5.Create();
-        await using var stream = File.OpenRead(filePath);
-        var hash = await md5.ComputeHashAsync(stream);
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+        string[] paths;
+        try
+        {
+            _shuttingDown = true;
+            lock (_lock) paths = _loadedPlugins.Keys.ToArray();
+        }
+        finally { _operationGate.Release(); }
+        foreach (var path in paths) await UnloadPluginAsync(path).ConfigureAwait(false);
     }
 
     private class LoadedPlugin
     {
         public required PluginLoadContext Context { get; init; }
+        public required PluginPackage Package { get; init; }
         public required IOrbitPlugin Instance { get; init; }
         public required PluginMetadata Metadata { get; init; }
-        public required WeakReference WeakRef { get; init; }
     }
 
 
@@ -415,9 +390,12 @@ public class PluginLoader
     {
         public PluginMetadata Metadata { get; }
 
-        public PluginUnloadedEventArgs(PluginMetadata metadata)
+        public IOrbitPlugin? Instance { get; }
+
+        public PluginUnloadedEventArgs(PluginMetadata metadata, IOrbitPlugin? instance = null)
         {
             Metadata = metadata;
+            Instance = instance;
         }
     }
 }

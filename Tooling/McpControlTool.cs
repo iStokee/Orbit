@@ -23,6 +23,6 @@ public sealed class McpControlTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return _serviceProvider.GetRequiredService<McpControlCenterView>();
+        return _serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<McpControlCenterView>();
     }
 }

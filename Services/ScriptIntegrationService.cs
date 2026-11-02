@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Orbit.Classes;
 using Orbit.Models;
@@ -18,6 +20,7 @@ namespace Orbit.Services
 		private readonly SessionCollectionService _sessionCollection;
 		private readonly SessionPlacementService _sessionPlacement;
 		private readonly OrbitLayoutStateService _orbitLayoutState;
+		internal bool IsShuttingDown { get; set; }
 
 		public ScriptIntegrationService(
 			SessionCollectionService sessionCollection,
@@ -39,8 +42,12 @@ namespace Orbit.Services
 		public Guid RegisterScriptWindow(IntPtr windowHandle, string tabName, int? processId = null)
 			=> ExecuteOnUi(() => RegisterScriptWindowOnUi(windowHandle, tabName, processId));
 
+		public Task<Guid> RegisterScriptWindowAsync(IntPtr handle, string name, int? processId, CancellationToken token, DateTimeOffset? deadline = null)
+			=> UiRequestDispatcher.RunAsync(Application.Current?.Dispatcher, () => RegisterScriptWindowOnUi(handle, name, processId), token, deadline);
+
 		private Guid RegisterScriptWindowOnUi(IntPtr windowHandle, string tabName, int? processId)
 		{
+			if (IsShuttingDown) throw new InvalidOperationException("Orbit is shutting down.");
 			if (!Orbit.Settings.Default.ScriptWindowEmbeddingEnabled)
 			{
 				throw new InvalidOperationException("Script window embedding is disabled.");
@@ -61,9 +68,14 @@ namespace Orbit.Services
 			{
 				throw new ArgumentException("Invalid window handle - window does not exist", nameof(windowHandle));
 			}
+			if (_sessionCollection.Sessions.Any(s => s.IsRuneScapeClient &&
+				(s.ExternalHandle == windowHandle || s.RenderSurfaceHandle == windowHandle || s.RSForm?.DockedClientHandle == windowHandle)))
+				throw new InvalidOperationException("A managed game window cannot also be registered as an external script window.");
 
 			// Get process ID if not provided
-			int pid = processId ?? GetProcessIdFromWindow(windowHandle);
+			int pid = GetProcessIdFromWindow(windowHandle);
+			if (pid <= 0 || (processId.HasValue && processId.Value != pid))
+				throw new ArgumentException("The supplied process ID does not own the script window.", nameof(processId));
 
 			// Get process for tracking
 			Process scriptProcess = null;
@@ -81,15 +93,16 @@ namespace Orbit.Services
 				s.IsExternalScript && s.ExternalHandle == (nint)windowHandle);
 			if (existingSession != null)
 			{
-				existingSession.Name = tabName;
-				if (!ReferenceEquals(existingSession.RSProcess, scriptProcess))
+				if (existingSession.ExternalWindowIdentity?.IsCurrent != true)
 				{
-					try { existingSession.RSProcess?.Dispose(); } catch { }
+					UnregisterScriptWindowOnUi(existingSession.Id);
 				}
-				existingSession.RSProcess = scriptProcess;
-				existingSession.UpdateState(SessionState.ClientReady);
-				existingSession.UpdateInjectionState(InjectionState.NotReady);
-				return existingSession.Id;
+				else
+				{
+					existingSession.Name = tabName;
+					scriptProcess.Dispose();
+					return existingSession.Id;
+				}
 			}
 
 			// Create a host control for the embedded window
@@ -107,6 +120,8 @@ namespace Orbit.Services
 				HostControl = hostControl,
 				RequireInjectionBeforeDock = false
 			};
+			try { session.ExternalWindowIdentity = new HostedWindowIdentity(windowHandle, scriptProcess); }
+			catch { scriptProcess.Dispose(); hostControl.DetachSession(); throw; }
 
 			hostControl.DataContext = session;
 
@@ -163,6 +178,9 @@ namespace Orbit.Services
 		public bool UnregisterScriptWindow(Guid sessionId)
 			=> ExecuteOnUi(() => UnregisterScriptWindowOnUi(sessionId));
 
+		public Task<bool> UnregisterScriptWindowAsync(Guid sessionId, CancellationToken token, DateTimeOffset? deadline = null)
+			=> UiRequestDispatcher.RunAsync(Application.Current?.Dispatcher, () => UnregisterScriptWindowOnUi(sessionId), token, deadline);
+
 		private bool UnregisterScriptWindowOnUi(Guid sessionId)
 		{
 			var session = _sessionCollection.Sessions.FirstOrDefault(s => s.Id == sessionId);
@@ -189,6 +207,12 @@ namespace Orbit.Services
 			}
 
 			session.HostControl?.DetachSession(restoreParent: true);
+			session.ExternalWindowIdentity?.Dispose();
+			session.ExternalWindowIdentity = null;
+			session.RSProcess?.Dispose();
+			session.RSProcess = null;
+			session.ExternalHandle = nint.Zero;
+			session.UpdateState(SessionState.Closed, clearError: false);
 			_sessionPlacement.Remove(session);
 			_sessionCollection.Sessions.Remove(session);
 

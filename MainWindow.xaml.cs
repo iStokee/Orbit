@@ -1,5 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
+using System.Collections;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -29,17 +32,15 @@ namespace Orbit
 {
 	public partial class MainWindow : MetroWindow
 	{
-	private readonly DispatcherTimer resizeTimer;
+	private readonly System.Collections.Generic.Dictionary<TabablzControl, NotifyCollectionChangedEventHandler> branchItemHandlers = new();
 	private readonly MainWindowViewModel viewModel;
 	private readonly DispatcherTimer floatingMenuInactivityTimer;
 	private readonly DispatcherTimer floatingMenuWakeTimer;
 	private readonly DispatcherTimer windowPlacementPersistTimer;
 	private readonly Services.FloatingMenuQuickToggleService floatingMenuQuickToggleService;
 	private readonly Services.FloatingMenuGeometryService floatingMenuGeometryService;
-	private readonly Services.ShellClientResizeService shellClientResizeService;
 	private readonly Services.ShellWindowPlacementService windowPlacementService;
 	private readonly Services.TaskbarOrbitIconService taskbarOrbitIconService;
-	private readonly NotifyCollectionChangedEventHandler sessionsCollectionChangedHandler;
 	private bool floatingMenuDragCandidate;
 	private bool floatingMenuDragging;
 	private Point floatingMenuDragStart;
@@ -47,9 +48,11 @@ namespace Orbit
 	private bool hasCursorBaseline;
 	private POINT lastCursorPoint;
 	private bool forceAppClose;
+	private bool shutdownInProgress;
+	private bool transferringWindowContents;
 	private HwndSource? hwndSource;
 	private HwndSourceHook? messageHook;
-	private readonly bool isPrimaryShellWindow;
+	private bool isPrimaryShellWindow => ReferenceEquals(System.Windows.Application.Current?.MainWindow, this);
 	private bool windowPlacementRestored;
 	private bool windowPlacementPersistenceReady;
 	private const int WM_MBUTTONUP = 0x0208;
@@ -68,19 +71,16 @@ namespace Orbit
 			MainWindowViewModel viewModel,
 			Services.FloatingMenuQuickToggleService floatingMenuQuickToggleService,
 			Services.FloatingMenuGeometryService floatingMenuGeometryService,
-			Services.ShellClientResizeService shellClientResizeService,
 			Services.ShellWindowPlacementService windowPlacementService,
 			Services.TaskbarOrbitIconService taskbarOrbitIconService)
 		{
 			this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 			this.floatingMenuQuickToggleService = floatingMenuQuickToggleService ?? throw new ArgumentNullException(nameof(floatingMenuQuickToggleService));
 			this.floatingMenuGeometryService = floatingMenuGeometryService ?? throw new ArgumentNullException(nameof(floatingMenuGeometryService));
-			this.shellClientResizeService = shellClientResizeService ?? throw new ArgumentNullException(nameof(shellClientResizeService));
 			this.windowPlacementService = windowPlacementService ?? throw new ArgumentNullException(nameof(windowPlacementService));
 			this.taskbarOrbitIconService = taskbarOrbitIconService ?? throw new ArgumentNullException(nameof(taskbarOrbitIconService));
 
 			InitializeComponent();
-			isPrimaryShellWindow = System.Windows.Application.Current?.MainWindow == null;
 
 			if (TaskbarInfo == null)
 			{
@@ -111,11 +111,7 @@ namespace Orbit
 			//// Forward location/state events to window placement persistence
 			LocationChanged += MainWindow_LocationChanged;
 			StateChanged += MainWindow_StateChanged;
-			sessionsCollectionChangedHandler = (_, __) => ResizeWindows();
-			this.viewModel.Sessions.CollectionChanged += sessionsCollectionChangedHandler;
 
-			resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
-			resizeTimer.Tick += ResizeTimer_Tick;
 
 			floatingMenuInactivityTimer = new DispatcherTimer();
 			UpdateFloatingMenuInactivityInterval();
@@ -154,54 +150,76 @@ namespace Orbit
 
 		protected override async void OnClosing(CancelEventArgs e)
 		{
-			if (forceAppClose || !ReferenceEquals(this, System.Windows.Application.Current.MainWindow) || viewModel == null)
+			if (forceAppClose || viewModel == null || (System.Windows.Application.Current as App)?.IsShutdownPrepared == true)
 			{
 				base.OnClosing(e);
+				return;
+			}
+
+			if (transferringWindowContents) { e.Cancel = true; return; }
+			if ((System.Windows.Application.Current as App)?.IsShuttingDown == true)
+			{
+				e.Cancel = true;
 				return;
 			}
 
 			// If the user closes the "primary" window while other Orbit windows are still open (e.g. after
 			// tearing tabs out), do not treat it as an app shutdown. This avoids closing sessions/tools
 			// that are currently hosted elsewhere.
-			var hasOtherWindows = System.Windows.Application.Current?.Windows?
-				.OfType<Window>()
-				.Any(w => !ReferenceEquals(w, this) && w.IsVisible) == true;
-			if (hasOtherWindows)
+			var remainingShell = System.Windows.Application.Current?.Windows?
+				.OfType<MainWindow>()
+				.FirstOrDefault(w => !ReferenceEquals(w, this) && w.IsVisible);
+			if (remainingShell != null)
 			{
-				base.OnClosing(e);
-				return;
-			}
-
-			if (viewModel.Sessions.Count == 0)
-			{
-				base.OnClosing(e);
+				e.Cancel = true;
+				transferringWindowContents = true;
+				try
+				{
+					if (ReferenceEquals(System.Windows.Application.Current.MainWindow, this))
+						System.Windows.Application.Current.MainWindow = remainingShell;
+					var target = (MainWindowViewModel)remainingShell.DataContext;
+					var controls = Utilities.VisualTreeUtil.FindVisualChildren<TabablzControl>(this)
+						.Where(control => Utilities.VisualTreeUtil.FindVisualAncestor<Views.OrbitGridLayoutView>(control) == null).ToArray();
+					var items = viewModel.Tabs.Concat(controls.SelectMany(control => control.Items.Cast<object>())).Distinct().ToArray();
+					((App)System.Windows.Application.Current).Services.GetRequiredService<Services.ShellWindowTransferService>().Transfer(
+						items,
+						item =>
+						{
+							viewModel.Tabs.Remove(item);
+							foreach (var control in controls.Where(control => control.Items.Contains(item)))
+								if (control.ItemsSource is IList list && !list.IsReadOnly) list.Remove(item);
+								else if (control.ItemsSource == null) control.Items.Remove(item);
+						},
+						item => { if (!viewModel.Tabs.Contains(item)) viewModel.Tabs.Add(item); },
+						target.Tabs, viewModel, target, () => target.OpenOrbitViewCommand.Execute(null),
+						ReferenceEquals(System.Windows.Application.Current.MainWindow, remainingShell)
+							? Services.SessionPlacementKind.MainTabs : Services.SessionPlacementKind.TearOffWindow);
+					forceAppClose = true;
+					_ = Dispatcher.BeginInvoke(new Action(Close));
+					}
+				catch (Exception ex)
+				{
+					System.Windows.MessageBox.Show($"Could not move this window's contents: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
+				}
+				finally { transferringWindowContents = false; }
 				return;
 			}
 
 			e.Cancel = true;
-
+			if (shutdownInProgress) return;
+			shutdownInProgress = true;
 			try
 			{
-				await viewModel.CloseAllSessionsAsync(skipConfirmation: true, forceKillOnTimeout: false);
+				await ((App)System.Windows.Application.Current).PrepareForShutdownAsync();
+				forceAppClose = true;
+				_ = Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current.Shutdown()));
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Orbit] Failed to shutdown sessions on exit: {ex}");
+				shutdownInProgress = false;
+				System.Windows.MessageBox.Show($"Orbit could not finish shutdown: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
-			try
-			{
-				await viewModel.ShutdownTrackedProcessesAsync(forceKillOnTimeout: false);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[Orbit] Failed to close tracked RuneScape processes on exit: {ex}");
-			}
-				finally
-				{
-					forceAppClose = true;
-					_ = Dispatcher.BeginInvoke(new Action(Close));
-				}
-			}
+		}
 
 	protected override void OnClosed(EventArgs e)
 	{
@@ -224,8 +242,7 @@ namespace Orbit
 		LocationChanged -= MainWindow_LocationChanged;
 		StateChanged -= MainWindow_StateChanged;
 		SessionTabControl.ClosingItemCallback -= this.viewModel.TabControl_ClosingItemHandler;
-		this.viewModel.Sessions.CollectionChanged -= sessionsCollectionChangedHandler;
-		resizeTimer.Tick -= ResizeTimer_Tick;
+		foreach (var control in branchItemHandlers.Keys.ToArray()) DetachBranchTabControl(control);
 		floatingMenuInactivityTimer.Tick -= FloatingMenuInactivityTimer_Tick;
 		floatingMenuWakeTimer.Tick -= FloatingMenuWakeTimer_Tick;
 		windowPlacementPersistTimer.Tick -= WindowPlacementPersistTimer_Tick;
@@ -314,6 +331,27 @@ namespace Orbit
 			tabControl.InterTabController ??= new InterTabController();
 			tabControl.InterTabController.InterTabClient = viewModel.InterTabClient;
 			tabControl.InterTabController.Partition = "OrbitMainShell";
+			if (!branchItemHandlers.ContainsKey(tabControl))
+			{
+				NotifyCollectionChangedEventHandler handler = (_, args) => viewModel.ReconcileBranchTabItemsChanged(tabControl, args);
+				((INotifyCollectionChanged)tabControl.Items).CollectionChanged += handler;
+				branchItemHandlers.Add(tabControl, handler);
+				tabControl.Unloaded += MainShellBranchTabControl_Unloaded;
+			}
+			if (tabControl.Items.Count > 0)
+				viewModel.ReconcileBranchTabItemsChanged(tabControl, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, tabControl.Items.Cast<object>().ToList()));
+		}
+
+		private void MainShellBranchTabControl_Unloaded(object sender, RoutedEventArgs e)
+		{
+			if (sender is TabablzControl control) DetachBranchTabControl(control);
+		}
+
+		private void DetachBranchTabControl(TabablzControl control)
+		{
+			if (branchItemHandlers.Remove(control, out var handler)) ((INotifyCollectionChanged)control.Items).CollectionChanged -= handler;
+			control.Unloaded -= MainShellBranchTabControl_Unloaded;
+			control.ClosingItemCallback -= viewModel.TabControl_ClosingItemHandler;
 		}
 
 		private void MainShellTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -423,27 +461,8 @@ namespace Orbit
 			var hostWidth = FloatingMenuOverlayAnchor?.ActualWidth > 0 ? FloatingMenuOverlayAnchor.ActualWidth : ActualWidth;
 			var hostHeight = FloatingMenuOverlayAnchor?.ActualHeight > 0 ? FloatingMenuOverlayAnchor.ActualHeight : ActualHeight;
 			viewModel.UpdateHostViewport(hostWidth, hostHeight);
-			if (viewModel.Sessions.Count == 0) return;
-			resizeTimer.Stop();
-			resizeTimer.Start();
 		}
 
-
-		// Timer tick method to handle resize logic
-		private void ResizeTimer_Tick(object sender, EventArgs e)
-		{
-			// If the left mouse button is pressed, don't proceed with resize
-			if (System.Windows.Input.Mouse.LeftButton == MouseButtonState.Pressed) return;
-
-			resizeTimer.Stop();
-
-			ResizeWindows();
-		}
-
-		private void ResizeWindows()
-		{
-			shellClientResizeService.ResizeVisibleClients(viewModel.Sessions);
-		}
 
 		private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
 		{

@@ -106,6 +106,14 @@ public partial class ConsoleView : UserControl
 		}
 	}
 
+	private void Console_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+	{
+		if (e.Key != System.Windows.Input.Key.C || System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control
+			|| GetActiveListBox() is not { SelectedItems.Count: > 0 }) return;
+		CopySelected_Click(sender, e);
+		e.Handled = true;
+	}
+
 	private ListBox? GetActiveListBox()
 	{
 		return _viewModel.SelectedTabIndex switch

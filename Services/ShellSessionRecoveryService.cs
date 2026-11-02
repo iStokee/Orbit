@@ -42,7 +42,7 @@ public sealed class ShellSessionRecoveryService
 			return;
 		}
 
-		if (!sessionPlacementService.IsPlacedInHost(session))
+		if (!sessionReconciliationService.Capture(session, orbitItems, "restore-visible-session").HasAnyUiReference && !tabs.Contains(session))
 		{
 			sessionPlacementService.SetPlacement(session, SessionPlacementKind.MainTabs, "restore-visible-session");
 			if (!tabs.Contains(session))
@@ -71,9 +71,8 @@ public sealed class ShellSessionRecoveryService
 				return;
 			}
 
-			// Placement-driven (Stage 2c): conflicts are now resolved by the ownership coordinator,
-			// so this path only restores a session the authoritative model reports in no host.
-			if (!sessionReconciliationService.ShouldRestoreOrphan(session))
+			// Intended placement cannot prove that a tab still exists after a failed move.
+			if (!sessionReconciliationService.ShouldRestoreOrphan(sessionReconciliationService.Capture(session, orbitItems, "orphan-validation")))
 			{
 				return;
 			}

@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Orbit.Views.ConsoleView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -14,7 +14,11 @@
     d:DesignHeight="600"
     d:DesignWidth="800"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}"
+    PreviewKeyDown="Console_PreviewKeyDown">
     <d:UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -25,6 +29,14 @@
     </d:UserControl.Resources>
     <UserControl.Resources>
         <converters:ConsoleLogLevelToBrushConverter x:Key="ConsoleLogLevelToBrushConverter" />
+        <Style x:Key="ConsoleMessageStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource ConsoleLogLevelToBrushConverter}}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
         <!-- Shared Console ListBox Template -->
         <DataTemplate x:Key="ConsoleEntryTemplate">
@@ -47,8 +59,9 @@
                 <!--  Message Text  -->
                 <TextBlock
                     Grid.Column="1"
-                    Foreground="{Binding Level, Converter={StaticResource ConsoleLogLevelToBrushConverter}}"
-                    LineHeight="18"
+                    FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                    FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                    Style="{StaticResource ConsoleMessageStyle}"
                     Text="{Binding DisplayText}"
                     TextWrapping="Wrap" />
             </Grid>
@@ -60,8 +73,8 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontFamily" Value="Cascadia Code, Consolas, Courier New" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="FontSize" Value="{DynamicResource Orbit.Fonts.Size.Base}" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="SelectionMode" Value="Extended" />
             <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
@@ -72,11 +85,17 @@
                 <Setter.Value>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="1" />
                         <Setter Property="Padding" Value="6,3" />
                         <Setter Property="Margin" Value="0,1" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -127,8 +146,8 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <ToggleButton
-                        Width="28"
-                        Height="28"
+                        Width="32"
+                        Height="32"
                         Margin="0,0,8,0"
                         IsChecked="{Binding AutoScrollEnabled}"
                         Style="{StaticResource MahApps.Styles.ToggleButton.Square}">
@@ -147,7 +166,9 @@
                     </ToggleButton>
 
                     <Button
-                        Height="28"
+                        Width="88"
+                        Height="32"
+                        Padding="8,4"
                         Margin="0,0,8,0"
                         Click="CopySelected_Click"
                         ToolTip="Copy selected log lines to the clipboard"
@@ -159,7 +180,10 @@
                     </Button>
 
                     <Button
-                        Height="28"
+                        Width="88"
+                        Height="32"
+                        Padding="8,4"
+                        Margin="0"
                         Command="{Binding ClearCommand}"
                         Style="{StaticResource Orbit.Workbench.Button.Primary}">
                         <StackPanel Orientation="Horizontal">

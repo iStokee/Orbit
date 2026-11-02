@@ -23,6 +23,6 @@ public sealed class ScriptManagerTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return serviceProvider.GetRequiredService<ScriptManagerPanel>();
+        return serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<ScriptManagerPanel>();
     }
 }

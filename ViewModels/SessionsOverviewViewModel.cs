@@ -1,4 +1,4 @@
-﻿using Orbit.Logging;
+using Orbit.Logging;
 using Orbit.Models;
 using Orbit.Services;
 using System;
@@ -23,6 +23,8 @@ namespace Orbit.ViewModels
 			private readonly Func<SessionModel, bool> canToggleNativeDebugMenu;
 			private readonly SessionReconciliationService reconciliationService;
 			private readonly OrbitLayoutStateService orbitLayoutState;
+			private readonly ScriptOrchestrationService orchestration;
+			private readonly SessionPlacementService? placementService;
 			private SessionModel? selectedSession;
 			private bool _isScriptCommandInFlight;
 			private string _diagnosticsStatus = "Diagnostics not captured yet.";
@@ -35,7 +37,8 @@ namespace Orbit.ViewModels
 				Func<SessionModel, Task> toggleNativeDebugMenu,
 				Func<SessionModel, bool> canToggleNativeDebugMenu,
 				SessionReconciliationService reconciliationService,
-				OrbitLayoutStateService orbitLayoutState)
+				OrbitLayoutStateService orbitLayoutState,
+				ScriptOrchestrationService orchestration, SessionPlacementService? placementService = null)
 			{
 				Sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
 				this.activateSession = activateSession ?? throw new ArgumentNullException(nameof(activateSession));
@@ -45,6 +48,8 @@ namespace Orbit.ViewModels
 				this.canToggleNativeDebugMenu = canToggleNativeDebugMenu ?? throw new ArgumentNullException(nameof(canToggleNativeDebugMenu));
 				this.reconciliationService = reconciliationService ?? throw new ArgumentNullException(nameof(reconciliationService));
 				this.orbitLayoutState = orbitLayoutState ?? throw new ArgumentNullException(nameof(orbitLayoutState));
+				this.orchestration = orchestration ?? throw new ArgumentNullException(nameof(orchestration));
+				this.placementService = placementService;
 
 			SetActiveCommand = new RelayCommand<SessionModel?>(session =>
 			{
@@ -86,6 +91,12 @@ namespace Orbit.ViewModels
 			DumpDiagnosticsCommand = new RelayCommand(DumpDiagnostics);
 
 			Sessions.CollectionChanged += OnSessionsCollectionChanged;
+			Settings.Default.PropertyChanged += OnSettingsChanged;
+			if (placementService != null)
+			{
+				placementService.PlacementChanged += OnPlacementChanged;
+				placementService.MoveCompleted += OnPlacementChanged;
+			}
 			foreach (var session in Sessions)
 			{
 				AttachSession(session);
@@ -243,7 +254,7 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			await RunScriptCommandAsync(target, ConfiguredScriptPath, actionLabel: "Loading script");
+			await RunScriptCommandAsync(target, ConfiguredScriptPath, reload: false);
 		}
 
 		private async Task ReloadScriptAsync(SessionModel? session)
@@ -277,7 +288,7 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			await RunScriptCommandAsync(target, path, actionLabel: "Reloading script");
+			await RunScriptCommandAsync(target, path, reload: true);
 		}
 
 		private async Task StopScriptAsync(SessionModel? session)
@@ -301,42 +312,13 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			target.SetScriptRuntimePending("Stopping script");
 			await SetScriptCommandInFlightAsync(async () =>
 			{
-				var scriptIdToUnload = !string.IsNullOrWhiteSpace(target.ActiveScriptId)
-					? target.ActiveScriptId!
-					: (!string.IsNullOrWhiteSpace(target.ActiveScriptPath)
-						? ScriptManagerService.DeriveScriptIdFromPath(target.ActiveScriptPath)
-						: string.Empty);
-
-				var success = string.IsNullOrWhiteSpace(scriptIdToUnload)
-					? await OrbitCommandClient
-						.SendUnloadScriptWithRetryAsync(target.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-						.ConfigureAwait(true)
-					: await OrbitCommandClient
-						.SendUnloadScriptWithRetryAsync(scriptIdToUnload, target.RSProcess.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: CancellationToken.None)
-						.ConfigureAwait(true);
-
-				if (!success)
-				{
-					target.SetScriptRuntimeError("Failed to stop script.");
-					ConsoleLogService.Instance.Append(
-						$"[Sessions] Failed to stop script for '{target.Name}'.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-					return;
-				}
-
-				target.SetScriptStopped();
-				ConsoleLogService.Instance.Append(
-					$"[Sessions] Stopped script for '{target.Name}'.",
-					ConsoleLogSource.Orbit,
-					ConsoleLogLevel.Info);
+				await orchestration.UnloadActiveScriptAsync(target).ConfigureAwait(true);
 			}).ConfigureAwait(true);
 		}
 
-		private async Task RunScriptCommandAsync(SessionModel target, string scriptPath, string actionLabel)
+		private async Task RunScriptCommandAsync(SessionModel target, string scriptPath, bool reload)
 		{
 			if (target.InjectionState != InjectionState.Injected || target.RSProcess == null)
 			{
@@ -344,46 +326,12 @@ namespace Orbit.ViewModels
 				return;
 			}
 
-			target.SetScriptRuntimePending(actionLabel);
-
 			await SetScriptCommandInFlightAsync(async () =>
 			{
-				var pid = target.RSProcess!.Id;
-				var runtimeReady = await OrbitCommandClient
-					.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!runtimeReady)
-				{
-					ConsoleLogService.Instance.Append(
-						$"[Sessions] Unable to start ME .NET runtime for '{target.Name}'. Script command may fail.",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-				}
-
-				var success = await OrbitCommandClient
-					.SendReloadWithRetryAsync(
-						scriptPath,
-						ScriptManagerService.DeriveScriptIdFromPath(scriptPath),
-						pid,
-						maxAttempts: 4,
-						initialDelay: TimeSpan.FromMilliseconds(200),
-						cancellationToken: CancellationToken.None)
-					.ConfigureAwait(true);
-				if (!success)
-				{
-					target.SetScriptRuntimeError($"Failed command for '{Path.GetFileNameWithoutExtension(scriptPath)}'.");
-					ConsoleLogService.Instance.Append(
-						$"[Sessions] Script command failed for '{target.Name}' (script '{scriptPath}').",
-						ConsoleLogSource.Orbit,
-						ConsoleLogLevel.Warning);
-					return;
-				}
-
-				target.SetScriptLoaded(scriptPath, ScriptManagerService.DeriveScriptIdFromPath(scriptPath));
-				ConsoleLogService.Instance.Append(
-					$"[Sessions] Script command sent for '{target.Name}' (script '{scriptPath}').",
-					ConsoleLogSource.Orbit,
-					ConsoleLogLevel.Info);
+				if (reload)
+					await orchestration.ReloadAsync(target, scriptPath).ConfigureAwait(true);
+				else
+					await orchestration.LoadAsync(target, scriptPath).ConfigureAwait(true);
 			}).ConfigureAwait(true);
 		}
 
@@ -491,8 +439,27 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(UnplacedSessionCount));
 		}
 
+		private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName is nameof(Settings.Default.HotReloadScriptPath) or nameof(Settings.Default.MesharpIntegrationEnabled))
+			{
+				OnPropertyChanged(nameof(ConfiguredScriptPath));
+				OnPropertyChanged(nameof(HasConfiguredScriptPath));
+				RefreshCommandStates();
+			}
+		}
+
+		private void OnPlacementChanged(object? sender, SessionPlacementChangedEventArgs e)
+			=> OnPropertyChanged(nameof(UnplacedSessionCount));
+
 		public void Dispose()
 		{
+			Settings.Default.PropertyChanged -= OnSettingsChanged;
+			if (placementService != null)
+			{
+				placementService.PlacementChanged -= OnPlacementChanged;
+				placementService.MoveCompleted -= OnPlacementChanged;
+			}
 			Sessions.CollectionChanged -= OnSessionsCollectionChanged;
 			foreach (var session in Sessions)
 			{

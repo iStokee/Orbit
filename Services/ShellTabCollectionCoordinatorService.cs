@@ -105,12 +105,10 @@ public sealed class ShellTabCollectionCoordinatorService
 		bool isOrbitViewTearOffWindow,
 		bool isMainWindowShell)
 	{
-		// The session has landed in a host; close any grace opened by its drag-out removal.
-		sessionPlacementService.EndExternalMove(session, "tab-add-landed");
-
 		if (isOrbitViewTearOffWindow)
 		{
 			sessionPlacementService.SetPlacement(session, SessionPlacementKind.OrbitWorkspace, "orbit-tearoff-tab-add");
+			sessionPlacementService.EndExternalMove(session, "tab-add-landed");
 			return;
 		}
 
@@ -118,6 +116,7 @@ public sealed class ShellTabCollectionCoordinatorService
 			session,
 			isMainWindowShell ? SessionPlacementKind.MainTabs : SessionPlacementKind.TearOffWindow);
 		orbitLayoutState.RemoveItem(session);
+		sessionPlacementService.EndExternalMove(session, "tab-add-landed");
 	}
 
 	private void ReconcileAddedTool(

@@ -24,6 +24,7 @@ namespace Orbit.Services.Updates
 			public GitHubAsset[] assets { get; set; }
 			public GitHubUser author { get; set; }
 			public bool prerelease { get; set; }
+			public bool draft { get; set; }
 		}
 
 		public sealed class GitHubAsset
@@ -86,7 +87,7 @@ namespace Orbit.Services.Updates
 					};
 				}
 
-				var release = releases.FirstOrDefault(r => includePrereleases || !r.prerelease);
+				var release = SelectRelease(releases, expectedAssetName, expectedAuthor, includePrereleases);
 				if (release == null)
 				{
 					return new UpdateInfo
@@ -95,8 +96,8 @@ namespace Orbit.Services.Updates
 						CurrentVersion = currentVersion,
 						RemoteVersion = currentVersion,
 						ErrorMessage = includePrereleases
-							? "No releases are available"
-							: "No stable releases are available"
+							? "No compatible release with a portable ZIP and checksum is available"
+							: "No compatible stable release with a portable ZIP and checksum is available"
 					};
 				}
 
@@ -211,17 +212,26 @@ namespace Orbit.Services.Updates
 			return client;
 		}
 
+		internal static GitHubRelease? SelectRelease(GitHubRelease[] releases, string assetName, string? author, bool includePrereleases)
+		{
+			return releases.FirstOrDefault(r => !r.draft && (includePrereleases || !r.prerelease) &&
+				(string.IsNullOrWhiteSpace(author) || string.Equals(r.author?.login, author, StringComparison.OrdinalIgnoreCase)) &&
+				TryParseVersion(r.tag_name, out _) &&
+				r.assets?.Any(a => string.Equals(a.name, assetName, StringComparison.OrdinalIgnoreCase)) == true &&
+				r.assets.Any(a => string.Equals(a.name, assetName + ".sha256", StringComparison.OrdinalIgnoreCase)));
+		}
+
 		private static bool TryParseVersion(string input, out Version version)
 		{
 			version = null;
 			if (string.IsNullOrWhiteSpace(input))
 				return false;
 
-			var match = Regex.Match(input, @"\d+(\.\d+){1,3}");
+			var match = Regex.Match(input, @"^(?:orbit/)?[vV]?(?<version>\d+(\.\d+){1,3})(?:-[0-9A-Za-z.-]+)?$");
 			if (!match.Success)
 				return false;
 
-			return Version.TryParse(match.Value, out version);
+			return Version.TryParse(match.Groups["version"].Value, out version);
 		}
 	}
 }

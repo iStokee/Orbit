@@ -15,6 +15,9 @@ namespace Orbit.Converters
 		{
 			if (value is string colorScheme)
 			{
+				var theme = ControlzEx.Theming.ThemeManager.Current.GetTheme($"Light.{colorScheme}");
+				if (theme?.Resources["MahApps.Colors.AccentBase"] is Color accent) return accent;
+				if (theme?.Resources["MahApps.Brushes.AccentBase"] is SolidColorBrush brush) return brush.Color;
 				return colorScheme switch
 				{
 					// MahApps standard color schemes

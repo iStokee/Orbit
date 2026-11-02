@@ -34,11 +34,11 @@ public sealed class UnifiedToolsManagerTool : IOrbitTool
         var mainWindowViewModel = context as MainWindowViewModel
             ?? (Application.Current?.MainWindow as FrameworkElement)?.DataContext as MainWindowViewModel;
 
-        var viewModel = new UnifiedToolsManagerViewModel(toolRegistry, pluginManager, mainWindowViewModel);
-        var view = new UnifiedToolsManagerView
-        {
-            DataContext = viewModel
-        };
+        var view = new UnifiedToolsManagerView();
+        var originalOwner = mainWindowViewModel == null ? null : new WeakReference<MainWindowViewModel>(mainWindowViewModel);
+        view.DataContext = new UnifiedToolsManagerViewModel(toolRegistry, pluginManager, mainWindowViewModel,
+            () => Window.GetWindow(view)?.DataContext as MainWindowViewModel
+                ?? (originalOwner?.TryGetTarget(out var owner) == true ? owner : null));
         return view;
     }
 }

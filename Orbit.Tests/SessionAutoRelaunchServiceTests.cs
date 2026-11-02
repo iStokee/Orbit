@@ -10,6 +10,22 @@ namespace Orbit.Tests;
 
 public sealed class SessionAutoRelaunchServiceTests
 {
+	[Theory]
+	[InlineData(true)]
+	[InlineData(false)]
+	public async Task CheckAndRelaunchAsync_RechecksPolicyAfterClose(bool shutdown)
+	{
+		var service = new SessionAutoRelaunchService(new SessionLifecycleCoordinatorService(), new ConsoleLogService());
+		using var process = CreateExitedProcess();
+		var session = NewExitedSession(process);
+		var stopping = false;
+		var enabled = true;
+		var launches = 0;
+		await service.CheckAndRelaunchAsync(new[] { session }, () => stopping, () => enabled,
+			_ => { if (shutdown) stopping = true; else enabled = false; return Task.CompletedTask; },
+			_ => { launches++; return Task.FromResult(true); });
+		Assert.Equal(0, launches);
+	}
 	[Fact]
 	public async Task CheckAndRelaunchAsync_DoesNothingWhenDisabled()
 	{
@@ -21,8 +37,8 @@ public sealed class SessionAutoRelaunchServiceTests
 
 		await service.CheckAndRelaunchAsync(
 			new[] { session },
-			isShuttingDown: false,
-			autoRelaunchEnabled: false,
+			isShuttingDown: () => false,
+			autoRelaunchEnabled: () => false,
 			session =>
 			{
 				closeCalls++;
@@ -49,8 +65,8 @@ public sealed class SessionAutoRelaunchServiceTests
 
 		await service.CheckAndRelaunchAsync(
 			new[] { session },
-			isShuttingDown: false,
-			autoRelaunchEnabled: true,
+			isShuttingDown: () => false,
+			autoRelaunchEnabled: () => true,
 			closed =>
 			{
 				closeCalls++;
@@ -59,7 +75,8 @@ public sealed class SessionAutoRelaunchServiceTests
 			},
 			name =>
 			{
-				relaunchedName = name;
+				Assert.Same(session, name);
+				relaunchedName = name.Name;
 				return Task.FromResult(true);
 			});
 
@@ -77,8 +94,8 @@ public sealed class SessionAutoRelaunchServiceTests
 
 		await service.CheckAndRelaunchAsync(
 			new[] { session },
-			isShuttingDown: false,
-			autoRelaunchEnabled: true,
+			isShuttingDown: () => false,
+			autoRelaunchEnabled: () => true,
 			_ => throw new InvalidOperationException("close failed"),
 			name =>
 			{

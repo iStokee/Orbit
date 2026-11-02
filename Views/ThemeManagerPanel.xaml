@@ -7,7 +7,10 @@
     xmlns:converters="clr-namespace:Orbit.Converters"
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
-    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -16,8 +19,21 @@
             </ResourceDictionary.MergedDictionaries>
             <converters:ColorSchemeToColorConverter x:Key="ColorSchemeToColorConverter" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:NullToVisibilityConverter x:Key="MessageVisibilityConverter" />
             <converters:ColorToBrushConverter x:Key="ColorToBrushConverter" />
             <converters:ContrastForegroundBrushConverter x:Key="ContrastForegroundBrushConverter" />
+            <Style x:Key="ThemeLibraryCard" TargetType="Border">
+                <Setter Property="Padding" Value="8,7" />
+                <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Border.Subtle}" />
+                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
 
             <!--  Override PixiEditor ColorPicker's baked dark editor styles with theme-aware variants.  -->
             <Style
@@ -44,7 +60,8 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Border Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
         <Grid Style="{StaticResource Orbit.Workbench.PageRoot}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -68,6 +85,10 @@
                         Margin="10,0,0,0"
                         VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Theme Customization" />
+                        <TextBlock Text="{Binding StorageError}" TextWrapping="Wrap" Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}"
+                                   Visibility="{Binding StorageError, Converter={StaticResource MessageVisibilityConverter}}" />
+                        <TextBlock Text="{Binding ThemeStatusMessage}" TextWrapping="Wrap" Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}"
+                                   Visibility="{Binding ThemeStatusMessage, Converter={StaticResource MessageVisibilityConverter}}" />
                         <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Transform Orbit's appearance with built-in themes or design your own custom palette" />
                     </StackPanel>
                 </Grid>
@@ -75,11 +96,17 @@
 
             <!--  Main Content  -->
             <Grid
+                x:Name="ThemeLayout"
+                SizeChanged="OnThemeLayoutSizeChanged"
                 Grid.Row="1"
                 VerticalAlignment="Top">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition MinWidth="460" Width="1.1*" />
-                    <ColumnDefinition MinWidth="420" Width="1*" />
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
                 <!--  Left Column: Custom Theme Creator  -->
@@ -112,6 +139,7 @@
                                 Grid.Column="1"
                                 Style="{StaticResource Orbit.Workbench.IconButton}"
                                 Foreground="{DynamicResource Orbit.Brushes.Action.Primary}"
+                                AutomationProperties.Name="Theme builder help"
                                 ToolTipService.BetweenShowDelay="50"
                                 ToolTipService.InitialShowDelay="120">
                                 <iconPacks:PackIconMaterial Kind="HelpCircleOutline" Width="16" Height="16" />
@@ -137,7 +165,7 @@
                                                 <TextBlock
                                                     Margin="0,8,0,0"
                                                     FontSize="11"
-                                                    Text="1. Set Base Mode (Light/Dark). This applies globally to Presets and Custom themes."
+                                                    Text="1. Choose Light or Dark for the next theme you apply."
                                                     TextWrapping="Wrap" />
                                                 <TextBlock
                                                     Margin="0,4,0,0"
@@ -174,13 +202,13 @@
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource Orbit.Workbench.SubsectionTitle}"
-                                Text="Base Mode (Global)" />
+                                Text="Base Mode" />
                         </StackPanel>
                         <TextBlock
                             Margin="0,0,0,10"
                             Style="{StaticResource Orbit.Workbench.MetaText}"
                             Foreground="{DynamicResource Orbit.Brushes.Text.Secondary}"
-                            Text="This sets Light/Dark globally for both Presets and Custom themes." />
+                            Text="Choose Light or Dark, then Apply to update Orbit." />
 
                         <ListBox
                             Margin="0,0,0,16"
@@ -225,6 +253,7 @@
                                     <Setter Property="Padding" Value="22,14" />
                                     <Setter Property="Margin" Value="0,0,12,0" />
                                     <Setter Property="MinWidth" Value="132" />
+                                    <Setter Property="FocusVisualStyle" Value="{StaticResource Orbit.KeyboardFocus}" />
                                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                                     <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.Primary}" />
                                     <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Card}" />
@@ -238,7 +267,7 @@
                                                     BorderThickness="1"
                                                     CornerRadius="14">
                                                     <ContentPresenter
-                                                        Margin="6,2"
+                                                        Margin="{TemplateBinding Padding}"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center" />
                                                 </Border>
@@ -248,9 +277,13 @@
                                                         <Setter Property="Foreground" Value="{DynamicResource Orbit.Brushes.Text.OnAccent}" />
                                                         <Setter TargetName="Container" Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Secondary}" />
                                                     </Trigger>
-                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                    <MultiTrigger>
+                                                        <MultiTrigger.Conditions>
+                                                            <Condition Property="IsMouseOver" Value="True" />
+                                                            <Condition Property="IsSelected" Value="False" />
+                                                        </MultiTrigger.Conditions>
                                                         <Setter TargetName="Container" Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Hover}" />
-                                                    </Trigger>
+                                                    </MultiTrigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Setter.Value>
@@ -469,6 +502,7 @@
                             Orientation="Horizontal">
                             <Button
                                 Margin="0,0,8,0"
+                                Width="96" Height="36"
                                 Style="{StaticResource Orbit.Workbench.Button}"
                                 Command="{Binding DeleteCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
@@ -478,6 +512,7 @@
                             </Button>
                             <Button
                                 Margin="0,0,8,0"
+                                Width="96" Height="36"
                                 Style="{StaticResource Orbit.Workbench.Button}"
                                 Command="{Binding ApplyCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
@@ -486,6 +521,7 @@
                                 </StackPanel>
                             </Button>
                             <Button
+                                Width="96" Height="36" Margin="0"
                                 Style="{StaticResource Orbit.Workbench.Button.Primary}"
                                 Command="{Binding SaveCustomThemeCommand}">
                                 <StackPanel Orientation="Horizontal">
@@ -499,6 +535,7 @@
                 </Border>
 
                 <Grid
+                    x:Name="ThemePreviewAndLibrary"
                     Grid.Column="1"
                     MaxHeight="{Binding ElementName=ThemeBuilderCard, Path=ActualHeight}"
                     VerticalAlignment="Top">
@@ -696,7 +733,7 @@
                                 Grid.Row="1"
                                 Margin="0,6,0,10"
                                 Style="{StaticResource Orbit.Workbench.HelperText}"
-                                Text="{Binding SelectedBaseTheme, StringFormat='Base mode: {0} (applies globally). Choose Presets or Custom below for colors.'}" />
+                                Text="{Binding SelectedBaseTheme, StringFormat='Base mode: {0}. Apply a preset or preview a custom palette.'}" />
 
                             <Controls:MetroTabControl
                                 x:Name="ThemeLibraryTabs"
@@ -738,12 +775,7 @@
                                             </ListBox.ItemContainerStyle>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border
-                                                        Padding="8,7"
-                                                        Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
-                                                        BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="6">
+                                                    <Border Style="{StaticResource ThemeLibraryCard}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <Border
                                                                 Width="24"
@@ -794,12 +826,7 @@
                                         </ListBox.ItemContainerStyle>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border
-                                                    Padding="8,7"
-                                                    Background="{DynamicResource Orbit.Brushes.Surface.Subtle}"
-                                                    BorderBrush="{DynamicResource Orbit.Brushes.Border.Subtle}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="6">
+                                                <Border Style="{StaticResource ThemeLibraryCard}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Border
                                                             Width="24"
@@ -841,5 +868,6 @@
                 </Grid>
             </Grid>
         </Grid>
+        </Border>
     </ScrollViewer>
 </UserControl>

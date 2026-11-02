@@ -12,6 +12,7 @@ public sealed class ConsoleLogService
 {
 	private const int MaxEntries = 5000;
 	private const int TrimBatchSize = 250;
+	private const int FlushBatchSize = 250;
 	private static readonly Lazy<ConsoleLogService> _lazy = new(() => new ConsoleLogService());
 
 	private readonly ObservableCollection<ConsoleLogEntry> _entries = new();
@@ -81,6 +82,8 @@ public sealed class ConsoleLogService
 		if (string.IsNullOrWhiteSpace(message))
 			return;
 
+		if (message.Length > BoundedLineReader.MaxLineLength)
+			message = message[..BoundedLineReader.MaxLineLength] + " [truncated]";
 		var entry = new ConsoleLogEntry(DateTime.Now, source, level, message.TrimEnd());
 		if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
 		{
@@ -94,6 +97,9 @@ public sealed class ConsoleLogService
 		}
 
 		_pendingEntries.Enqueue(entry);
+		// Retain the newest entries when producers outpace the UI. The visible log
+		// already has the same retention limit; pending work must also be bounded.
+		while (_pendingEntries.Count > MaxEntries && _pendingEntries.TryDequeue(out _)) { }
 		ScheduleFlush();
 	}
 
@@ -164,7 +170,7 @@ public sealed class ConsoleLogService
 
 		try
 		{
-			while (_pendingEntries.TryDequeue(out var entry))
+			for (var count = 0; count < FlushBatchSize && _pendingEntries.TryDequeue(out var entry); count++)
 			{
 				_entries.Add(entry);
 				TrimEntries();

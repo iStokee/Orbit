@@ -23,6 +23,6 @@ public sealed class SettingsTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return serviceProvider.GetRequiredService<SettingsView>();
+        return serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<SettingsView>();
     }
 }

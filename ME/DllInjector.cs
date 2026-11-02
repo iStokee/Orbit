@@ -87,6 +87,7 @@ namespace Orbit.ME
 
 			IntPtr allocAddress = IntPtr.Zero;
 			IntPtr hThread = IntPtr.Zero;
+			bool remoteThreadCompleted = false;
 
 			try
 			{
@@ -119,13 +120,14 @@ namespace Orbit.ME
 				switch (waitResult)
 				{
 					case WAIT_OBJECT_0:
+						remoteThreadCompleted = true;
 						break;
 					case WAIT_TIMEOUT:
-						throw new TimeoutException("Timed out waiting for remote LoadLibraryW to complete.");
+						throw new InjectionOutcomeUnknownException("Remote LoadLibraryW is still running. Restart the client before retrying injection.");
 					case WAIT_FAILED:
-						throw new Win32Exception(Marshal.GetLastWin32Error(), "WaitForSingleObject failed");
+						throw new InjectionOutcomeUnknownException("Unable to confirm remote LoadLibraryW completion. Restart the client before retrying injection.");
 					default:
-						throw new InvalidOperationException($"Unexpected WaitForSingleObject result: {waitResult}.");
+						throw new InjectionOutcomeUnknownException($"Unexpected wait result {waitResult}. Restart the client before retrying injection.");
 				}
 
 				if (!GetExitCodeThread(hThread, out uint exitCode))
@@ -141,11 +143,14 @@ namespace Orbit.ME
 				if (hThread != IntPtr.Zero)
 					CloseHandle(hThread);
 
-				if (allocAddress != IntPtr.Zero)
+				// A running remote thread may still read its argument. Leave this small allocation
+				// in the target until process exit when completion cannot be established.
+				if (allocAddress != IntPtr.Zero && (hThread == IntPtr.Zero || remoteThreadCompleted))
 					VirtualFreeEx(hProc, allocAddress, 0, MEM_RELEASE);
 
 				CloseHandle(hProc);
 			}
+
 		}
 
 		/// <summary>
@@ -157,8 +162,19 @@ namespace Orbit.ME
 			if (proc.Length == 0)
 				throw new ArgumentException($"No process named '{processName}' is running.");
 
-			return Inject(proc[0].Id, dllPath);
+			try
+			{
+				return Inject(proc[0].Id, dllPath);
+			}
+			finally
+			{
+				foreach (var process in proc) process.Dispose();
+			}
 		}
 	}
 
+	public sealed class InjectionOutcomeUnknownException : Exception
+	{
+		public InjectionOutcomeUnknownException(string message) : base(message) { }
+	}
 }

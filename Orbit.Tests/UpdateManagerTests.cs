@@ -12,7 +12,7 @@ public sealed class UpdateManagerTests
 	public void ExtractUpdate_ExtractsSafeArchive()
 	{
 		var zipPath = CreateZip(("Orbit.exe", "binary"), ("docs/readme.txt", "docs"));
-		var manager = new UpdateManager();
+		var manager = new UpdateManager(Path.Combine(Path.GetTempPath(), "OrbitUpdateTest-" + Guid.NewGuid().ToString("N")));
 
 		var extracted = manager.ExtractUpdate(zipPath);
 
@@ -24,7 +24,7 @@ public sealed class UpdateManagerTests
 	public void ExtractUpdate_RejectsZipSlipPath()
 	{
 		var zipPath = CreateZip(("../outside.txt", "bad"));
-		var manager = new UpdateManager();
+		var manager = new UpdateManager(Path.Combine(Path.GetTempPath(), "OrbitUpdateTest-" + Guid.NewGuid().ToString("N")));
 
 		var ex = Assert.Throws<InvalidDataException>(() => manager.ExtractUpdate(zipPath));
 
@@ -38,7 +38,7 @@ public sealed class UpdateManagerTests
 			? "C:/outside.txt"
 			: "/tmp/outside.txt";
 		var zipPath = CreateZip((absoluteEntryName, "bad"));
-		var manager = new UpdateManager();
+		var manager = new UpdateManager(Path.Combine(Path.GetTempPath(), "OrbitUpdateTest-" + Guid.NewGuid().ToString("N")));
 
 		var ex = Assert.Throws<InvalidDataException>(() => manager.ExtractUpdate(zipPath));
 
@@ -53,7 +53,7 @@ public sealed class UpdateManagerTests
 		{
 			archive.CreateEntry(" ");
 		}
-		var manager = new UpdateManager();
+		var manager = new UpdateManager(Path.Combine(Path.GetTempPath(), "OrbitUpdateTest-" + Guid.NewGuid().ToString("N")));
 
 		var ex = Assert.Throws<InvalidDataException>(() => manager.ExtractUpdate(zipPath));
 

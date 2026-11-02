@@ -17,17 +17,25 @@ public class PluginManager
     private readonly PluginLoader _loader;
     private readonly IToolRegistry _toolRegistry;
     private readonly string _pluginDirectory;
+    private readonly Orbit.Services.OrbitLayoutStateService _layout;
+    private bool _shuttingDown;
 
     public event EventHandler<PluginStatusChangedEventArgs>? PluginStatusChanged;
 
     public IReadOnlyList<PluginMetadata> LoadedPlugins => _loader.LoadedPlugins;
 
-    public PluginManager(IToolRegistry toolRegistry, string pluginDirectory)
+    public PluginManager(IToolRegistry toolRegistry, string pluginDirectory, Orbit.Services.OrbitLayoutStateService layout)
     {
         _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
         _pluginDirectory = pluginDirectory ?? throw new ArgumentNullException(nameof(pluginDirectory));
+        _layout = layout ?? throw new ArgumentNullException(nameof(layout));
 
         _loader = new PluginLoader();
+        _loader.IsPluginInUse = key =>
+            Orbit.Services.ToolInstanceRegistry.Instance.OpenTools.Any(tool => tool.Key == key) ||
+            _layout.Items.OfType<Orbit.Models.ToolTabItem>().Any(t => t.Key == key) ||
+            System.Windows.Application.Current?.Windows.OfType<Orbit.MainWindow>()
+                .Any(w => w.DataContext is Orbit.ViewModels.MainWindowViewModel vm && vm.Tabs.OfType<Orbit.Models.ToolTabItem>().Any(t => t.Key == key)) == true;
 
         // Subscribe to loader events
         _loader.PluginLoaded += OnPluginLoaded;
@@ -47,6 +55,9 @@ public class PluginManager
     {
         return _loader.DiscoverPlugins(_pluginDirectory);
     }
+
+    public void BeginShutdown() { _shuttingDown = true; _loader.StopLoading(); }
+    public Task ShutdownAsync() { BeginShutdown(); return _loader.ShutdownAsync(); }
 
     /// <summary>
     /// Loads a plugin from the specified path.
@@ -121,6 +132,7 @@ public class PluginManager
 
         foreach (var pluginPath in discoveredPlugins)
         {
+            if (_shuttingDown) break;
             try
             {
                 var result = await LoadPluginAsync(pluginPath);
@@ -155,6 +167,7 @@ public class PluginManager
 
     private void OnPluginUnloaded(object? sender, PluginUnloadedEventArgs e)
     {
+        if (e.Instance != null && !ReferenceEquals(_toolRegistry.Find(e.Metadata.Key), e.Instance)) return;
         // Unregister plugin from tool registry
         _toolRegistry.UnregisterPluginTool(e.Metadata.Key);
     }

@@ -18,17 +18,17 @@ namespace Orbit.Interop
 			if (targetWindow == IntPtr.Zero)
 				return false;
 
-			ActivateWindow(targetWindow);
+			if (!ActivateWindow(targetWindow)) return false;
 			var keyDownLParam = BuildKeyLParam(virtualKey, isKeyUp: false);
 
-			SendMessage(targetWindow, WM_KEYDOWN, (IntPtr)virtualKey, keyDownLParam);
+			if (!SendBounded(targetWindow, WM_KEYDOWN, (IntPtr)virtualKey, keyDownLParam)) return false;
 
 			if (emitChar)
 			{
 				var charCode = ResolveChar(virtualKey, character);
 				if (charCode.HasValue)
 				{
-					SendMessage(targetWindow, WM_CHAR, (IntPtr)charCode.Value, keyDownLParam);
+					if (!SendBounded(targetWindow, WM_CHAR, (IntPtr)charCode.Value, keyDownLParam)) return false;
 				}
 			}
 
@@ -40,10 +40,9 @@ namespace Orbit.Interop
 			if (targetWindow == IntPtr.Zero)
 				return false;
 
-			ActivateWindow(targetWindow);
+			if (!ActivateWindow(targetWindow)) return false;
 			var lParam = BuildKeyLParam(virtualKey, isKeyUp: true);
-			SendMessage(targetWindow, WM_KEYUP, (IntPtr)virtualKey, lParam);
-			return true;
+			return SendBounded(targetWindow, WM_KEYUP, (IntPtr)virtualKey, lParam);
 		}
 
 		private static char? ResolveChar(int virtualKey, char? explicitChar)
@@ -62,15 +61,17 @@ namespace Orbit.Interop
 			return (char)mapped;
 		}
 
-		private static void ActivateWindow(IntPtr hWnd)
+		private static bool ActivateWindow(IntPtr hWnd)
 		{
 			if (hWnd == IntPtr.Zero)
-				return;
+				return false;
 
-			SendMessage(hWnd, WM_ACTIVATE, (IntPtr)WA_ACTIVE, IntPtr.Zero);
-			SetFocus(hWnd);
-			SetForegroundWindow(hWnd);
+			return SendBounded(hWnd, WM_ACTIVATE, (IntPtr)WA_ACTIVE, IntPtr.Zero);
 		}
+
+		private static bool SendBounded(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam)
+			=> IsWindow(hwnd) && SendMessageTimeout(hwnd, message, wParam, lParam,
+				0x0002 | 0x0020, 250, out _) != IntPtr.Zero; // ABORTIFHUNG | ERRORONEXIT
 
 		private static IntPtr BuildKeyLParam(int virtualKey, bool isKeyUp)
 		{
@@ -103,7 +104,11 @@ namespace Orbit.Interop
 		}
 
 		[DllImport("user32.dll", SetLastError = true)]
-		private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+		private static extern IntPtr SendMessageTimeout(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool IsWindow(IntPtr hwnd);
 
 		[DllImport("user32.dll")]
 		private static extern uint MapVirtualKey(uint uCode, uint uMapType);

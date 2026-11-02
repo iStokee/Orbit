@@ -95,7 +95,7 @@ public sealed class SessionUiCoordinatorService
 		using (_placement.BeginMove(session, SessionPlacementKind.MainTabs))
 		{
 			_orbitLayoutState.RemoveItem(session);
-			_reconciliation.RemoveItemFromTabOwners(session, SessionTabOwnerScope.OrbitOnly, reason);
+			_reconciliation.RemoveItemFromTabOwners(session, SessionTabOwnerScope.All, reason);
 
 			if (!mainTabs.Contains(session))
 			{
@@ -179,7 +179,7 @@ public sealed class SessionUiCoordinatorService
 
 	private static void EnsureToolDataContext(ToolTabItem tool, object? dataContext)
 	{
-		if (tool?.HostControl == null || dataContext == null || ReferenceEquals(tool.HostControl.DataContext, dataContext))
+		if (tool?.HostControl == null || dataContext == null || tool.HostControl.DataContext != null)
 		{
 			return;
 		}

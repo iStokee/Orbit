@@ -7,7 +7,7 @@ using Orbit.Models;
 namespace Orbit.ViewModels;
 
 /// <summary>
-/// ViewModel for the Session Close confirmation dialog
+/// Snapshot of session state when close confirmation was requested.
 /// </summary>
 public class SessionCloseDialogViewModel : INotifyPropertyChanged
 {

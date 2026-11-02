@@ -8,11 +8,14 @@ using System.Text.Json.Serialization;
 
 namespace Orbit.Services
 {
-	public class AccountService
+	public class AccountService : ObservableObject
 	{
 		private const string AccountsFileName = "accounts.json";
 		private readonly ObservableCollection<AccountModel> _accounts;
 		private readonly string _accountsFilePath;
+		private bool _loadFailed;
+		private string? _lastError;
+		public string? LastError { get => _lastError; private set => SetProperty(ref _lastError, value); }
 
 		public ObservableCollection<AccountModel> Accounts => _accounts;
 
@@ -66,33 +69,44 @@ namespace Orbit.Services
 			try
 			{
 				var json = File.ReadAllText(_accountsFilePath);
-				var accounts = JsonSerializer.Deserialize<AccountStorageRecord[]>(json);
+				var accounts = JsonSerializer.Deserialize<AccountStorageRecord[]>(json)
+					?? throw new InvalidDataException("Account storage must contain an account array.");
 
-				_accounts.Clear();
+				// Decode every record before replacing the live collection. One bad password
+				// must not turn a complete account file into a partially loaded collection.
+				var loaded = new System.Collections.Generic.List<AccountModel>();
+				var migratedPlaintext = false;
 				if (accounts != null)
 				{
-					var migratedPlaintext = false;
 					foreach (var record in accounts)
 					{
 						var account = record.ToAccountModel(out var usedLegacyPlaintext);
 						migratedPlaintext |= usedLegacyPlaintext;
-						_accounts.Add(account);
+						loaded.Add(account);
 					}
 
-					if (migratedPlaintext)
-					{
-						SaveAccounts();
-					}
 				}
+				_accounts.Clear();
+				foreach (var account in loaded) _accounts.Add(account);
+				_loadFailed = false;
+				LastError = null;
+				if (migratedPlaintext) SaveAccounts();
 			}
 			catch (Exception ex)
 			{
+				_loadFailed = true;
+				LastError = $"Unable to load accounts. The original file is preserved: {ex.Message}";
 				Console.WriteLine($"[Orbit] Failed to load accounts: {ex.Message}");
 			}
 		}
 
 		public void SaveAccounts()
+			=> TrySaveAccounts();
+
+		private bool TrySaveAccounts()
 		{
+			if (_loadFailed) return false;
+			var temporaryPath = _accountsFilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 			try
 			{
 				var options = new JsonSerializerOptions
@@ -103,28 +117,37 @@ namespace Orbit.Services
 
 				var records = _accounts.Select(AccountStorageRecord.FromAccountModel).ToArray();
 				var json = JsonSerializer.Serialize(records, options);
-				File.WriteAllText(_accountsFilePath, json);
+				File.WriteAllText(temporaryPath, json);
+				if (File.Exists(_accountsFilePath)) File.Replace(temporaryPath, _accountsFilePath, null);
+				else File.Move(temporaryPath, _accountsFilePath);
+				LastError = null;
+				return true;
 			}
 			catch (Exception ex)
 			{
+				LastError = $"Unable to save accounts: {ex.Message}";
 				Console.WriteLine($"[Orbit] Failed to save accounts: {ex.Message}");
+				return false;
 			}
+			finally { try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
 		}
 
 		public void AddAccount(AccountModel account)
 		{
-			if (account == null) return;
+			if (account == null || _loadFailed) return;
 
 			_accounts.Add(account);
-			SaveAccounts();
+			if (!TrySaveAccounts()) _accounts.Remove(account);
 		}
 
 		public void RemoveAccount(AccountModel account)
 		{
-			if (account == null) return;
+			if (account == null || _loadFailed) return;
 
-			_accounts.Remove(account);
-			SaveAccounts();
+			var index = _accounts.IndexOf(account);
+			if (index < 0) return;
+			_accounts.RemoveAt(index);
+			if (!TrySaveAccounts()) _accounts.Insert(index, account);
 		}
 
 		public void UpdateAccount(AccountModel account)

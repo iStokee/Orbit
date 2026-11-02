@@ -29,6 +29,7 @@ namespace Orbit.ViewModels
 		private const double RefreshIntervalToleranceSeconds = 0.2;
 
 		private readonly SessionCollectionService _sessionCollectionService;
+		private readonly Action<SessionModel>? _activateSession;
 		private readonly DispatcherTimer _refreshTimer;
 		private readonly DispatcherTimer _refreshCheckTimer;
 		private readonly SemaphoreSlim _refreshSignal = new(0, int.MaxValue);
@@ -44,13 +45,23 @@ namespace Orbit.ViewModels
 		private double _globalRefreshIntervalSeconds = 5;
 		private bool _allowSessionOverrides = true;
 		private bool _disposed;
+		private volatile bool _isVisible;
+
+		public void SetVisible(bool visible)
+		{
+			if (_disposed || _isVisible == visible) return;
+			_isVisible = visible;
+			UpdateTimerState();
+			if (visible) _ = RefreshDueThumbnailsAsync();
+		}
 		private bool _useCustomThumbnailSize = false;
 		private double _customThumbnailSize = 300;
 		private const double ThumbnailCardPadding = 8;
 
-		public SessionGalleryViewModel(SessionCollectionService sessionCollectionService)
+		public SessionGalleryViewModel(SessionCollectionService sessionCollectionService, Action<SessionModel>? activateSession = null)
 		{
 			_sessionCollectionService = sessionCollectionService ?? throw new ArgumentNullException(nameof(sessionCollectionService));
+			_activateSession = activateSession;
 
 			// Commands
 			ActivateSessionCommand = new RelayCommand<SessionModel?>(session =>
@@ -61,7 +72,7 @@ namespace Orbit.ViewModels
 				}
 			});
 			RefreshThumbnailsCommand = new RelayCommand(async () => await RefreshAllThumbnailsAsync());
-			ActiveSessions = CollectionViewSource.GetDefaultView(Sessions);
+			ActiveSessions = new CollectionViewSource { Source = Sessions }.View;
 			ActiveSessions.Filter = item => item is SessionModel session && session.State != SessionState.Closed;
 
 			// Auto-refresh timer (tick every second and check per-session intervals)
@@ -79,8 +90,7 @@ namespace Orbit.ViewModels
 
 			UpdateTimerState();
 
-			// Initial thumbnail capture
-			_ = RefreshAllThumbnailsAsync();
+			// Capture starts when the view becomes visible.
 		}
 
 		/// <summary>
@@ -276,7 +286,7 @@ namespace Orbit.ViewModels
 				return;
 
 			_sessionCollectionService.GlobalSelectedSession = session;
-			session.HostControl?.FocusEmbeddedClient();
+			_activateSession?.Invoke(session);
 		}
 
 		/// <summary>
@@ -293,7 +303,7 @@ namespace Orbit.ViewModels
 		/// </summary>
 		private Task RefreshDueThumbnailsAsync()
 		{
-			if (_disposed)
+			if (_disposed || !_isVisible)
 				return Task.CompletedTask;
 
 			var snapshot = Sessions.ToList();
@@ -363,7 +373,7 @@ namespace Orbit.ViewModels
 							var sessionsToRefresh = refreshAll ? GetSessionSnapshot() : batch;
 							foreach (var session in sessionsToRefresh)
 							{
-								if (_disposed || token.IsCancellationRequested || _refreshLoopCts.IsCancellationRequested)
+								if (_disposed || !_isVisible || token.IsCancellationRequested || _refreshLoopCts.IsCancellationRequested)
 								{
 									break;
 								}
@@ -697,7 +707,7 @@ namespace Orbit.ViewModels
 			var hasOverrideAuto = AllowSessionOverrides &&
 				Sessions.Any(s => s.GalleryOverrideEnabled && s.GalleryAutoRefreshEnabled);
 
-			var shouldRun = AutoRefreshEnabled || hasOverrideAuto;
+			var shouldRun = !_disposed && _isVisible && (AutoRefreshEnabled || hasOverrideAuto);
 
 			if (shouldRun && !_refreshTimer.IsEnabled)
 			{
@@ -807,6 +817,7 @@ namespace Orbit.ViewModels
 			_refreshCheckTimer.Stop();
 			_refreshCheckTimer.Tick -= OnRefreshCheckTimerTick;
 			Sessions.CollectionChanged -= OnSessionsCollectionChanged;
+			if (ActiveSessions is CollectionView view) view.DetachFromSourceCollection();
 
 			foreach (var session in Sessions.ToList())
 			{
@@ -835,24 +846,26 @@ namespace Orbit.ViewModels
 				// ignored during teardown
 			}
 
+			_ = DisposeWorkerResourcesAsync();
+		}
+
+		private async Task DisposeWorkerResourcesAsync()
+		{
 			try
 			{
-				_refreshLoopTask?.Wait(TimeSpan.FromMilliseconds(500));
+				if (_refreshLoopTask != null) await _refreshLoopTask.ConfigureAwait(false);
 			}
-			catch
+			catch (Exception ex)
 			{
-				// teardown best effort only
+				Debug.WriteLine($"Gallery worker stopped: {ex.Message}");
 			}
-
-			lock (_refreshQueueSync)
+			finally
 			{
-				_activeRefreshCts?.Dispose();
-				_activeRefreshCts = null;
-				_queuedSessions.Clear();
+				ClearBatchTokenSource();
+				lock (_refreshQueueSync) _queuedSessions.Clear();
+				_refreshLoopCts.Dispose();
+				_refreshSignal.Dispose();
 			}
-
-			_refreshLoopCts.Dispose();
-			_refreshSignal.Dispose();
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged;

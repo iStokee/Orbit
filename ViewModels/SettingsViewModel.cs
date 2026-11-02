@@ -85,7 +85,12 @@ namespace Orbit.ViewModels
 			ClearThemeLogCommand = new RelayCommand(ClearThemeLog);
 			OpenOrbitInteractionLogCommand = new RelayCommand(OpenOrbitInteractionLog);
 			ClearOrbitInteractionLogCommand = new RelayCommand(ClearOrbitInteractionLog);
-			OpenToolsOverviewCommand = new RelayCommand(() => TryApplyToMain(vm => vm.OpenToolsOverviewTab()));
+			OpenToolsOverviewCommand = new RelayCommand(() =>
+			{
+				var windows = Application.Current?.Windows.OfType<MainWindow>();
+				var owner = windows?.FirstOrDefault(window => window.IsActive) ?? Application.Current?.MainWindow as MainWindow;
+				(owner?.DataContext as MainWindowViewModel)?.OpenToolsOverviewTab();
+			});
 			ConfigureLauncherAccountsCommand = new RelayCommand(OpenLauncherAccountConfig);
 			BrowseInjectorDllCommand = new RelayCommand(BrowseInjectorDll);
 			UseDefaultInjectorDllCommand = new RelayCommand(UseDefaultInjectorDll);
@@ -632,7 +637,7 @@ namespace Orbit.ViewModels
 					await Task.Delay(500);
 
 					// Launch updater and exit
-					_updateManager.LaunchUpdaterAndExit(_extractedFolderPath);
+					await _updateManager.LaunchUpdaterAndExitAsync(_extractedFolderPath);
 				}
 				else
 				{

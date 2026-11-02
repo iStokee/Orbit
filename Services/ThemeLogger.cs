@@ -17,7 +17,6 @@ namespace Orbit.Services
 				Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 				"Orbit"
 			);
-			Directory.CreateDirectory(appDataPath);
 			_logFilePath = Path.Combine(appDataPath, "theme-debug.log");
 		}
 
@@ -45,6 +44,7 @@ namespace Orbit.Services
 			{
 				try
 				{
+					Directory.CreateDirectory(Path.GetDirectoryName(_logFilePath)!);
 					var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
 					var logEntry = $"[{timestamp}] {message}";
 					File.AppendAllText(_logFilePath, logEntry + Environment.NewLine);

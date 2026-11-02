@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Media.Imaging;
 using Orbit.Views;
 
@@ -10,6 +11,28 @@ namespace Orbit.Models
 {
 	public class SessionModel : ObservableObject
 	{
+		private CancellationTokenSource _workCancellation = new();
+		internal System.Threading.Tasks.Task? StartupTask { get; set; }
+		internal Orbit.Services.HostedWindowIdentity? ExternalWindowIdentity { get; set; }
+		internal CancellationToken WorkCancellation => _workCancellation.Token;
+		private CancellationTokenSource _lifetimeCancellation = new();
+		internal CancellationToken LifetimeCancellation => _lifetimeCancellation.Token;
+		internal SemaphoreSlim ScriptCommandGate { get; } = new(1, 1);
+		internal SemaphoreSlim ShutdownGate { get; } = new(1, 1);
+		internal SemaphoreSlim NativeCommandGate { get; } = new(1, 1);
+		private Orbit.Services.OrbitRuntimeStatus? _confirmedRuntimeStatus;
+		public Orbit.Services.OrbitRuntimeStatus? ConfirmedRuntimeStatus => _confirmedRuntimeStatus;
+		public string RuntimeInventorySummary => _confirmedRuntimeStatus?.HasScriptInventory == true
+			? $"Last confirmed runtime inventory: {_confirmedRuntimeStatus.ScriptsInfo!.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length - 2} script(s)"
+			: "Runtime inventory has not been confirmed";
+		internal void ConfirmRuntimeStatus(Orbit.Services.OrbitRuntimeStatus status)
+		{
+			if (!status.HasScriptInventory || status.ProcessId != RSProcess?.Id || State is SessionState.Closed or SessionState.ShuttingDown) return;
+			_confirmedRuntimeStatus = status;
+			OnPropertyChanged(nameof(ConfirmedRuntimeStatus));
+			OnPropertyChanged(nameof(RuntimeInventorySummary));
+			if (ActiveScriptId != null && !status.IsScriptLoaded(ActiveScriptId)) SetScriptStopped();
+		}
 		private SessionState _state;
 		private InjectionState _injectionState;
 		private string _lastError;
@@ -117,6 +140,7 @@ namespace Orbit.Models
 		public DateTime CreatedAt { get; init; }
 		public ChildClientView HostControl { get; init; }
 		public RSForm RSForm { get; set; }
+		public string? LauncherCharacterId { get; set; }
 
 		/// <summary>
 		/// When true, postpone docking until MESharp injection finishes (used for auto-inject flows).
@@ -177,7 +201,16 @@ namespace Orbit.Models
 				if (_rsProcess == value)
 					return;
 
+				if (_rsProcess != null)
+				{
+					_workCancellation.Cancel();
+					if (State is not (SessionState.ShuttingDown or SessionState.Closed))
+						_workCancellation = new CancellationTokenSource();
+				}
 				_rsProcess = value;
+				_confirmedRuntimeStatus = null;
+				OnPropertyChanged(nameof(ConfirmedRuntimeStatus));
+				OnPropertyChanged(nameof(RuntimeInventorySummary));
 				OnPropertyChanged();
 				OnPropertyChanged(nameof(DisplayName));
 			}
@@ -286,7 +319,7 @@ namespace Orbit.Models
 			State != SessionState.Failed &&
 			State != SessionState.ShuttingDown &&
 			State != SessionState.Closed &&
-			InjectionState != InjectionState.Failed;
+			InjectionState != InjectionState.Failed && InjectionState != InjectionState.Unknown;
 
 		public string? ActiveScriptPath
 		{
@@ -385,6 +418,16 @@ namespace Orbit.Models
 			}
 
 			State = state;
+			if (state is SessionState.ShuttingDown or SessionState.Closed)
+			{
+				_workCancellation.Cancel();
+				_lifetimeCancellation.Cancel();
+			}
+			else if (previous == SessionState.ShuttingDown)
+			{
+				_workCancellation = new CancellationTokenSource();
+				_lifetimeCancellation = new CancellationTokenSource();
+			}
 			LastLifecycleChangedAt = DateTime.Now;
 			LogSessionTransition("lifecycle", previous, state, reason);
 		}
@@ -432,7 +475,7 @@ namespace Orbit.Models
 		public void RecordInjectionFailure(Exception exception)
 		{
 			LastError = exception?.Message ?? "Unknown error";
-			UpdateInjectionState(InjectionState.Failed, LastError);
+			UpdateInjectionState(exception is Orbit.ME.InjectionOutcomeUnknownException ? InjectionState.Unknown : InjectionState.Failed, LastError);
 			UpdateState(SessionState.ClientReady, clearError: false, reason: "recovering from injection failure");
 		}
 
@@ -501,7 +544,8 @@ namespace Orbit.Models
 			{
 				InjectionState.NotReady => to is InjectionState.Ready or InjectionState.Failed,
 				InjectionState.Ready => to is InjectionState.Injecting or InjectionState.NotReady or InjectionState.Failed,
-				InjectionState.Injecting => to is InjectionState.Injected or InjectionState.Ready or InjectionState.NotReady or InjectionState.Failed,
+				InjectionState.Injecting => to is InjectionState.Injected or InjectionState.Ready or InjectionState.NotReady or InjectionState.Failed or InjectionState.Unknown,
+				InjectionState.Unknown => to is InjectionState.NotReady,
 				InjectionState.Injected => to is InjectionState.NotReady or InjectionState.Failed,
 				InjectionState.Failed => to is InjectionState.Ready or InjectionState.Injecting or InjectionState.NotReady,
 				_ => false
@@ -528,50 +572,9 @@ namespace Orbit.Models
 		private static string FormatReason(string? reason)
 			=> string.IsNullOrWhiteSpace(reason) ? string.Empty : $" ({reason.Trim()})";
 
+		[Obsolete("Process lifetime is managed by SessionManagerService.ShutdownSessionAsync.")]
 		public void KillProcess()
-		{
-			try
-			{
-				if (RSProcess != null && !RSProcess.HasExited)
-				{
-					UpdateState(SessionState.ShuttingDown, clearError: false);
-					UpdateInjectionState(InjectionState.NotReady);
-					RSProcess.Kill();
-					RSProcess.Dispose();
-				}
-
-				if (ParentProcessId is int parentPid)
-				{
-					try
-					{
-						var parentProcess = Process.GetProcessById(parentPid);
-						if (!parentProcess.HasExited)
-						{
-							parentProcess.Kill();
-							parentProcess.WaitForExit();
-						}
-						parentProcess.Dispose();
-					}
-					catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-					{
-						// Parent may have already exited or be invalid; ignore.
-					}
-				}
-			}
-			catch
-			{
-				// Best-effort shutdown; swallow exceptions for now.
-			}
-			finally
-			{
-				RSProcess = null;
-				ParentProcessId = null;
-				ExternalHandle = nint.Zero;
-				RenderSurfaceHandle = nint.Zero;
-				UpdateState(SessionState.Closed, clearError: false);
-			}
-		}
-
+			=> throw new NotSupportedException("Use SessionManagerService.ShutdownSessionAsync to close an owned client. A session model cannot terminate clients or shared launchers.");
 		[DllImport("user32.dll")]
 		private static extern bool SetForegroundWindow(nint hWnd);
 

@@ -140,7 +140,7 @@ public sealed class SessionLifecycleCoordinatorService
 			return false;
 		}
 
-		if (session.State is SessionState.Closed or SessionState.ShuttingDown)
+		if (session.State is SessionState.Initializing or SessionState.Closed or SessionState.ShuttingDown)
 		{
 			return false;
 		}

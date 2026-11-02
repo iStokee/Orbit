@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Orbit.csproj" />
+    <Compile Include="..\..\Orbit.Updater\UpdateTransaction.cs" Link="Updater\UpdateTransaction.cs" />
   </ItemGroup>
 
 </Project>

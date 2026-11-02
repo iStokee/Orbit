@@ -1,4 +1,4 @@
-﻿using Dragablz;
+using Dragablz;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using Orbit.Logging;
@@ -176,6 +176,7 @@ namespace Orbit.ViewModels
 
 		selectedSession = this.sessionCollectionService.GlobalSelectedSession;
 		this.sessionCollectionService.PropertyChanged += OnGlobalSessionChanged;
+		Settings.Default.PropertyChanged += OnSharedSettingsChanged;
 
 		InterTabClient = this.interTabClient;
 		hotReloadScriptPath = Settings.Default.HotReloadScriptPath ?? string.Empty;
@@ -470,7 +471,7 @@ namespace Orbit.ViewModels
 				CommandManager.InvalidateRequerySuggested).ConfigureAwait(true);
 		}
 
-		private async Task<bool> AddSingleSessionAsync(string? preferredName = null)
+		private async Task<bool> AddSingleSessionAsync(string? preferredName = null, string? launcherCharacterId = null)
 		{
 			return await sessionStartupService.AddSingleSessionAsync(
 				Sessions,
@@ -481,7 +482,8 @@ namespace Orbit.ViewModels
 				this,
 				session => SelectedSession = session,
 				tab => SelectedTab = tab,
-				() => OpenOrbitViewCommand?.Execute(null)).ConfigureAwait(true);
+				() => OpenOrbitViewCommand?.Execute(null), launcherCharacterId,
+				() => !isApplicationShuttingDown && !_disposed).ConfigureAwait(true);
 		}
 
 		private async Task InjectAsync()
@@ -599,6 +601,7 @@ namespace Orbit.ViewModels
 				Tabs.Remove(removedItem);
 				HandleTabRemoval(removedItem);
 			}
+			else if (removedItem is Models.ToolTabItem) DisposeToolItem(removedItem);
 		}
 
 		private bool CanInject() => SelectedSession?.IsInjectable == true;
@@ -721,7 +724,7 @@ namespace Orbit.ViewModels
 		shellToolCoordinatorService.OpenMcpControl(Tabs, this, tab => SelectedTab = tab);
 	}
 
-	private bool TryOpenToolByKey(string key)
+	public bool TryOpenToolByKey(string key)
 	{
 		return shellToolCoordinatorService.TryOpenToolByKey(Tabs, this, key, tab => SelectedTab = tab);
 	}
@@ -1226,6 +1229,20 @@ namespace Orbit.ViewModels
 			Settings.Default.FloatingMenuDockCornerHeight,
 			Settings.Default.FloatingMenuDockCornerRoundness);
 
+	private void OnSharedSettingsChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (_disposed || e.PropertyName == null) return;
+		var property = e.PropertyName switch
+		{
+			nameof(Settings.Default.ShowMenuApiDocumentation) => nameof(ShowMenuGuide),
+			_ when e.PropertyName.StartsWith("ShowMenu", StringComparison.Ordinal) => e.PropertyName,
+			_ => null
+		};
+		if (property == null) return;
+		OnPropertyChanged(property);
+		if (property == nameof(ShowMenuInject)) OnPropertyChanged(nameof(ShowInjectMenuButton));
+	}
+
 	// Menu Button Visibility Properties
 	public bool ShowMenuAddSession
 	{
@@ -1234,7 +1251,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuAddSession == value) return;
 			Settings.Default.ShowMenuAddSession = value;
-			OnPropertyChanged(nameof(ShowMenuAddSession));
 		}
 	}
 
@@ -1245,8 +1261,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuInject == value) return;
 			Settings.Default.ShowMenuInject = value;
-			OnPropertyChanged(nameof(ShowMenuInject));
-			OnPropertyChanged(nameof(ShowInjectMenuButton));
 		}
 	}
 
@@ -1259,7 +1273,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuSessions == value) return;
 			Settings.Default.ShowMenuSessions = value;
-			OnPropertyChanged(nameof(ShowMenuSessions));
 		}
 	}
 
@@ -1270,7 +1283,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuAccountManager == value) return;
 			Settings.Default.ShowMenuAccountManager = value;
-			OnPropertyChanged(nameof(ShowMenuAccountManager));
 		}
 	}
 
@@ -1281,7 +1293,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuScriptControls == value) return;
 			Settings.Default.ShowMenuScriptControls = value;
-			OnPropertyChanged(nameof(ShowMenuScriptControls));
 		}
 	}
 
@@ -1292,7 +1303,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuThemeManager == value) return;
 			Settings.Default.ShowMenuThemeManager = value;
-			OnPropertyChanged(nameof(ShowMenuThemeManager));
 		}
 	}
 
@@ -1303,7 +1313,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuConsole == value) return;
 			Settings.Default.ShowMenuConsole = value;
-			OnPropertyChanged(nameof(ShowMenuConsole));
 		}
 	}
 
@@ -1314,7 +1323,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuMcpControl == value) return;
 			Settings.Default.ShowMenuMcpControl = value;
-			OnPropertyChanged(nameof(ShowMenuMcpControl));
 		}
 	}
 
@@ -1325,7 +1333,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuApiDocumentation == value) return;
 			Settings.Default.ShowMenuApiDocumentation = value;
-			OnPropertyChanged(nameof(ShowMenuGuide));
 		}
 	}
 
@@ -1336,7 +1343,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuSettings == value) return;
 			Settings.Default.ShowMenuSettings = value;
-			OnPropertyChanged(nameof(ShowMenuSettings));
 		}
 	}
 
@@ -1347,7 +1353,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuToolsOverview == value) return;
 			Settings.Default.ShowMenuToolsOverview = value;
-			OnPropertyChanged(nameof(ShowMenuToolsOverview));
 		}
 	}
 
@@ -1358,7 +1363,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuSessionGallery == value) return;
 			Settings.Default.ShowMenuSessionGallery = value;
-			OnPropertyChanged(nameof(ShowMenuSessionGallery));
 		}
 	}
 
@@ -1369,7 +1373,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuOrbitView == value) return;
 			Settings.Default.ShowMenuOrbitView = value;
-			OnPropertyChanged(nameof(ShowMenuOrbitView));
 		}
 	}
 
@@ -1380,7 +1383,6 @@ namespace Orbit.ViewModels
 		{
 			if (Settings.Default.ShowMenuSharpBuilder == value) return;
 			Settings.Default.ShowMenuSharpBuilder = value;
-			OnPropertyChanged(nameof(ShowMenuSharpBuilder));
 		}
 	}
 
@@ -1730,7 +1732,7 @@ namespace Orbit.ViewModels
 			return Task.CompletedTask;
 		}
 
-		return SetNativeDebugMenuVisibleAsync(session!, !session!.NativeDebugMenuVisible);
+		return mesharpSessionCommandService.ToggleNativeDebugMenuAsync(session!, RevealNativeDebugMenuAsync);
 	}
 
 	public bool CanToggleNativeDebugMenu(SessionModel? session)
@@ -1743,13 +1745,15 @@ namespace Orbit.ViewModels
 		=> mesharpSessionCommandService.SetNativeDebugMenuVisibleAsync(
 			session,
 			visible,
-			revealAndFocusAsync: target =>
-			{
-				var ownerVm = ResolveOwningShellForSession(target);
-				ownerVm.RevealSession(target, requestFocus: true);
-				ownerVm.TryActivateOwningWindow();
-				return Task.CompletedTask;
-			});
+			revealAndFocusAsync: RevealNativeDebugMenuAsync);
+
+	private Task RevealNativeDebugMenuAsync(SessionModel target)
+	{
+		var ownerVm = ResolveOwningShellForSession(target);
+		ownerVm.RevealSession(target, requestFocus: true);
+		ownerVm.TryActivateOwningWindow();
+		return Task.CompletedTask;
+	}
 
 	public Task ApplyNativeDebugMenuInjectionPreferenceAsync(bool hideOnInject)
 		=> mesharpSessionCommandService.ApplyNativeDebugMenuInjectionPreferenceAsync(Sessions.Cast<SessionModel?>(), hideOnInject);
@@ -1849,7 +1853,8 @@ namespace Orbit.ViewModels
 			var viewModel = new SessionCloseDialogViewModel(session);
 			var dialog = new Views.SessionCloseDialog(viewModel)
 			{
-				Owner = Application.Current?.MainWindow
+				Owner = Application.Current?.Windows.OfType<Window>()
+					.FirstOrDefault(window => ReferenceEquals(window.DataContext, this)) ?? Application.Current?.MainWindow
 			};
 
 				dialog.ShowDialog();
@@ -1968,6 +1973,28 @@ namespace Orbit.ViewModels
 		return args.DragablzItem.DataContext ?? args.DragablzItem.Content;
 	}
 
+	internal void ReconcileBranchTabItemsChanged(TabablzControl control, NotifyCollectionChangedEventArgs e)
+	{
+		if (_disposed) return;
+		var result = shellTabCollectionCoordinatorService.HandleCollectionChanged(
+			control.Items.Cast<object?>(), control.SelectedItem, e.Action,
+			e.OldItems?.Cast<object?>(), e.NewItems?.Cast<object?>(), IsOrbitViewTearOffWindow(),
+			ReferenceEquals(Application.Current?.MainWindow?.DataContext, this));
+		foreach (var session in result.SessionsNeedingOrphanValidation) ScheduleOrphanedSessionValidation(session);
+		if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Reset) ScheduleEmptyBranchCollapse("branch-tab-removed");
+	}
+
+	private readonly HashSet<SessionModel> orphanValidationsWaitingForInput = new();
+	private System.Windows.Threading.DispatcherTimer? orphanValidationTimer;
+	private void OrphanValidationTimer_Tick(object? sender, EventArgs e)
+	{
+		if (Mouse.LeftButton == MouseButtonState.Pressed) return;
+		orphanValidationTimer?.Stop();
+		var pending = orphanValidationsWaitingForInput.ToArray();
+		orphanValidationsWaitingForInput.Clear();
+		foreach (var session in pending) ValidateOrphanedSession(session);
+	}
+
 	private void ScheduleOrphanedSessionValidation(SessionModel session)
 	{
 		if (session == null)
@@ -1994,6 +2021,18 @@ namespace Orbit.ViewModels
 
 	private void ValidateOrphanedSession(SessionModel session)
 	{
+		if (_disposed) { sessionLifecycleCoordinator.CompleteOrphanValidation(session); return; }
+		if (Mouse.LeftButton == MouseButtonState.Pressed)
+		{
+			orphanValidationsWaitingForInput.Add(session);
+			if (orphanValidationTimer == null)
+			{
+				orphanValidationTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+				orphanValidationTimer.Tick += OrphanValidationTimer_Tick;
+			}
+			orphanValidationTimer.Start();
+			return;
+		}
 		// Close the drag-out grace as the backstop: this runs at Background priority, after the
 		// matching add has had a full dispatcher cycle to land. If it landed, the session now
 		// has a UI reference and will not be restored; if it genuinely did not, clearing the
@@ -2021,10 +2060,10 @@ namespace Orbit.ViewModels
 
 			await sessionAutoRelaunchService.CheckAndRelaunchAsync(
 				Sessions.Cast<SessionModel?>(),
-				isApplicationShuttingDown,
-				Settings.Default.AutoRelaunchOnUnexpectedExit,
+				() => isApplicationShuttingDown || _disposed,
+				() => Settings.Default.AutoRelaunchOnUnexpectedExit,
 				session => CloseSessionInternalAsync(session, skipConfirmation: true, forceKillOnTimeout: false),
-				AddSingleSessionAsync).ConfigureAwait(true);
+				session => AddSingleSessionAsync(session.Name, session.LauncherCharacterId)).ConfigureAwait(true);
 		}
 
 		public void MarkApplicationShuttingDown()
@@ -2107,6 +2146,14 @@ namespace Orbit.ViewModels
 		{
 			if (_disposed) return;
 			_disposed = true;
+			Settings.Default.PropertyChanged -= OnSharedSettingsChanged;
+			if (orphanValidationTimer != null)
+			{
+				orphanValidationTimer.Stop();
+				orphanValidationTimer.Tick -= OrphanValidationTimer_Tick;
+			}
+			foreach (var session in orphanValidationsWaitingForInput) sessionLifecycleCoordinator.CompleteOrphanValidation(session);
+			orphanValidationsWaitingForInput.Clear();
 
 			// Dispose active tool view models owned by this window.
 			foreach (var tool in Tabs.OfType<Models.ToolTabItem>().ToList())

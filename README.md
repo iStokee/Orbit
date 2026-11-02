@@ -183,3 +183,33 @@ Settings displays the full app version string from `AppVersion.Display`.
 
 - **Drag/tab interactions feel unstable**
   - Enable Orbit interaction logging in **Advanced** and inspect events around drag/reparent operations.
+
+## Build and release
+
+Requires the .NET 10 SDK on Windows (x64).
+
+- Development: `dotnet build Orbit/Orbit/Orbit.csproj -c Debug`
+- Publish the complete portable payload: `powershell -File Orbit/tools/OrbitRelease.ps1 -Action Publish`
+- Publish and ZIP without Velopack: `powershell -File Orbit/tools/BuildOrbitUploadPayload.ps1 -CreateZip`
+- Build installer and update ZIP: `powershell -File Orbit/tools/OrbitRelease.ps1 -Action FullRelease` (requires `vpk`).
+- Change version: `powershell -File Orbit/tools/OrbitRelease.ps1 -Action BumpVersion -Version X.Y.Z`
+
+A normal Orbit build also builds the updater. Both applications and their runtime files
+land together in `Orbit/Build/Test/`. Run `Orbit/Build/Test/Orbit.exe` for local testing.
+Debug and Release share this folder: the most recent build is the test build.
+RID-specific publish intermediates stay under `Orbit/artifacts/build/`.
+Publishing uses clean temporary folders and replaces `Orbit/artifacts/publish/` only after
+both applications publish successfully. Orbit and its updater are self-contained win-x64
+executables. Symbols are excluded from release payloads. Orbit's interop dependency does
+not deploy into the live ME or user-script directories during these builds.
+
+`FullRelease` also produces `Orbit/artifacts/releases/` and
+`Orbit/artifacts/autoupdate/orbit-win-x64.zip` with its required `.sha256` file.
+Packaging checks the staged version before proceeding. `CreateRelease` publishes the
+prepared assets to GitHub; `FullRelease` only builds local artifacts. Old `Orbit/Publish/`
+output is no longer used and is not automatically deleted. The repository's
+`build-release.ps1` wrapper uses the same publisher but retains its explicit
+`Build/Prod/Orbit/` destination.
+
+Visual Studio folder profiles publish each project separately under
+`Orbit/artifacts/profiles/`; use the scripts above for a complete distributable payload.

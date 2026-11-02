@@ -28,6 +28,8 @@ public sealed class SessionOwnershipCoordinatorService : IDisposable
 	private readonly SessionReconciliationService _reconciliation;
 	private readonly OrbitLayoutStateService _orbitLayoutState;
 	private bool _disposed;
+	private readonly System.Collections.Generic.HashSet<SessionModel> _pendingAfterInput = new();
+	private readonly InputManager? _inputManager;
 
 	public SessionOwnershipCoordinatorService(
 		SessionPlacementService placement,
@@ -39,6 +41,9 @@ public sealed class SessionOwnershipCoordinatorService : IDisposable
 		_orbitLayoutState = orbitLayoutState ?? throw new ArgumentNullException(nameof(orbitLayoutState));
 
 		_placement.PlacementChanged += OnPlacementChanged;
+		_placement.MoveCompleted += OnPlacementChanged;
+		_inputManager = Application.Current == null ? null : InputManager.Current;
+		if (_inputManager != null) _inputManager.PostProcessInput += OnPostProcessInput;
 	}
 
 	/// <summary>
@@ -82,8 +87,10 @@ public sealed class SessionOwnershipCoordinatorService : IDisposable
 		}
 
 		// Wait until the move settles and never fight an in-flight drag.
-		if (_placement.IsMoveInProgress(session) || Mouse.LeftButton == MouseButtonState.Pressed)
+		if (_placement.IsMoveInProgress(session)) return;
+		if (Mouse.LeftButton == MouseButtonState.Pressed)
 		{
+			_pendingAfterInput.Add(session);
 			return;
 		}
 
@@ -113,6 +120,18 @@ public sealed class SessionOwnershipCoordinatorService : IDisposable
 		}
 	}
 
+	private void OnPostProcessInput(object sender, ProcessInputEventArgs e)
+	{
+		if (_disposed || Mouse.LeftButton == MouseButtonState.Pressed || _pendingAfterInput.Count == 0) return;
+		var pending = _pendingAfterInput.ToArray();
+		_pendingAfterInput.Clear();
+		foreach (var session in pending)
+		{
+			var placement = _placement.GetPlacement(session);
+			OnPlacementChanged(this, new SessionPlacementChangedEventArgs(session, placement, placement, "input-settled"));
+		}
+	}
+
 	public void Dispose()
 	{
 		if (_disposed)
@@ -122,5 +141,8 @@ public sealed class SessionOwnershipCoordinatorService : IDisposable
 
 		_disposed = true;
 		_placement.PlacementChanged -= OnPlacementChanged;
+		_placement.MoveCompleted -= OnPlacementChanged;
+		if (_inputManager != null) _inputManager.PostProcessInput -= OnPostProcessInput;
+		_pendingAfterInput.Clear();
 	}
 }

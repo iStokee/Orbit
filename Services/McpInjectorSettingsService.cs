@@ -8,10 +8,13 @@ namespace Orbit.Services;
 public sealed class McpInjectorSettingsService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly string? _path;
+    public McpInjectorSettingsService() { }
+    internal McpInjectorSettingsService(string path) => _path = path;
 
     public McpInjectorSettings Load()
     {
-        var path = ResolveSettingsPath();
+        var path = _path ?? ResolveSettingsPath();
         if (!File.Exists(path))
         {
             return new McpInjectorSettings(path, true, false);
@@ -23,15 +26,15 @@ public sealed class McpInjectorSettingsService
             var node = JsonNode.Parse(json)?.AsObject();
             if (node == null)
             {
-                return new McpInjectorSettings(path, true, true);
+                throw new InvalidDataException("Injector settings must contain a JSON object.");
             }
 
             var autoStart = node["MCP_AUTOSTART"]?.GetValue<bool>() ?? true;
             return new McpInjectorSettings(path, autoStart, true);
         }
-        catch
+        catch (Exception ex)
         {
-            return new McpInjectorSettings(path, true, true);
+            return new McpInjectorSettings(path, true, true, $"Cannot read injector settings; original file preserved: {ex.Message}");
         }
     }
 
@@ -47,14 +50,8 @@ public sealed class McpInjectorSettingsService
 
         if (File.Exists(path))
         {
-            try
-            {
-                root = JsonNode.Parse(File.ReadAllText(path))?.AsObject() ?? new JsonObject();
-            }
-            catch
-            {
-                root = new JsonObject();
-            }
+            root = JsonNode.Parse(File.ReadAllText(path)) as JsonObject
+                ?? throw new InvalidDataException("Injector settings must contain a JSON object. Original file preserved.");
         }
         else
         {
@@ -69,7 +66,7 @@ public sealed class McpInjectorSettingsService
             Directory.CreateDirectory(dir);
         }
 
-        File.WriteAllText(path, root.ToJsonString(JsonOptions));
+        AtomicFile.WriteText(path, root.ToJsonString(JsonOptions));
     }
 
     private static string ResolveSettingsPath()
@@ -103,4 +100,4 @@ public sealed class McpInjectorSettingsService
     }
 }
 
-public sealed record McpInjectorSettings(string SettingsPath, bool AutoStart, bool Exists);
+public sealed record McpInjectorSettings(string SettingsPath, bool AutoStart, bool Exists, string? Error = null);

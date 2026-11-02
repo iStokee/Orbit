@@ -13,6 +13,21 @@ public sealed record OrbitRuntimeStatus(
 	string? ScriptId,
 	string? ScriptsInfo)
 {
+	public bool HasScriptInventory
+	{
+		get
+		{
+			if (!Ok || !RuntimeRunning || string.IsNullOrWhiteSpace(ScriptsInfo)) return false;
+			var lines = ScriptsInfo.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
+			if (lines.Length < 2 || lines[0].TrimEnd('\r') != "DASHBOARD_V1" ||
+				!lines[1].StartsWith("COUNT\t", System.StringComparison.Ordinal) ||
+				!int.TryParse(lines[1].AsSpan(6), out var count) || count < 0 || count != lines.Length - 2) return false;
+			for (var i = 2; i < lines.Length; i++)
+				if (!lines[i].StartsWith("SCRIPT\t", System.StringComparison.Ordinal) || lines[i].Split('\t').Length < 6) return false;
+			return true;
+		}
+	}
+
 	public bool IsScriptLoaded(string? scriptId)
 	{
 		if (string.IsNullOrWhiteSpace(scriptId) || string.IsNullOrWhiteSpace(ScriptsInfo))
@@ -20,8 +35,7 @@ public sealed record OrbitRuntimeStatus(
 			return false;
 		}
 
-		var scriptToken = $"SCRIPT\t{scriptId.Trim()}\t";
-		return ScriptsInfo.Contains(scriptToken, System.StringComparison.OrdinalIgnoreCase);
+		return Ok && RuntimeRunning && GetScriptPath(scriptId) != null;
 	}
 
 	public string? GetScriptPath(string? scriptId)

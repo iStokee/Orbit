@@ -24,21 +24,50 @@ public sealed class ScriptOrchestrationService
 	}
 
 	public async Task<bool> LoadAsync(SessionModel targetSession, string scriptPath, CancellationToken cancellationToken = default)
-		=> await LoadOrReloadAsync(targetSession, scriptPath, "load", cancellationToken).ConfigureAwait(false);
+		=> await RunSerializedAsync(targetSession, token => LoadOrReloadAsync(targetSession, scriptPath, "load", token), cancellationToken).ConfigureAwait(true);
 
 	public async Task<bool> ReloadAsync(SessionModel targetSession, string scriptPath, CancellationToken cancellationToken = default)
-		=> await LoadOrReloadAsync(targetSession, scriptPath, "reload", cancellationToken).ConfigureAwait(false);
+		=> await RunSerializedAsync(targetSession, token => LoadOrReloadAsync(targetSession, scriptPath, "reload", token), cancellationToken).ConfigureAwait(true);
 
-	public async Task<bool> UnloadActiveScriptAsync(SessionModel targetSession, string? nextPath = null, CancellationToken cancellationToken = default)
+	public Task<bool> UnloadActiveScriptAsync(SessionModel targetSession, string? nextPath = null, CancellationToken cancellationToken = default)
+		=> RunSerializedAsync(targetSession, token => UnloadActiveScriptCoreAsync(targetSession, nextPath, token), cancellationToken);
+
+	public Task<bool> LoadAsync(SessionModel session, string path, string scriptId, CancellationToken cancellationToken = default)
+		=> RunSerializedAsync(session, token => LoadOrReloadAsync(session, path, "load", token, scriptId), cancellationToken);
+	public Task<bool> ReloadAsync(SessionModel session, string path, string scriptId, CancellationToken cancellationToken = default)
+		=> RunSerializedAsync(session, token => LoadOrReloadAsync(session, path, "reload", token, scriptId), cancellationToken);
+	public Task<bool> UnloadScriptAsync(SessionModel session, string scriptId, CancellationToken cancellationToken = default)
+		=> RunSerializedAsync(session, token => UnloadActiveScriptCoreAsync(session, null, token, scriptId), cancellationToken);
+
+	private static async Task<bool> RunSerializedAsync(SessionModel session, Func<CancellationToken, Task<bool>> operation, CancellationToken cancellationToken)
 	{
+		ArgumentNullException.ThrowIfNull(session);
+		using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.WorkCancellation);
+		var entered = false;
+		try
+		{
+			await session.ScriptCommandGate.WaitAsync(linked.Token).ConfigureAwait(true);
+			entered = true;
+			linked.Token.ThrowIfCancellationRequested();
+			if (session.State is SessionState.Closed or SessionState.ShuttingDown) return false;
+			return await operation(linked.Token).ConfigureAwait(true);
+		}
+		catch (OperationCanceledException) when (linked.IsCancellationRequested) { return false; }
+		finally { if (entered) session.ScriptCommandGate.Release(); }
+	}
+
+	private async Task<bool> UnloadActiveScriptCoreAsync(SessionModel targetSession, string? nextPath, CancellationToken cancellationToken, string? requestedScriptId = null)
+	{
+		ArgumentNullException.ThrowIfNull(targetSession);
 		if (targetSession.RSProcess == null)
 		{
 			return false;
 		}
 
-		var scriptIdToUnload = !string.IsNullOrWhiteSpace(targetSession.ActiveScriptId)
+		var scriptIdToUnload = requestedScriptId ?? (!string.IsNullOrWhiteSpace(targetSession.ActiveScriptId)
 			? targetSession.ActiveScriptId!
-			: ScriptManagerService.DeriveScriptIdFromPath(targetSession.ActiveScriptPath);
+			: ScriptManagerService.DeriveScriptIdFromPath(targetSession.ActiveScriptPath));
+		var pid = targetSession.RSProcess.Id;
 
 		_consoleLog.Append(
 			string.IsNullOrWhiteSpace(nextPath)
@@ -48,8 +77,9 @@ public sealed class ScriptOrchestrationService
 			ConsoleLogLevel.Info);
 
 		var response = await _commandClient
-			.SendUnloadScriptWithRetryAsync(scriptIdToUnload, targetSession.RSProcess.Id, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
-			.ConfigureAwait(false);
+			.SendUnloadScriptWithRetryAsync(scriptIdToUnload, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(150), cancellationToken: cancellationToken)
+			.ConfigureAwait(true);
+		cancellationToken.ThrowIfCancellationRequested();
 
 		if (!response.Success)
 		{
@@ -61,18 +91,26 @@ public sealed class ScriptOrchestrationService
 		}
 
 		var status = response.Status
-			?? await _commandClient.QueryStatusAsync(targetSession.RSProcess.Id, scriptIdToUnload, cancellationToken).ConfigureAwait(false);
+			?? await _commandClient.QueryStatusAsync(pid, scriptIdToUnload, cancellationToken).ConfigureAwait(true);
+		cancellationToken.ThrowIfCancellationRequested();
+		if (status == null || !status.HasScriptInventory || status.ProcessId != pid)
+		{
+			targetSession.SetScriptRuntimeError("ME did not confirm the script inventory after unload.");
+			return false;
+		}
 		if (status?.IsScriptLoaded(scriptIdToUnload) == true)
 		{
 			targetSession.SetScriptRuntimeError($"Script '{scriptIdToUnload}' still appears loaded after unload.");
 			return false;
 		}
+		targetSession.ConfirmRuntimeStatus(status);
 
-		targetSession.SetScriptStopped();
+		if (requestedScriptId == null || string.Equals(targetSession.ActiveScriptId, scriptIdToUnload, StringComparison.OrdinalIgnoreCase))
+			targetSession.SetScriptStopped();
 		return true;
 	}
 
-	private async Task<bool> LoadOrReloadAsync(SessionModel targetSession, string scriptPath, string action, CancellationToken cancellationToken)
+	private async Task<bool> LoadOrReloadAsync(SessionModel targetSession, string scriptPath, string action, CancellationToken cancellationToken, string? requestedScriptId = null)
 	{
 		if (targetSession == null)
 		{
@@ -97,15 +135,15 @@ public sealed class ScriptOrchestrationService
 			return false;
 		}
 
-		var scriptId = ScriptManagerService.DeriveScriptIdFromPath(scriptPath);
+		var scriptId = requestedScriptId ?? ScriptManagerService.DeriveScriptIdFromPath(scriptPath);
 		_scriptManager.AddOrUpdateScript(scriptPath, null, null, scriptId);
 
 		var activePath = targetSession.ActiveScriptPath;
 		var switchingScripts = !string.IsNullOrWhiteSpace(activePath) &&
 			!string.Equals(activePath, scriptPath, StringComparison.OrdinalIgnoreCase);
-		if (switchingScripts)
+		if (switchingScripts && requestedScriptId == null)
 		{
-			var unloaded = await UnloadActiveScriptAsync(targetSession, scriptPath, cancellationToken).ConfigureAwait(false);
+			var unloaded = await UnloadActiveScriptCoreAsync(targetSession, scriptPath, cancellationToken).ConfigureAwait(true);
 			if (!unloaded)
 			{
 				targetSession.SetScriptRuntimeError($"Failed to unload previous script before {action}ing a new one.");
@@ -122,7 +160,8 @@ public sealed class ScriptOrchestrationService
 
 		var runtimeReady = await _commandClient
 			.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: cancellationToken)
-			.ConfigureAwait(false);
+			.ConfigureAwait(true);
+		cancellationToken.ThrowIfCancellationRequested();
 		if (!runtimeReady.Success)
 		{
 			_consoleLog.Append(
@@ -133,7 +172,8 @@ public sealed class ScriptOrchestrationService
 
 		var commandResponse = await _commandClient
 			.SendReloadWithRetryAsync(scriptPath, scriptId, pid, maxAttempts: 4, initialDelay: TimeSpan.FromMilliseconds(200), cancellationToken: cancellationToken)
-			.ConfigureAwait(false);
+			.ConfigureAwait(true);
+		cancellationToken.ThrowIfCancellationRequested();
 		if (!commandResponse.Success)
 		{
 			_consoleLog.Append(
@@ -145,14 +185,16 @@ public sealed class ScriptOrchestrationService
 		}
 
 		var status = commandResponse.Status
-			?? await _commandClient.QueryStatusAsync(pid, scriptId, cancellationToken).ConfigureAwait(false);
-		if (status?.IsScriptLoaded(scriptId) != true)
+			?? await _commandClient.QueryStatusAsync(pid, scriptId, cancellationToken).ConfigureAwait(true);
+		cancellationToken.ThrowIfCancellationRequested();
+		if (status == null || !status.HasScriptInventory || status.ProcessId != pid || !status.IsScriptLoaded(scriptId))
 		{
 			targetSession.SetScriptRuntimeError($"ME did not confirm '{Path.GetFileNameWithoutExtension(scriptPath)}' is loaded.");
 			return false;
 		}
 
 		targetSession.SetScriptLoaded(status.GetScriptPath(scriptId) ?? scriptPath, scriptId);
+		targetSession.ConfirmRuntimeStatus(status);
 		return true;
 	}
 

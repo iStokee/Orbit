@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -32,7 +33,9 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		_listenerTask ??= Task.Run(ListenAsync, _cts.Token);
 	}
 
-	private async Task ListenAsync()
+	private Task ListenAsync() => Task.WhenAll(Enumerable.Range(0, 4).Select(_ => ListenWorkerAsync()));
+
+	private async Task ListenWorkerAsync()
 	{
 		var token = _cts.Token;
 
@@ -86,53 +89,62 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		}
 	}
 
-	private async Task ProcessConnectionAsync(NamedPipeServerStream pipe, CancellationToken token)
+	internal async Task ProcessConnectionAsync(NamedPipeServerStream pipe, CancellationToken token)
 	{
-		using var reader = new StreamReader(pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
-		using var writer = new StreamWriter(pipe, Encoding.UTF8, bufferSize: 4096, leaveOpen: true) { AutoFlush = true };
-
-		while (!token.IsCancellationRequested && pipe.IsConnected)
+		var legacyDeadline = DateTimeOffset.UtcNow.AddSeconds(2);
+		using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+		requestCts.CancelAfter(TimeSpan.FromSeconds(5));
+		using var reader = new StreamReader(pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
+		using var writer = new StreamWriter(pipe, new UTF8Encoding(false), bufferSize: 4096, leaveOpen: true) { AutoFlush = true };
+		try
 		{
-			string? line;
-			try
-			{
-				line = await reader.ReadLineAsync().ConfigureAwait(false);
-			}
-			catch (IOException)
-			{
-				break;
-			}
-
-			if (string.IsNullOrWhiteSpace(line))
-			{
-				break;
-			}
-
-			var response = HandleRequest(line);
-			try
-			{
-				await writer.WriteLineAsync(response).ConfigureAwait(false);
-			}
-			catch (IOException)
-			{
-				break;
-			}
+			// Clients open a connection per command. Do not let one persistent/idle client
+			// monopolize the listener; accept both legacy BOM-prefixed and plain UTF-8 input.
+			var line = await ReadRequestLineAsync(reader, requestCts.Token).ConfigureAwait(false);
+			if (string.IsNullOrWhiteSpace(line)) return;
+			var response = await HandleRequestAsync(line, requestCts.Token, legacyDeadline).ConfigureAwait(false);
+			await writer.WriteLineAsync(response.AsMemory(), requestCts.Token).ConfigureAwait(false);
 		}
+		catch (OperationCanceledException) when (!token.IsCancellationRequested) { }
+		catch (IOException) { }
 	}
 
-	private string HandleRequest(string line)
+	internal static async Task<string?> ReadRequestLineAsync(StreamReader reader, CancellationToken token)
+	{
+		const int maxLength = 16 * 1024;
+		var text = new StringBuilder();
+		var buffer = new char[1024];
+		int count;
+		while ((count = await reader.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false)) > 0)
+		{
+			var newline = Array.IndexOf(buffer, '\n', 0, count);
+			var length = newline < 0 ? count : newline;
+			if (text.Length + length > maxLength) throw new InvalidDataException("Orbit API request exceeds 16,384 characters.");
+			text.Append(buffer, 0, length);
+			if (newline >= 0) return text.ToString().TrimEnd('\r');
+		}
+		return text.Length == 0 ? null : text.ToString();
+	}
+
+	private async Task<string> HandleRequestAsync(string line, CancellationToken token, DateTimeOffset legacyDeadline)
 	{
 		try
 		{
 			using var doc = JsonDocument.Parse(line);
 			var root = doc.RootElement;
+			var deadline = root.TryGetProperty("deadlineUnixMs", out var deadlineValue) && deadlineValue.TryGetInt64(out var unixMs)
+				? DateTimeOffset.FromUnixTimeMilliseconds(unixMs) : legacyDeadline;
+			if (deadline > DateTimeOffset.UtcNow.AddSeconds(5)) deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+			if (deadline <= DateTimeOffset.UtcNow) throw new TimeoutException("Orbit request expired.");
+			using var execution = CancellationTokenSource.CreateLinkedTokenSource(token);
+			execution.CancelAfter(deadline - DateTimeOffset.UtcNow);
 			var action = GetString(root, "action")?.Trim().ToLowerInvariant();
 
 			return action switch
 			{
 				"isavailable" or "ping" => Serialize(ok: true, available: true, embeddingEnabled: Orbit.Settings.Default.ScriptWindowEmbeddingEnabled),
-				"register" => HandleRegister(root),
-				"unregister" => HandleUnregister(root),
+				"register" => await HandleRegisterAsync(root, execution.Token, deadline).ConfigureAwait(false),
+				"unregister" => await HandleUnregisterAsync(root, execution.Token, deadline).ConfigureAwait(false),
 				_ => Serialize(ok: false, message: $"Unknown action '{action ?? "<null>"}'")
 			};
 		}
@@ -142,7 +154,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		}
 	}
 
-	private string HandleRegister(JsonElement root)
+	private async Task<string> HandleRegisterAsync(JsonElement root, CancellationToken token, DateTimeOffset deadline)
 	{
 		if (!Orbit.Settings.Default.ScriptWindowEmbeddingEnabled)
 		{
@@ -165,7 +177,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 
 		try
 		{
-			var sessionId = _scriptIntegration.RegisterScriptWindow(windowHandle, tabName, processId);
+			var sessionId = await _scriptIntegration.RegisterScriptWindowAsync(windowHandle, tabName, processId, token, deadline).ConfigureAwait(false);
 			ConsoleLogService.Instance.Append(
 				$"[OrbitAPI][IPC] Registered script window '{tabName}' (HWND 0x{windowHandle.ToInt64():X}). Session={sessionId}",
 				ConsoleLogSource.Orbit,
@@ -182,7 +194,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		}
 	}
 
-	private string HandleUnregister(JsonElement root)
+	private async Task<string> HandleUnregisterAsync(JsonElement root, CancellationToken token, DateTimeOffset deadline)
 	{
 		var sessionIdRaw = GetString(root, "sessionId");
 		if (!Guid.TryParse(sessionIdRaw, out var sessionId))
@@ -190,7 +202,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 			return Serialize(ok: false, message: "Missing or invalid 'sessionId'.");
 		}
 
-		var removed = _scriptIntegration.UnregisterScriptWindow(sessionId);
+		var removed = await _scriptIntegration.UnregisterScriptWindowAsync(sessionId, token, deadline).ConfigureAwait(false);
 		ConsoleLogService.Instance.Append(
 			removed
 				? $"[OrbitAPI][IPC] Unregistered script session {sessionId}"
@@ -290,7 +302,7 @@ internal sealed class OrbitApiPipeServer : IDisposable
 		}
 
 		_disposed = true;
-		try { _cts.Cancel(); } catch { }
+		Stop();
 
 		try
 		{
@@ -300,4 +312,6 @@ internal sealed class OrbitApiPipeServer : IDisposable
 
 		_cts.Dispose();
 	}
+
+	internal void Stop() { try { _cts.Cancel(); } catch (ObjectDisposedException) { } }
 }

@@ -50,6 +50,12 @@ namespace Orbit.Views
 		}
 	}
 
+	private void Accounts_RowEditEnding(object sender, DataGridRowEditEndingEventArgs e)
+	{
+		if (e.EditAction == DataGridEditAction.Commit)
+			Dispatcher.BeginInvoke(new Action(() => _viewModel.CommitAccountEdit()), System.Windows.Threading.DispatcherPriority.Background);
+	}
+
 	private void OnPasswordReset(object? sender, EventArgs e)
 	{
 		NewPasswordBox.PasswordChanged -= NewPasswordBox_PasswordChanged;

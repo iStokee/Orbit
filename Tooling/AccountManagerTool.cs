@@ -23,6 +23,6 @@ public sealed class AccountManagerTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return _serviceProvider.GetRequiredService<AccountManagerView>();
+        return _serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<AccountManagerView>();
     }
 }

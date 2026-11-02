@@ -21,8 +21,23 @@ namespace Orbit.ViewModels
 		UpdateBadge
 	}
 
-	public class ThemeManagerViewModel : ObservableObject
+	public class ThemeManagerViewModel : ObservableObject, IDisposable
 	{
+	public string? StorageError => themeService.LastError;
+	private void OnStorageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+	{ if (e.PropertyName == nameof(ThemeService.LastError)) OnPropertyChanged(nameof(StorageError)); }
+	public void Dispose()
+	{
+		if (_disposed) return;
+		_disposed = true;
+		if (_typographySaveTimer.IsEnabled) { _typographySaveTimer.Stop(); SaveTypography(); }
+		_typographySaveTimer.Tick -= OnTypographySaveTick;
+		themeService.PropertyChanged -= OnStorageChanged;
+	}
+	private bool _disposed;
+	private string _themeStatusMessage = string.Empty;
+	public string ThemeStatusMessage { get => _themeStatusMessage; private set => SetProperty(ref _themeStatusMessage, value); }
+	private readonly System.Windows.Threading.DispatcherTimer _typographySaveTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
 	private readonly ThemeService themeService;
 	private string customThemeName = string.Empty;
 	private MediaColor selectedCustomColor = MediaColors.SteelBlue;
@@ -60,6 +75,8 @@ namespace Orbit.ViewModels
 		public ThemeManagerViewModel(ThemeService themeService)
 		{
 			this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+			themeService.PropertyChanged += OnStorageChanged;
+			_typographySaveTimer.Tick += OnTypographySaveTick;
 
 			BaseThemes = themeService.GetAvailableBaseThemes();
 			ColorSchemes = themeService.GetAvailableColorSchemes();
@@ -69,7 +86,7 @@ namespace Orbit.ViewModels
 
 			ApplyThemeCommand = new RelayCommand(ApplySelectedTheme, CanApplyTheme);
 			SaveCustomThemeCommand = new RelayCommand(SaveCustomTheme, CanSaveCustomTheme);
-			ApplyCustomThemeCommand = new RelayCommand(ApplyCustomTheme, () => SelectedCustomTheme != null);
+			ApplyCustomThemeCommand = new RelayCommand(ApplyCustomTheme, () => !string.IsNullOrEmpty(SelectedBaseTheme));
 			DeleteCustomThemeCommand = new RelayCommand(DeleteCustomTheme, () => SelectedCustomTheme != null);
 			ResetActiveColorCommand = new RelayCommand(ResetActiveColor);
 			ResetTypographyCommand = new RelayCommand(ResetTypography);
@@ -96,6 +113,7 @@ namespace Orbit.ViewModels
 					{
 						ApplyThemeCommand.NotifyCanExecuteChanged();
 						SaveCustomThemeCommand.NotifyCanExecuteChanged();
+						ApplyCustomThemeCommand.NotifyCanExecuteChanged();
 					}
 				}
 			}
@@ -133,11 +151,6 @@ namespace Orbit.ViewModels
 				if (!SetProperty(ref selectedCustomColor, value))
 					return;
 
-				if (SelectedCustomTheme != null)
-				{
-					SelectedCustomTheme.AccentHex = value.ToString();
-				}
-
 				if (ActiveColorEditor == ThemeColorEditorMode.Accent)
 				{
 					OnPropertyChanged(nameof(ActiveColorSelection));
@@ -155,12 +168,6 @@ namespace Orbit.ViewModels
 					return;
 
 				OnPropertyChanged(nameof(IsActiveColorEditable));
-
-				if (SelectedCustomTheme != null)
-				{
-					SelectedCustomTheme.OverrideForeground = value;
-					SelectedCustomTheme.ForegroundHex = value ? SelectedCustomForeground.ToString() : null;
-				}
 
 				if (!useCustomForeground && ActiveColorEditor == ThemeColorEditorMode.Foreground)
 				{
@@ -183,10 +190,6 @@ namespace Orbit.ViewModels
 					OnPropertyChanged(nameof(ActiveColorHex));
 				}
 
-				if (UseCustomForeground && SelectedCustomTheme != null)
-				{
-					SelectedCustomTheme.ForegroundHex = selectedCustomForeground.ToString();
-				}
 			}
 		}
 
@@ -544,7 +547,7 @@ namespace Orbit.ViewModels
 			BaseFontSize = settings.BaseFontSize;
 			SelectedFontWeight = settings.FontWeight;
 			suppressTypographyApply = false;
-			ApplyTypographyIfReady();
+			ApplyTypographyIfReady(persist: false);
 		}
 
 		private bool CanApplyTheme()
@@ -561,6 +564,7 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(SelectedCustomTheme));
 
 			themeService.ApplyBuiltInTheme(SelectedBaseTheme, SelectedColorScheme);
+			ThemeStatusMessage = $"Applied {SelectedBaseTheme} {SelectedColorScheme}.";
 			SelectedCustomColor = themeService.GetCurrentAccentColor();
 			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
 			UseCustomForeground = false;
@@ -584,47 +588,40 @@ namespace Orbit.ViewModels
 			};
 
 			var existing = CustomThemes.FirstOrDefault(t => string.Equals(t.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
+			var savedThemes = CustomThemes.ToList();
+			if (existing == null) savedThemes.Add(definition);
+			else savedThemes[savedThemes.IndexOf(existing)] = definition;
+			if (!themeService.TrySaveCustomThemes(savedThemes)) return;
 			if (existing != null)
 			{
-				existing.BaseTheme = definition.BaseTheme;
-				existing.AccentHex = definition.AccentHex;
-				existing.OverrideForeground = definition.OverrideForeground;
-				existing.ForegroundHex = definition.ForegroundHex;
+				CustomThemes[CustomThemes.IndexOf(existing)] = definition;
 			}
 			else
 			{
 				CustomThemes.Add(definition);
 			}
 
-			themeService.SaveCustomThemes(CustomThemes);
 			SelectedCustomTheme = definition;
-			ApplyCustomTheme();
+			themeService.ApplyCustomTheme(definition);
+			ThemeStatusMessage = $"Saved and applied '{definition.Name}'.";
 		}
 
 		private void ApplyCustomTheme()
 		{
-			if (SelectedCustomTheme == null)
-				return;
-
-			// Ensure the custom theme honors the current base selection
-			if (!string.IsNullOrEmpty(SelectedBaseTheme) &&
-				!string.Equals(SelectedCustomTheme.BaseTheme, SelectedBaseTheme, StringComparison.OrdinalIgnoreCase))
-			{
-				SelectedCustomTheme.BaseTheme = SelectedBaseTheme;
-				themeService.SaveCustomThemes(CustomThemes);
-				OnPropertyChanged(nameof(SelectedCustomTheme));
-			}
-
 			// Clear the selected color scheme to avoid visual confusion in the UI
 			// (custom themes don't use the built-in color schemes)
 			selectedColorScheme = null;
 			OnPropertyChanged(nameof(SelectedColorScheme));
 
-			SelectedCustomTheme.AccentHex = SelectedCustomColor.ToString();
-			SelectedCustomTheme.OverrideForeground = UseCustomForeground;
-			SelectedCustomTheme.ForegroundHex = UseCustomForeground ? SelectedCustomForeground.ToString() : null;
-
-			themeService.ApplyCustomTheme(SelectedCustomTheme);
+			themeService.ApplyCustomTheme(new CustomThemeDefinition
+			{
+				Name = string.IsNullOrWhiteSpace(CustomThemeName) ? "Preview" : CustomThemeName.Trim(),
+				BaseTheme = SelectedBaseTheme ?? "Dark",
+				AccentHex = SelectedCustomColor.ToString(),
+				OverrideForeground = UseCustomForeground,
+				ForegroundHex = UseCustomForeground ? SelectedCustomForeground.ToString() : null
+			}, persist: false);
+			ThemeStatusMessage = "Palette preview applied. Save to keep these changes.";
 			SelectedCustomColor = themeService.GetCurrentAccentColor();
 			SelectedCustomForeground = themeService.GetCurrentForegroundColor();
 		}
@@ -635,8 +632,8 @@ namespace Orbit.ViewModels
 				return;
 
 			var toRemove = SelectedCustomTheme;
+			if (!themeService.TrySaveCustomThemes(CustomThemes.Where(theme => !ReferenceEquals(theme, toRemove)))) return;
 			CustomThemes.Remove(toRemove);
-			themeService.SaveCustomThemes(CustomThemes);
 			SelectedCustomTheme = CustomThemes.FirstOrDefault();
 		}
 
@@ -676,9 +673,9 @@ namespace Orbit.ViewModels
 			OnPropertyChanged(nameof(ActiveColorHex));
 		}
 
-		private void ApplyTypographyIfReady()
+		private void ApplyTypographyIfReady(bool persist = true)
 		{
-			if (suppressTypographyApply)
+			if (suppressTypographyApply || _disposed)
 			{
 				return;
 			}
@@ -688,8 +685,20 @@ namespace Orbit.ViewModels
 				FontFamily = SelectedFontFamily,
 				BaseFontSize = BaseFontSize,
 				FontWeight = SelectedFontWeight
-			});
+			}, persist: false);
+			if (persist) { _typographySaveTimer.Stop(); _typographySaveTimer.Start(); }
 		}
+
+		private void OnTypographySaveTick(object? sender, EventArgs e)
+		{
+			_typographySaveTimer.Stop();
+			SaveTypography();
+		}
+
+		private void SaveTypography() => themeService.ApplyTypographySettings(new ThemeService.TypographySettings
+		{
+			FontFamily = SelectedFontFamily, BaseFontSize = BaseFontSize, FontWeight = SelectedFontWeight
+		});
 
 		private void ResetTypography()
 		{

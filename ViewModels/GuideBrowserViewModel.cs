@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Documents;
@@ -19,7 +21,7 @@ namespace Orbit.ViewModels;
 /// View model backing the Orbit documentation browser. Handles document navigation,
 /// markdown rendering, and lightweight status messaging.
 /// </summary>
-public class GuideBrowserViewModel : INotifyPropertyChanged
+public class GuideBrowserViewModel : INotifyPropertyChanged, IDisposable
 {
 	private readonly MarkdownPipeline _markdownPipeline;
 	private readonly string _docsRoot;
@@ -27,6 +29,10 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 	private GuideSection? _selectedSection;
 	private string _statusMessage = "Select a document to begin.";
 	private bool _isLoading;
+	private readonly Func<string, CancellationToken, Task<string>> _read;
+	private CancellationTokenSource? _load;
+	private int _generation;
+	private bool _disposed;
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -81,8 +87,12 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 	public IRelayCommand OpenDocsFolderCommand { get; }
 
 	public GuideBrowserViewModel()
+		: this(ResolveDocsRoot(), (path, token) => File.ReadAllTextAsync(path, token)) { }
+
+	internal GuideBrowserViewModel(string docsRoot, Func<string, CancellationToken, Task<string>> read)
 	{
-		_docsRoot = ResolveDocsRoot();
+		_docsRoot = docsRoot;
+		_read = read;
 		_markdownPipeline = CreatePipeline();
 
 		RefreshCommand = new RelayCommand(() => _ = LoadCurrentSectionAsync());
@@ -142,18 +152,26 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 
 	private async System.Threading.Tasks.Task LoadCurrentSectionAsync()
 	{
-		if (SelectedSection is null)
+		if (_disposed) return;
+		_load?.Cancel();
+		var generation = ++_generation;
+		using var request = new CancellationTokenSource();
+		_load = request;
+		var section = SelectedSection;
+		if (section is null)
 		{
+			_load = null;
+			IsLoading = false;
 			CurrentDocument = BuildMessageDocument("No section selected.");
 			return;
 		}
 
 		IsLoading = true;
-		StatusMessage = $"Loading {SelectedSection.Title}...";
+		StatusMessage = $"Loading {section.Title}...";
 
 		try
 		{
-			var path = Path.Combine(_docsRoot, SelectedSection.FileName);
+			var path = Path.Combine(_docsRoot, section.FileName);
 
 			if (!File.Exists(path))
 			{
@@ -162,23 +180,28 @@ public class GuideBrowserViewModel : INotifyPropertyChanged
 				return;
 			}
 
-			var markdownText = await File.ReadAllTextAsync(path);
+			var markdownText = await _read(path, request.Token);
+			if (_disposed || generation != _generation || request.IsCancellationRequested) return;
 			var flowDocument = Markdig.Wpf.Markdown.ToFlowDocument(markdownText, _markdownPipeline);
 
 			ApplyDocumentStyling(flowDocument);
 			CurrentDocument = flowDocument;
-			StatusMessage = $"Showing {SelectedSection.Title}.";
+			StatusMessage = $"Showing {section.Title}.";
 		}
+		catch (OperationCanceledException) when (request.IsCancellationRequested) { }
 		catch (Exception ex)
 		{
+			if (_disposed || generation != _generation) return;
 			StatusMessage = "Failed to load guide.";
 			CurrentDocument = BuildErrorDocument(ex);
 		}
 		finally
 		{
-			IsLoading = false;
+			if (generation == _generation) { _load = null; IsLoading = false; }
 		}
 	}
+
+	public void Dispose() { if (_disposed) return; _disposed = true; ++_generation; _load?.Cancel(); _load = null; }
 
 	private void ApplyDocumentStyling(FlowDocument document)
 	{

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using System.Linq;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Logging;
@@ -23,6 +24,35 @@ public partial class App : Application
 	public IServiceProvider Services =>
 		_serviceProvider ?? throw new InvalidOperationException("Service provider has not been initialized yet.");
 
+	public bool IsShutdownPrepared { get; private set; }
+	public bool IsShuttingDown => Services.GetRequiredService<ApplicationShutdownService>().IsShuttingDown;
+	public async Task PrepareForShutdownAsync()
+	{
+		await Services.GetRequiredService<ApplicationShutdownService>().PrepareAsync();
+		IsShutdownPrepared = true;
+	}
+
+	private void PreparePresentationForShutdown()
+	{
+		Services.GetRequiredService<ScriptIntegrationService>().IsShuttingDown = true;
+		_orbitApiPipeServer?.Stop();
+		Services.GetRequiredService<Plugins.PluginManager>().BeginShutdown();
+		var rootTools = new System.Collections.Generic.HashSet<Models.ToolTabItem>();
+		foreach (var window in Windows.OfType<MainWindow>().ToArray())
+			if (window.DataContext is MainWindowViewModel vm)
+			{
+				foreach (var tool in vm.Tabs.OfType<Models.ToolTabItem>()) rootTools.Add(tool);
+				vm.MarkApplicationShuttingDown();
+				vm.Dispose();
+			}
+		var otherTools = Services.GetRequiredService<OrbitLayoutStateService>().Items
+			.Concat(Windows.OfType<MainWindow>().SelectMany(window => Utilities.VisualTreeUtil.FindVisualChildren<Dragablz.TabablzControl>(window))
+				.SelectMany(control => control.Items.Cast<object>()))
+			.OfType<Models.ToolTabItem>().Distinct().Where(tool => !rootTools.Contains(tool)).ToArray();
+		foreach (var tool in otherTools)
+			Services.GetRequiredService<ShellToolHostService>().DisposeToolItem(tool, this);
+	}
+
 	protected override void OnStartup(StartupEventArgs e)
 	{
 		base.OnStartup(e);
@@ -31,6 +61,7 @@ public partial class App : Application
 		ConfigureServices(services);
 
 		_serviceProvider = services.BuildServiceProvider();
+		_serviceProvider.GetRequiredService<SessionManagerService>().StartTracking(SessionCollectionService.Instance);
 		ApplyUpdateBadgeBrushFromSettings();
 
 		var consoleLog = _serviceProvider.GetRequiredService<ConsoleLogService>();
@@ -46,7 +77,7 @@ public partial class App : Application
 		_orbitApiPipeServer = _serviceProvider.GetRequiredService<OrbitApiPipeServer>();
 		_orbitApiPipeServer.Start();
 
-		var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+		var mainWindow = _serviceProvider.GetRequiredService<OwnedViewFactory>().Create<MainWindow>();
 		MainWindow = mainWindow;
 		mainWindow.Show();
 
@@ -93,7 +124,6 @@ public partial class App : Application
 		services.AddSingleton<FloatingMenuVisibilityService>();
 		services.AddSingleton<FloatingMenuQuickToggleService>();
 		services.AddSingleton<TaskbarOrbitIconService>();
-		services.AddSingleton<ShellClientResizeService>();
 
 		services.AddSingleton<SessionCollectionService>(_ => SessionCollectionService.Instance);
 		services.AddSingleton<SessionAutoRelaunchService>();
@@ -117,6 +147,7 @@ public partial class App : Application
 		services.AddSingleton<ShellToolHostService>();
 		services.AddSingleton<ShellToolCoordinatorService>();
 		services.AddSingleton<ShellWindowPlacementService>();
+		services.AddSingleton<ShellWindowTransferService>();
 		services.AddSingleton<OrbitLayoutStateService>();
 		services.AddSingleton<ScriptIntegrationService>();
 		services.AddSingleton<IOrbitCommandClient, OrbitCommandClientAdapter>();
@@ -124,36 +155,22 @@ public partial class App : Application
 		services.AddSingleton<ScriptOrchestrationService>();
 		services.AddSingleton<InjectorPathResolver>();
 		services.AddSingleton<SessionManagerService>();
+		services.AddSingleton<ApplicationShutdownService>(sp => new ApplicationShutdownService(
+			sp.GetRequiredService<SessionCollectionService>(), sp.GetRequiredService<SessionManagerService>(),
+			sp.GetRequiredService<SessionPlacementService>(), sp.GetRequiredService<OrbitLayoutStateService>(),
+			sp.GetRequiredService<Plugins.PluginManager>(), () => ((App)Current).PreparePresentationForShutdown()));
 		services.AddSingleton<McpPreferencesStore>();
 		services.AddSingleton<McpBridgeClientService>();
 		services.AddSingleton<McpInjectorSettingsService>();
 		services.AddSingleton<ThemeService>();
 		services.AddSingleton<ScriptManagerService>();
 		services.AddSingleton<AccountService>();
-		services.AddSingleton<AutoLoginService>();
 		services.AddSingleton<TearOffHostRegistry>();
 		services.AddSingleton<InterTabClient>();
 		services.AddSingleton<MesharpHotkeyService>();
 
 			services.AddSingleton<SettingsViewModel>();
-		services.AddTransient<SettingsView>(sp => new SettingsView(
-			sp.GetRequiredService<SettingsViewModel>(),
-			sp.GetRequiredService<IToolRegistry>()));
-		services.AddTransient<ConsoleView>();
-		services.AddTransient<ThemeManagerViewModel>();
-		services.AddTransient<ThemeManagerPanel>(sp => new ThemeManagerPanel(sp.GetRequiredService<ThemeManagerViewModel>()));
-		services.AddTransient<ScriptManagerViewModel>();
-		services.AddTransient<ScriptManagerPanel>(sp => new ScriptManagerPanel(sp.GetRequiredService<ScriptManagerViewModel>()));
-		services.AddTransient<GuideBrowserViewModel>();
-		services.AddTransient<GuideBrowserView>(sp => new GuideBrowserView(sp.GetRequiredService<GuideBrowserViewModel>()));
-		services.AddTransient<McpControlCenterViewModel>();
-		services.AddTransient<McpControlCenterView>();
-
-		services.AddTransient<AccountManagerViewModel>(sp => new AccountManagerViewModel(
-			sp.GetRequiredService<AccountService>(),
-			sp.GetRequiredService<SessionCollectionService>(),
-			sp.GetRequiredService<AutoLoginService>()));
-		services.AddTransient<AccountManagerView>();
+		services.AddSingleton<OwnedViewFactory>();
 
 		services.AddSingleton<IOrbitTool, SettingsTool>();
 		services.AddSingleton<IOrbitTool, ConsoleTool>();
@@ -170,8 +187,6 @@ public partial class App : Application
 			sp.GetRequiredService<SessionReconciliationService>()));
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.GuideTool>();
 		// Legacy separate tools (kept for compatibility, but UnifiedToolsManagerTool combines them)
-		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.ToolsOverviewTool>();
-		// services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.PluginManagerTool>();
 		// New unified dashboard
 		services.AddSingleton<IOrbitTool, Tooling.BuiltInTools.UnifiedToolsManagerTool>();
 		services.AddSingleton<IToolRegistry, ToolRegistry>();
@@ -181,11 +196,11 @@ public partial class App : Application
 		{
 			var toolRegistry = sp.GetRequiredService<IToolRegistry>();
 			var pluginDirectory = Plugins.PluginManager.GetDefaultPluginDirectory();
-			return new Plugins.PluginManager(toolRegistry, pluginDirectory);
+			return new Plugins.PluginManager(toolRegistry, pluginDirectory, sp.GetRequiredService<OrbitLayoutStateService>());
 		});
 
-		services.AddTransient<MainWindowViewModel>();
-		services.AddTransient<MainWindow>();
+		
+		
 	}
 
 	private static void ApplyUpdateBadgeBrushFromSettings()

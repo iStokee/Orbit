@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Orbit.Views.ChildClientView"
+<UserControl x:Class="Orbit.Views.ChildClientView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
@@ -6,7 +6,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <Grid>
         <!-- RS Client Window -->

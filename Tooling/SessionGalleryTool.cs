@@ -27,8 +27,16 @@ namespace Orbit.Tooling
 
 		public FrameworkElement CreateView(object? context = null)
 		{
-			var viewModel = new SessionGalleryViewModel(_sessionCollectionService);
-			return new SessionGalleryView(viewModel);
+			SessionGalleryView? view = null;
+			var originalOwner = context is MainWindowViewModel owner ? new WeakReference<MainWindowViewModel>(owner) : null;
+			var viewModel = new SessionGalleryViewModel(_sessionCollectionService, session =>
+			{
+				var shell = (view == null ? null : Window.GetWindow(view)?.DataContext as MainWindowViewModel)
+					?? (originalOwner?.TryGetTarget(out var current) == true ? current : null);
+				shell?.FocusSession(session);
+			});
+			view = new SessionGalleryView(viewModel);
+			return view;
 		}
 	}
 }

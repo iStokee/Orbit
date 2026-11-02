@@ -38,6 +38,7 @@ internal sealed class ConsoleRedirectWriter : TextWriter
 			else
 			{
 				_buffer.Append(value);
+				if (_buffer.Length >= BoundedLineReader.MaxLineLength) FlushBufferNoLock();
 			}
 		}
 
@@ -108,23 +109,17 @@ internal sealed class ConsoleRedirectWriter : TextWriter
 
 	private void AppendStringNoLock(string value)
 	{
-		int start = 0;
 		for (int i = 0; i < value.Length; i++)
 		{
 			if (value[i] == '\n')
 			{
-				if (i > start)
-				{
-					_buffer.Append(value, start, i - start);
-				}
 				FlushBufferNoLock();
-				start = i + 1;
 			}
-		}
-
-		if (start < value.Length)
-		{
-			_buffer.Append(value, start, value.Length - start);
+			else if (value[i] != '\r')
+			{
+				_buffer.Append(value[i]);
+				if (_buffer.Length >= BoundedLineReader.MaxLineLength) FlushBufferNoLock();
+			}
 		}
 	}
 

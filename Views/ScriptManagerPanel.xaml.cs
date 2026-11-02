@@ -8,6 +8,9 @@ using Orbit.Models;
 using Orbit.ViewModels;
 using Application = System.Windows.Application;
 using UserControl = System.Windows.Controls.UserControl;
+using ListBox = System.Windows.Controls.ListBox;
+using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
+using TextBoxBase = System.Windows.Controls.Primitives.TextBoxBase;
 
 namespace Orbit.Views;
 
@@ -25,14 +28,35 @@ public partial class ScriptManagerPanel : UserControl
 
     private void OnScriptDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not Selector { SelectedItem: ScriptProfile profile })
-        {
-            return;
-        }
+        if (sender is not Selector selector || GetDoubleClickProfile(selector, e.OriginalSource as DependencyObject) is not { } profile) return;
 
         if (DataContext is ScriptManagerViewModel vm && vm.LoadScriptCommand.CanExecute(profile))
         {
             vm.LoadScriptCommand.Execute(profile);
+        }
+    }
+
+    internal static ScriptProfile? GetDoubleClickProfile(Selector selector, DependencyObject? source)
+    {
+        if (source == null || ItemsControl.ContainerFromElement(selector, source) is not ListBoxItem item) return null;
+        for (var current = source; current != null && !ReferenceEquals(current, item);)
+        {
+            if (current is ButtonBase or TextBoxBase or System.Windows.Controls.Primitives.ScrollBar) return null;
+            current = current is System.Windows.Media.Visual
+                ? System.Windows.Media.VisualTreeHelper.GetParent(current) : LogicalTreeHelper.GetParent(current);
+        }
+        return item.DataContext as ScriptProfile;
+    }
+
+    private void OnBrowserKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || Keyboard.Modifiers != ModifierKeys.None ||
+            e.OriginalSource is not (ListBox or ListBoxItem) ||
+            sender is not Selector { SelectedItem: ScriptProfile profile }) return;
+        if (DataContext is ScriptManagerViewModel vm && vm.LoadScriptCommand.CanExecute(profile))
+        {
+            vm.LoadScriptCommand.Execute(profile);
+            e.Handled = true;
         }
     }
 
@@ -44,7 +68,7 @@ public partial class ScriptManagerPanel : UserControl
     private static ScriptManagerViewModel ResolveViewModel()
     {
         var app = Application.Current as App;
-        var viewModel = app?.Services.GetService<ScriptManagerViewModel>();
+        var viewModel = app?.Services.GetRequiredService<Orbit.Services.OwnedViewFactory>().CreateModel<ScriptManagerViewModel>();
         if (viewModel == null)
         {
             throw new InvalidOperationException("ScriptManagerPanel requires ScriptManagerViewModel from DI.");

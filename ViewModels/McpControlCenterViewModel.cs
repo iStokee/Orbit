@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -23,7 +24,10 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
     private readonly McpPreferencesStore _preferencesStore;
     private readonly McpInjectorSettingsService _injectorSettingsService;
     private readonly DispatcherTimer _autoProbeTimer;
+    private readonly CancellationTokenSource _lifetime = new();
+    private bool _disposed;
     private readonly NotifyCollectionChangedEventHandler _sessionsChangedHandler;
+    private readonly HashSet<SessionModel> _observedSessions = new();
 
     private SessionProbeItem? _selectedSession;
     private string _lastResponseJson = "{}";
@@ -81,6 +85,11 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         ValidateSidecarArtifacts();
         LoadInjectorSettings();
         UpdateAutoProbeState();
+        if (_preferencesStore.LastError is { } preferenceError)
+        {
+            StatusSummary = preferenceError;
+            AppendLog(preferenceError, ConsoleLogLevel.Error);
+        }
 
         _sessionsChangedHandler = (_, _) => RefreshSessions();
         _sessionCollectionService.Sessions.CollectionChanged += _sessionsChangedHandler;
@@ -108,8 +117,10 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         get => _selectedSession;
         set
         {
+            var changedTarget = _selectedSession?.SessionId != value?.SessionId || _selectedSession?.ProcessId != value?.ProcessId;
             if (SetProperty(ref _selectedSession, value))
             {
+                if (changedTarget) LastResponseJson = "{}";
                 OnPropertyChanged(nameof(CanInteractWithSession));
                 OnPropertyChanged(nameof(SelectedSessionSummary));
                 NotifyCommandStateChanged();
@@ -117,7 +128,10 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         }
     }
 
-    public bool CanInteractWithSession => SelectedSession is { ProcessId: > 0 };
+    public bool CanInteractWithSession => !_disposed && SelectedSession is { ProcessId: > 0 } selected
+        && _sessionCollectionService.Sessions.Any(s => s.Id == selected.SessionId
+            && s.IsRuneScapeClient && s.InjectionState == InjectionState.Injected
+            && s.State is not (SessionState.Closed or SessionState.ShuttingDown) && IsSessionProcessAlive(s));
 
     public string SelectedSessionSummary =>
         SelectedSession is null
@@ -226,12 +240,20 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private void RefreshSessions()
     {
+        foreach (var old in _observedSessions.Where(s => !_sessionCollectionService.Sessions.Contains(s)).ToArray())
+        {
+            old.PropertyChanged -= OnSessionChanged;
+            _observedSessions.Remove(old);
+        }
+        foreach (var current in _sessionCollectionService.Sessions)
+            if (_observedSessions.Add(current)) current.PropertyChanged += OnSessionChanged;
         var alive = _sessionCollectionService.Sessions
-            .Where(IsSessionProcessAlive)
+            .Where(s => s.IsRuneScapeClient && s.InjectionState == InjectionState.Injected
+                && s.State is not (SessionState.Closed or SessionState.ShuttingDown) && IsSessionProcessAlive(s))
             .OrderBy(s => s.Name)
             .ToList();
 
-        var previousPid = SelectedSession?.ProcessId;
+        var previousSessionId = SelectedSession?.SessionId;
         Sessions.Clear();
 
         foreach (var session in alive)
@@ -253,12 +275,19 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
             return;
         }
 
-        SelectedSession = previousPid.HasValue
-            ? Sessions.FirstOrDefault(s => s.ProcessId == previousPid.Value) ?? Sessions[0]
+        SelectedSession = previousSessionId.HasValue
+            ? Sessions.FirstOrDefault(s => s.SessionId == previousSessionId.Value)
             : Sessions[0];
 
         StatusSummary = $"{Sessions.Count} active session(s) available for MCP probes.";
         OnPropertyChanged(nameof(SelectedSessionSummary));
+    }
+
+    private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!_disposed && e.PropertyName is nameof(SessionModel.RSProcess) or nameof(SessionModel.State)
+            or nameof(SessionModel.InjectionState) or nameof(SessionModel.DisplayName) or nameof(SessionModel.Name))
+            RefreshSessions();
     }
 
     private static bool IsSessionProcessAlive(SessionModel? session)
@@ -281,26 +310,33 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private async Task StartRuntimeAsync()
     {
-        if (SelectedSession == null)
+        var target = SelectedSession;
+        if (_disposed || target == null || !CanInteractWithSession)
         {
             return;
         }
 
+        var live = _sessionCollectionService.Sessions.FirstOrDefault(s => s.Id == target.SessionId);
+        if (live == null || live.RSProcess?.Id != target.ProcessId) return;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, live.WorkCancellation);
         IsBusy = true;
         try
         {
-            var ok = await OrbitCommandClient.SendStartRuntimeWithRetryAsync(SelectedSession.ProcessId, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(180), cancellationToken: CancellationToken.None).ConfigureAwait(true);
+            var ok = await OrbitCommandClient.SendStartRuntimeWithRetryAsync(target.ProcessId, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(180), cancellationToken: request.Token).ConfigureAwait(true);
+            if (_disposed || request.IsCancellationRequested || SelectedSession?.SessionId != target.SessionId || SelectedSession?.ProcessId != target.ProcessId) return;
             if (ok)
             {
-                AppendLog($"START_RUNTIME sent to PID {SelectedSession.ProcessId}.", ConsoleLogLevel.Info);
-                StatusSummary = $"Runtime start requested for PID {SelectedSession.ProcessId}.";
+                AppendLog($"START_RUNTIME sent to PID {target.ProcessId}.", ConsoleLogLevel.Info);
+                StatusSummary = $"Runtime start requested for PID {target.ProcessId}.";
             }
             else
             {
-                AppendLog($"Failed to send START_RUNTIME to PID {SelectedSession.ProcessId}.", ConsoleLogLevel.Warning);
+                AppendLog($"Failed to send START_RUNTIME to PID {target.ProcessId}.", ConsoleLogLevel.Warning);
                 StatusSummary = "Failed to send runtime start command.";
             }
         }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+        catch (Exception ex) { if (!_disposed && !request.IsCancellationRequested && SelectedSession?.SessionId == target.SessionId && SelectedSession?.ProcessId == target.ProcessId) { StatusSummary = ex.Message; AppendLog(ex.Message, ConsoleLogLevel.Error); } }
         finally
         {
             IsBusy = false;
@@ -309,27 +345,34 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private async Task ProbeAsync(string command)
     {
-        if (SelectedSession == null)
+        var target = SelectedSession;
+        if (_disposed || target == null || !CanInteractWithSession)
         {
             return;
         }
 
+        var live = _sessionCollectionService.Sessions.FirstOrDefault(s => s.Id == target.SessionId);
+        if (live == null || live.RSProcess?.Id != target.ProcessId) return;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, live.WorkCancellation);
         IsBusy = true;
         try
         {
-            var result = await _bridgeClient.CallAsync(SelectedSession.ProcessId, command, new { }, CancellationToken.None).ConfigureAwait(true);
+            var result = await _bridgeClient.CallAsync(target.ProcessId, command, new { }, request.Token).ConfigureAwait(true);
+            if (_disposed || request.IsCancellationRequested || SelectedSession?.SessionId != target.SessionId || SelectedSession?.ProcessId != target.ProcessId) return;
             if (result.IsSuccess)
             {
                 LastResponseJson = result.PayloadJson ?? "{}";
-                StatusSummary = $"{command} succeeded (PID {SelectedSession.ProcessId}).";
-                AppendLog($"{command} OK pid={SelectedSession.ProcessId} trace={result.TraceId ?? "n/a"} runtime={result.DurationMs?.ToString() ?? "n/a"}ms rtt={result.RoundTripMs}ms", ConsoleLogLevel.Info);
+                StatusSummary = $"{command} succeeded (PID {target.ProcessId}).";
+                AppendLog($"{command} OK pid={target.ProcessId} trace={result.TraceId ?? "n/a"} runtime={result.DurationMs?.ToString() ?? "n/a"}ms rtt={result.RoundTripMs}ms", ConsoleLogLevel.Info);
                 return;
             }
 
             LastResponseJson = result.RawResponse ?? "{}";
             StatusSummary = $"{command} failed: {result.Message}";
-            AppendLog($"{command} failed pid={SelectedSession.ProcessId}: {result.Message}", ConsoleLogLevel.Warning);
+            AppendLog($"{command} failed pid={target.ProcessId}: {result.Message}", ConsoleLogLevel.Warning);
         }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+        catch (Exception ex) { if (!_disposed && !request.IsCancellationRequested && SelectedSession?.SessionId == target.SessionId && SelectedSession?.ProcessId == target.ProcessId) { StatusSummary = ex.Message; AppendLog(ex.Message, ConsoleLogLevel.Error); } }
         finally
         {
             IsBusy = false;
@@ -365,6 +408,7 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
         InjectorSettingsPath = settings.SettingsPath;
         BasicInjectorAutoStart = settings.AutoStart;
         HasInjectorSettingsFile = settings.Exists;
+        if (settings.Error != null) { StatusSummary = settings.Error; AppendLog(settings.Error, ConsoleLogLevel.Error); }
 
         AppendLog(
             settings.Exists
@@ -379,7 +423,8 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
             InjectorSettingsPath,
             BasicInjectorAutoStart,
             Exists: true);
-        _injectorSettingsService.Save(settings);
+        try { _injectorSettingsService.Save(settings); }
+        catch (Exception ex) { StatusSummary = ex.Message; AppendLog(ex.Message, ConsoleLogLevel.Error); return; }
         HasInjectorSettingsFile = true;
         AppendLog(
             $"Saved injector MCP settings (MCP_AUTOSTART={(BasicInjectorAutoStart ? "1" : "0")}).",
@@ -401,7 +446,7 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private async void AutoProbeTimerOnTick(object? sender, EventArgs e)
     {
-        if (!AutoProbeEnabled || IsBusy || SelectedSession == null)
+        if (_disposed || !AutoProbeEnabled || IsBusy || SelectedSession == null)
         {
             return;
         }
@@ -411,12 +456,16 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     private void SavePreferences()
     {
+        try
+        {
         _preferencesStore.Save(new McpPreferences
         {
             AutoStartRuntimeOnInject = AutoStartRuntimeOnInject,
             AutoProbeEnabled = AutoProbeEnabled,
             AutoProbeSeconds = AutoProbeSeconds
         });
+        }
+        catch (Exception ex) { StatusSummary = $"Cannot save MCP preferences: {ex.Message}"; AppendLog(StatusSummary, ConsoleLogLevel.Error); }
     }
 
     private void UpdateAutoProbeState()
@@ -458,9 +507,15 @@ public sealed class McpControlCenterViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        _lifetime.Cancel();
+        _lifetime.Dispose();
         _autoProbeTimer.Stop();
         _autoProbeTimer.Tick -= AutoProbeTimerOnTick;
         _sessionCollectionService.Sessions.CollectionChanged -= _sessionsChangedHandler;
+        foreach (var session in _observedSessions) session.PropertyChanged -= OnSessionChanged;
+        _observedSessions.Clear();
     }
 }
 

@@ -23,6 +23,6 @@ public sealed class ThemeManagerTool : IOrbitTool
 
     public FrameworkElement CreateView(object? context = null)
     {
-        return serviceProvider.GetRequiredService<ThemeManagerPanel>();
+        return serviceProvider.GetRequiredService<Orbit.Services.OwnedViewFactory>().Create<ThemeManagerPanel>();
     }
 }

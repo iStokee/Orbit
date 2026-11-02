@@ -100,13 +100,14 @@ internal sealed class ConsolePipeServer : IDisposable
 		try
 		{
 			using var reader = new StreamReader(pipe, Encoding.UTF8);
+			var lines = new BoundedLineReader(reader);
 
 			while (!token.IsCancellationRequested && pipe.IsConnected)
 			{
 				string? line;
 				try
 				{
-					line = await reader.ReadLineAsync().ConfigureAwait(false);
+					line = await lines.ReadLineAsync(token).ConfigureAwait(false);
 				}
 				catch (IOException)
 				{

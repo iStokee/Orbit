@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Orbit.Models;
 
@@ -16,147 +17,118 @@ public sealed class MesharpSessionCommandService
 	}
 
 	public bool CanToggleNativeDebugMenu(bool mesharpIntegrationEnabled, SessionModel? session)
+		=> mesharpIntegrationEnabled && IsInjectedLiveSession(session);
+
+	private static bool IsInjectedLiveSession(SessionModel? session)
 	{
-		return mesharpIntegrationEnabled &&
-			   session != null &&
-			   session.InjectionState == InjectionState.Injected &&
-			   session.RSProcess != null &&
-			   !session.RSProcess.HasExited;
+		if (session == null || session.State is SessionState.Closed or SessionState.ShuttingDown ||
+			session.InjectionState != InjectionState.Injected) return false;
+		try { return session.RSProcess != null && !session.RSProcess.HasExited; }
+		catch (InvalidOperationException) { return false; }
+		catch (System.ComponentModel.Win32Exception) { return false; }
 	}
 
-	public Task ReassertInputPassthroughAsync(IEnumerable<SessionModel?> sessions)
+	public async Task ReassertInputPassthroughAsync(IEnumerable<SessionModel?> sessions)
 	{
-		var targets = GetInjectedLiveSessions(sessions);
-		if (targets.Count == 0)
-		{
-			return Task.CompletedTask;
-		}
-
-		return Task.Run(async () =>
-		{
-			foreach (var session in targets)
-			{
-				try
-				{
-					var process = session.RSProcess;
-					if (process == null || process.HasExited)
-					{
-						continue;
-					}
-
-					var targetDebugMenuVisible = session.NativeDebugMenuVisible;
-					if (!targetDebugMenuVisible)
-					{
-						await commandClient
-							.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-							.ConfigureAwait(false);
-					}
-
-					await commandClient
-						.SendDebugMenuVisibleWithRetryAsync(targetDebugMenuVisible, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-						.ConfigureAwait(false);
-
-					await commandClient
-						.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-						.ConfigureAwait(false);
-				}
-				catch
-				{
-					// Best-effort only; individual sessions may be shutting down.
-				}
-			}
-		});
+		foreach (var session in GetInjectedLiveSessions(sessions))
+			await RunSerializedAsync(session, null, null).ConfigureAwait(true);
 	}
 
-	public async Task SetNativeDebugMenuVisibleAsync(
+	public Task SetNativeDebugMenuVisibleAsync(
 		SessionModel? session,
 		bool visible,
 		Func<SessionModel, Task>? revealAndFocusAsync = null)
+		=> session == null ? Task.CompletedTask : RunSerializedAsync(session, visible, revealAndFocusAsync);
+
+	public Task ToggleNativeDebugMenuAsync(SessionModel session, Func<SessionModel, Task>? revealAndFocusAsync = null)
+		=> RunSerializedAsync(session, null, revealAndFocusAsync, toggle: true);
+
+	internal Task ApplyInjectionPreferenceAsync(SessionModel session, bool hide)
+		=> RunSerializedAsync(session, !hide, null, startRuntime: false);
+
+	private async Task RunSerializedAsync(SessionModel session, bool? requestedVisible, Func<SessionModel, Task>? revealAndFocusAsync, bool startRuntime = true, bool toggle = false)
 	{
-		if (session == null)
-		{
-			return;
-		}
-
 		var process = session.RSProcess;
-		if (process == null || process.HasExited)
-		{
-			session.SetNativeDebugMenuVisible(false, "process unavailable");
-			return;
-		}
-
-		var previousVisible = session.NativeDebugMenuVisible;
-		session.SetNativeDebugMenuVisible(visible, "native menu command pending");
-
+		var token = session.WorkCancellation;
+		var entered = false;
+		var previousVisible = false;
+		var pending = false;
+		bool? confirmedVisible = null;
 		try
 		{
+			await session.NativeCommandGate.WaitAsync(token).ConfigureAwait(true);
+			entered = true;
+			if (!IsCurrent()) return;
+			var pid = process!.Id;
+			previousVisible = session.NativeDebugMenuVisible;
+			if (toggle) requestedVisible = !previousVisible;
+			var visible = requestedVisible ?? previousVisible;
+			if (requestedVisible.HasValue)
+			{
+				await SetVisibleAsync(visible, "native menu command pending");
+				pending = true;
+			}
 			if (visible && revealAndFocusAsync != null)
-			{
 				await revealAndFocusAsync(session).ConfigureAwait(true);
-			}
+			if (!IsCurrent()) return;
 
-			var applied = false;
-			if (visible)
+			if (visible && requestedVisible.HasValue && startRuntime)
 			{
-				await commandClient
-					.SendStartRuntimeWithRetryAsync(process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(120))
-					.ConfigureAwait(false);
-
-				await commandClient
-					.SendInputModeWithRetryAsync(0, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				applied = await commandClient
-					.SendDebugMenuVisibleWithRetryAsync(true, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await commandClient
-					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
+				await commandClient.SendStartRuntimeWithRetryAsync(pid, maxAttempts: 3,
+					initialDelay: TimeSpan.FromMilliseconds(120), cancellationToken: token).ConfigureAwait(true);
+				if (!IsCurrent()) return;
 			}
-			else
+
+			// Restore input mode together with visibility, including when reasserting a visible menu.
+			if (visible || !requestedVisible.HasValue)
 			{
-				applied = await commandClient
-					.SendDebugMenuVisibleWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await commandClient
-					.SendInputModeWithRetryAsync(1, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
-
-				await commandClient
-					.SendFocusSpoofWithRetryAsync(false, process.Id, maxAttempts: 3, initialDelay: TimeSpan.FromMilliseconds(100))
-					.ConfigureAwait(false);
+				await commandClient.SendInputModeWithRetryAsync(visible ? 0 : 1, pid, maxAttempts: 3,
+					initialDelay: TimeSpan.FromMilliseconds(100), cancellationToken: token).ConfigureAwait(true);
+				if (!IsCurrent()) return;
 			}
-
-			session.SetNativeDebugMenuVisible(
-				applied ? visible : previousVisible,
-				applied ? "native menu command applied" : "native menu command failed");
+			var applied = await commandClient.SendDebugMenuVisibleWithRetryAsync(visible, pid, maxAttempts: 3,
+				initialDelay: TimeSpan.FromMilliseconds(100), cancellationToken: token).ConfigureAwait(true);
+			if (!IsCurrent()) return;
+			confirmedVisible = applied ? visible : previousVisible;
+			if (!applied || (!visible && requestedVisible.HasValue))
+			{
+				await commandClient.SendInputModeWithRetryAsync(confirmedVisible.Value ? 0 : 1, pid, maxAttempts: 3,
+					initialDelay: TimeSpan.FromMilliseconds(100), cancellationToken: token).ConfigureAwait(true);
+				if (!IsCurrent()) return;
+			}
+			await commandClient.SendFocusSpoofWithRetryAsync(false, pid, maxAttempts: 3,
+				initialDelay: TimeSpan.FromMilliseconds(100), cancellationToken: token).ConfigureAwait(true);
+			if (requestedVisible.HasValue)
+				await SetVisibleAsync(applied ? visible : previousVisible,
+					applied ? "native menu command applied" : "native menu command failed");
 		}
-		catch
+		catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+		catch (Exception)
 		{
-			session.SetNativeDebugMenuVisible(previousVisible, "native menu command threw");
+			if (pending) await SetVisibleAsync(confirmedVisible ?? previousVisible, "native menu command threw");
+		}
+		finally { if (entered) session.NativeCommandGate.Release(); }
+
+		bool IsCurrent() => !token.IsCancellationRequested && ReferenceEquals(session.RSProcess, process) && IsInjectedLiveSession(session);
+
+		async Task SetVisibleAsync(bool visible, string reason)
+		{
+			var dispatcher = session.HostControl?.Dispatcher;
+			if (dispatcher != null && !dispatcher.CheckAccess())
+				await dispatcher.InvokeAsync(() => { if (IsCurrent()) session.SetNativeDebugMenuVisible(visible, reason); });
+			else if (IsCurrent()) session.SetNativeDebugMenuVisible(visible, reason);
 		}
 	}
 
 	public async Task SetNativeDebugMenuVisibleAsync(IEnumerable<SessionModel?> sessions, bool visible)
 	{
 		foreach (var session in GetInjectedLiveSessions(sessions))
-		{
-			await SetNativeDebugMenuVisibleAsync(session, visible).ConfigureAwait(false);
-		}
+			await SetNativeDebugMenuVisibleAsync(session, visible).ConfigureAwait(true);
 	}
 
 	public Task ApplyNativeDebugMenuInjectionPreferenceAsync(IEnumerable<SessionModel?> sessions, bool hideOnInject)
-	{
-		return SetNativeDebugMenuVisibleAsync(sessions, !hideOnInject);
-	}
+		=> SetNativeDebugMenuVisibleAsync(sessions, !hideOnInject);
 
 	private static List<SessionModel> GetInjectedLiveSessions(IEnumerable<SessionModel?> sessions)
-	{
-		return sessions
-			.Where(s => s != null && s.InjectionState == InjectionState.Injected && s.RSProcess != null && !s.RSProcess.HasExited)
-			.Cast<SessionModel>()
-			.ToList();
-	}
+		=> sessions.Where(IsInjectedLiveSession).Cast<SessionModel>().ToList();
 }

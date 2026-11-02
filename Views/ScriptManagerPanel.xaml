@@ -8,7 +8,10 @@
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
     Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
-    Unloaded="OnUnloaded">
+    Unloaded="OnUnloaded"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
@@ -79,23 +82,23 @@
 
         <Style x:Key="ScriptItemBorderStyle" TargetType="Border" BasedOn="{StaticResource ChipStyle}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}" Value="True">
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Secondary}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsSelected}" Value="True">
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource Orbit.Brushes.Action.Primary}" />
                     <Setter Property="Background" Value="{DynamicResource Orbit.Brushes.Surface.Subtle}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ScriptListItemStyle" TargetType="ListViewItem">
+        <Style x:Key="ScriptListItemStyle" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Orbit.KeyboardFocus}" />
         </Style>
 
         <Style x:Key="ScriptTileListItemStyle" TargetType="ListBoxItem">
@@ -103,7 +106,7 @@
             <Setter Property="Margin" Value="0,0,10,10" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Orbit.KeyboardFocus}" />
         </Style>
 
         <DataTemplate x:Key="ScriptItemTemplate">
@@ -162,6 +165,7 @@
                             Margin="0,0,4,0"
                             Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
+                            ToolTip="Load this script"
                             Style="{StaticResource Orbit.Workbench.IconButton}">
                             <iconPacks:PackIconMaterial
                                 Width="14"
@@ -213,7 +217,7 @@
             <Border
                 Style="{StaticResource ScriptItemBorderStyle}"
                 Width="220"
-                Height="108"
+                MinHeight="108"
                 Padding="10">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -250,6 +254,7 @@
                                 Margin="0,0,4,0"
                                 Command="{Binding DataContext.LoadScriptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
+                                ToolTip="Load this script"
                                 Style="{StaticResource Orbit.Workbench.IconButton}">
                                 <iconPacks:PackIconMaterial Width="14" Height="14" Kind="Play" />
                             </Button>
@@ -290,116 +295,56 @@
 
         <!--  Header  -->
         <Border Grid.Row="0" Style="{StaticResource ScriptManagerHeaderStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
-                    <iconPacks:PackIconMaterial Kind="FileCodeOutline" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
-                </Border>
-
-                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                    <TextBlock
-                        Style="{StaticResource Orbit.ToolHeaderTitle}"
-                        Text="Script Manager" />
-                    <TextBlock
-                        Style="{StaticResource Orbit.ToolHeaderSubtitle}"
-                        Text="Load, manage, and iterate on scripts with hot-reload - no file locking!" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Margin="0,0,8,0" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Density:" />
-                        <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Full"
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Orbit.ToolHeaderIcon}">
+                        <iconPacks:PackIconMaterial Kind="FileCodeOutline" Style="{StaticResource Orbit.ToolHeaderIconGlyph}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Orbit.ToolHeaderTitle}" Text="Script Manager" />
+                        <TextBlock Text="{Binding StorageError}" TextWrapping="Wrap" Foreground="{DynamicResource Orbit.Brushes.Text.OnHeader}"
+                                   Visibility="{Binding StorageError, Converter={StaticResource NullToVisibilityConverter}}" />
+                        <TextBlock Style="{StaticResource Orbit.ToolHeaderSubtitle}" Text="Load and manage scripts in the selected session." />
+                    </StackPanel>
+                </Grid>
+                <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
+                    <TextBlock Margin="0,0,8,6" VerticalAlignment="Center" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Target Session" />
+                    <ComboBox Width="240" MaxWidth="260" Margin="0,0,12,6" Padding="6,2"
+                              IsEnabled="{Binding HasSessions}" ItemsSource="{Binding Sessions}"
+                              SelectedItem="{Binding TargetSession, Mode=TwoWay}"
+                              ToolTip="Commands act only on the selected session">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Margin="0,0,12,6" VerticalAlignment="Center"
+                              Content="Embed Script UI" IsChecked="{Binding ScriptWindowEmbeddingEnabled, Mode=TwoWay}"
+                              ToolTip="Allow external script windows to dock through OrbitAPI" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="Density:" />
+                        <RadioButton Margin="0,0,4,0" Padding="8,2" Content="Full"
                                       IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
                                       Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton Margin="0,0,4,0" Padding="8,2" Content="Compact"
+                        <RadioButton Margin="0,0,4,0" Padding="8,2" Content="Compact"
                                       IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
                                       Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton Padding="8,2" Content="Minimal"
+                        <RadioButton Padding="8,2" Content="Minimal"
                                       IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
                                       Style="{StaticResource MahApps.Styles.ToggleButton}" />
                     </StackPanel>
-
-                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Border
-                            Padding="8,4"
-                            Margin="0,0,8,0"
-                            Background="{DynamicResource Orbit.Brushes.Action.Primary}"
-                            CornerRadius="6"
-                            Opacity="0.9">
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial
-                                    Width="14"
-                                    Height="14"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center"
-                                    Foreground="{DynamicResource Orbit.Brushes.Text.OnAccent}"
-                                    Kind="CrosshairsGps" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource Orbit.Workbench.BadgeText.OnAccent}"
-                                    Text="Target Session" />
-                            </StackPanel>
-                        </Border>
-                        <Border
-                            Padding="4"
-                            Background="{DynamicResource Orbit.Brushes.Surface.Hover}"
-                            CornerRadius="6">
-                            <ComboBox
-                                MinWidth="210"
-                                Padding="6,2"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                IsEnabled="{Binding HasSessions}"
-                                ItemsSource="{Binding Sessions}"
-                                SelectedItem="{Binding TargetSession, Mode=TwoWay}"
-                                ToolTip="Select which session receives script commands">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock
-                                                FontWeight="SemiBold"
-                                                Text="{Binding Name}" />
-                                            <TextBlock
-                                                Margin="8,0,0,0"
-                                                Opacity="0.6"
-                                                Text="{Binding RSProcess.Id, StringFormat=PID {0}}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </Border>
-                        <CheckBox
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            IsChecked="{Binding ScriptWindowEmbeddingEnabled, Mode=TwoWay}"
-                            ToolTip="When enabled, external script UI windows can dock into Orbit via OrbitAPI.">
-                            <StackPanel Orientation="Horizontal">
-                                <iconPacks:PackIconMaterial
-                                    Width="14"
-                                    Height="14"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center"
-                                    Kind="ViewColumnOutline" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource Orbit.Workbench.MetaText}"
-                                    Text="Embed Script UI" />
-                            </StackPanel>
-                        </CheckBox>
-                        <TextBlock
-                            Margin="10,0,0,0"
-                            Style="{StaticResource Orbit.ToolHeaderMetaText}"
-                            Text="{Binding TargetSessionScriptStatus}" />
-                    </StackPanel>
-                </StackPanel>
-            </Grid>
+                </WrapPanel>
+                <WrapPanel>
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="{Binding TargetSessionScriptStatus}" TextWrapping="Wrap" Margin="0,0,12,0" />
+                    <TextBlock Style="{StaticResource Orbit.ToolHeaderMetaText}" Text="{Binding TargetRuntimeInventory}" TextWrapping="Wrap" />
+                </WrapPanel>
+            </StackPanel>
         </Border>
-
         <!--  Actions  -->
         <Border Grid.Row="1" Style="{StaticResource ScriptManagerCardStyle}">
             <Grid>
@@ -554,8 +499,9 @@
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <Button
-                            Width="140"
+                            Width="160"
                             Height="36"
+                            Margin="0,0,8,0"
                             Command="{Binding AddScriptCommand}"
                             Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
@@ -570,7 +516,7 @@
                         <Button
                             Width="160"
                             Height="36"
-                            Margin="8,0,0,0"
+                            Margin="0,0,8,0"
                             Command="{Binding ClearMissingCommand}"
                             Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
@@ -583,9 +529,9 @@
                         </Button>
 
                         <Button
-                            Width="120"
+                            Width="160"
                             Height="36"
-                            Margin="8,0,0,0"
+                            Margin="0"
                             Command="{Binding StopScriptCommand}"
                             Style="{StaticResource Orbit.Workbench.Button}">
                             <StackPanel Orientation="Horizontal">
@@ -607,7 +553,8 @@
             Grid.Row="2"
             Style="{StaticResource ScriptManagerCardStyle}"
             Visibility="{Binding IsMcpToolEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Grid>
+            <Expander Header="Runtime Scripts (MCP Bridge)" IsExpanded="False" Style="{StaticResource Orbit.Workbench.Expander}">
+            <Grid MaxHeight="220">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -621,7 +568,7 @@
 
                     <TextBlock
                         Style="{StaticResource Orbit.Workbench.SectionTitle}"
-                        Text="Runtime Scripts (MCP Bridge)" />
+                        Text="Runtime inventory" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <TextBlock
                             VerticalAlignment="Center"
@@ -640,6 +587,7 @@
                     <ListView
                         Background="Transparent"
                         BorderThickness="0"
+                        Visibility="{Binding HasRuntimeScripts, Converter={StaticResource BoolToVisibilityConverter}}"
                         ItemsSource="{Binding RuntimeScripts}">
                         <ListView.View>
                             <GridView>
@@ -671,6 +619,7 @@
                         Visibility="{Binding HasNoRuntimeScripts, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>
             </Grid>
+            </Expander>
         </Border>
 
         <!--  Content  -->
@@ -689,31 +638,31 @@
                     </Grid.ColumnDefinitions>
 
                     <WrapPanel Grid.Column="0" VerticalAlignment="Center">
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,8,0"
                             Padding="10,4"
                             Content="All"
                             IsChecked="{Binding SelectedFilter, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserFilter.All}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,8,0"
                             Padding="10,4"
                             Content="Library"
                             IsChecked="{Binding SelectedFilter, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserFilter.Library}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,8,0"
                             Padding="10,4"
                             Content="Favorites"
                             IsChecked="{Binding SelectedFilter, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserFilter.Favorites}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,8,0"
                             Padding="10,4"
                             Content="Recents"
                             IsChecked="{Binding SelectedFilter, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserFilter.Recents}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Padding="10,4"
                             Content="Missing"
                             IsChecked="{Binding SelectedFilter, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserFilter.Missing}}"
@@ -721,13 +670,13 @@
                     </WrapPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,8,0"
                             Padding="10,4"
                             Content="List"
                             IsChecked="{Binding SelectedLayout, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserLayout.List}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Padding="10,4"
                             Content="Tiles"
                             IsChecked="{Binding SelectedLayout, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:ScriptBrowserLayout.Tiles}}"
@@ -743,30 +692,36 @@
                     TextWrapping="Wrap" />
 
                 <Grid Grid.Row="2" Margin="0,10,0,0">
-                    <ListView
-                        Background="Transparent"
-                        BorderThickness="0"
-                        ItemContainerStyle="{StaticResource ScriptListItemStyle}"
-                        ItemTemplate="{StaticResource ScriptItemTemplate}"
-                        ItemsSource="{Binding BrowserScriptsView}"
-                        MouseDoubleClick="OnScriptDoubleClick"
-                        Visibility="{Binding IsListLayout, Converter={StaticResource BoolToVisibilityConverter}}" />
-
-                    <ListBox
-                        Background="Transparent"
-                        BorderThickness="0"
-                        ItemContainerStyle="{StaticResource ScriptTileListItemStyle}"
-                        ItemTemplate="{StaticResource ScriptTileTemplate}"
-                        ItemsSource="{Binding BrowserScriptsView}"
-                        MouseDoubleClick="OnScriptDoubleClick"
-                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
+                    <ListBox x:Name="ScriptBrowser"
+                             Background="Transparent" BorderThickness="0"
+                             ItemsSource="{Binding BrowserScriptsView}"
+                             SelectedItem="{Binding SelectedScript, Mode=TwoWay}"
+                             MouseDoubleClick="OnScriptDoubleClick" KeyDown="OnBrowserKeyDown"
+                             ScrollViewer.CanContentScroll="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             VirtualizingPanel.ScrollUnit="Pixel"
+                             AutomationProperties.Name="Script library">
+                        <ListBox.Style>
+                            <Style TargetType="ListBox">
+                                <Setter Property="ItemContainerStyle" Value="{StaticResource ScriptListItemStyle}" />
+                                <Setter Property="ItemTemplate" Value="{StaticResource ScriptItemTemplate}" />
+                                <Setter Property="ItemsPanel">
+                                    <Setter.Value><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsTileLayout}" Value="True">
+                                        <Setter Property="ItemContainerStyle" Value="{StaticResource ScriptTileListItemStyle}" />
+                                        <Setter Property="ItemTemplate" Value="{StaticResource ScriptTileTemplate}" />
+                                        <Setter Property="ItemsPanel">
+                                            <Setter.Value><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.Style>
                     </ListBox>
 
                     <TextBlock

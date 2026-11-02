@@ -7,12 +7,32 @@ using Orbit.Tooling;
 using Orbit.ViewModels;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using UserControl = System.Windows.Controls.UserControl;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
 namespace Orbit.Views;
 
-public partial class SettingsView : UserControl
+public partial class SettingsView : UserControl, Orbit.Services.IToolViewLifetime
 {
+	private void SnapSettingsLayout_SizeChanged(object sender, SizeChangedEventArgs e)
+	{
+		var compact = e.NewSize.Width < 760;
+		Grid.SetColumnSpan(SnapPreviewPane, compact ? 3 : 1);
+		SnapPreviewPane.HorizontalAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+		Grid.SetRow(SnapSettingsControls, compact ? 1 : 0);
+		Grid.SetColumn(SnapSettingsControls, compact ? 0 : 2);
+		Grid.SetColumnSpan(SnapSettingsControls, compact ? 3 : 1);
+		SnapSettingsControls.Margin = compact ? new Thickness(0, 16, 0, 0) : new Thickness(0);
+	}
 	private readonly IToolRegistry _toolRegistry;
+	private bool _closed;
+	public void Dispose()
+	{
+		if (_closed) return;
+		_closed = true;
+		if (ToolsDashboardHost.Content is FrameworkElement child && child.DataContext is IDisposable disposable) disposable.Dispose();
+		ToolsDashboardHost.Content = null;
+		Unloaded -= OnUnloaded;
+	}
 
 	public SettingsView(SettingsViewModel vm, IToolRegistry toolRegistry)
 	{

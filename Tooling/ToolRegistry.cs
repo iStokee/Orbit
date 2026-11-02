@@ -80,10 +80,10 @@ internal sealed class ToolRegistry : IToolRegistry
 		{
 			if (_builtInTools.ContainsKey(tool.Key))
 			{
-				Console.WriteLine($"[Orbit][Plugin] Ignoring plugin tool key '{tool.Key}' because it conflicts with a built-in Orbit tool.");
-				return;
+				throw new InvalidOperationException($"Plugin key '{tool.Key}' conflicts with a built-in Orbit tool.");
 			}
-
+			if (_pluginTools.TryGetValue(tool.Key, out var existing) && !ReferenceEquals(existing, tool))
+				throw new InvalidOperationException($"Plugin key '{tool.Key}' is already registered.");
 			_pluginTools[tool.Key] = tool;
 		}
 	}

@@ -78,6 +78,7 @@ public sealed class SessionReconciliationService
 	/// </summary>
 	public bool IsOrbitViewHost(object? windowDataContext)
 	{
+		if (ReferenceEquals(Application.Current?.MainWindow?.DataContext, windowDataContext)) return false;
 		if (windowDataContext == null)
 		{
 			return false;
@@ -97,6 +98,7 @@ public sealed class SessionReconciliationService
 		var tabStripItems = new HashSet<object>(ReferenceEqualityComparer.Instance);
 		var orbitWindows = new HashSet<Window>(
 			_tearOffRegistry.GetHosts(partition, TearOffHostRegistry.HostOrigin.OrbitView)
+				.Where(host => !ReferenceEquals(host.Window, Application.Current?.MainWindow))
 				.Select(host => host.Window));
 
 		foreach (var item in orbitWorkspaceItems ?? Enumerable.Empty<object>())
@@ -157,6 +159,16 @@ public sealed class SessionReconciliationService
 	/// </summary>
 	public bool IsSessionMoving(SessionModel session)
 		=> session != null && _placement.IsMoveInProgress(session);
+
+	internal void RegisterOrbitLanding(object item)
+	{
+		if (item is SessionModel session)
+		{
+			_placement.SetPlacement(session, SessionPlacementKind.OrbitWorkspace, "orbit-tab-landed");
+			_placement.EndExternalMove(session, "orbit-tab-landed");
+		}
+		else if (item is ToolTabItem tool) _placement.SetPlacement(tool, SessionPlacementKind.OrbitWorkspace, "orbit-tool-landed");
+	}
 
 	/// <summary>
 	/// Placement-driven "is this workspace item currently hosted in a non-Orbit tab strip" for
@@ -252,6 +264,7 @@ public sealed class SessionReconciliationService
 		var removedAny = false;
 		var orbitWindows = new HashSet<Window>(
 			_tearOffRegistry.GetHosts("OrbitMainShell", TearOffHostRegistry.HostOrigin.OrbitView)
+				.Where(host => !ReferenceEquals(host.Window, Application.Current?.MainWindow))
 				.Select(host => host.Window));
 		var windows = (Application.Current?.Windows?.OfType<Window>() ?? Enumerable.Empty<Window>()).ToList();
 
@@ -273,13 +286,14 @@ public sealed class SessionReconciliationService
 			{
 				var tabControlIsOrbit = windowIsOrbit || FindVisualAncestor<OrbitGridLayoutView>(tabControl) != null;
 				if (!ShouldIncludeOwner(tabControlIsOrbit, scope) ||
-					tabControl.ItemsSource != null ||
 					!tabControl.Items.Contains(item))
 				{
 					continue;
 				}
 
-				tabControl.Items.Remove(item);
+				if (tabControl.ItemsSource is System.Collections.IList list && !list.IsReadOnly) list.Remove(item);
+				else if (tabControl.ItemsSource == null) tabControl.Items.Remove(item);
+				else continue;
 				removedAny = true;
 			}
 		}

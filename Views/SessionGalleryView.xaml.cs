@@ -13,6 +13,7 @@ namespace Orbit.Views
 		{
 			InitializeComponent();
 			DataContext = viewModel;
+			IsVisibleChanged += (_, _) => viewModel.SetVisible(IsVisible);
 		}
 	}
 }

@@ -9,7 +9,10 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:Orbit"
     xmlns:models="clr-namespace:Orbit.Models"
-    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}">
+    Foreground="{DynamicResource Orbit.Brushes.Text.Primary}"
+    FontFamily="{DynamicResource Orbit.Fonts.Family}"
+    FontSize="{DynamicResource Orbit.Fonts.Size.Base}"
+    FontWeight="{DynamicResource Orbit.Fonts.Weight.Body}">
 
     <UserControl.Resources>
         <converters:OrbitViewBorderThicknessConverter x:Key="BorderThicknessConverter" />
@@ -162,7 +165,7 @@
                 <!--  Header summary (full density only)  -->
                 <Grid
                     Grid.Row="0"
-                    Grid.RowSpan="2"
+                    Grid.RowSpan="1"
                     Grid.Column="0"
                     Margin="0,0,16,0">
                     <Grid.Style>
@@ -201,13 +204,10 @@
                     </StackPanel>
                 </Grid>
 
-                <!--  Full layout toolbar (single aligned row)  -->
-                <Grid
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    VerticalAlignment="Center">
-                    <Grid.Style>
-                        <Style TargetType="Grid">
+                <!-- Full toolbar groups wrap as the workspace narrows. -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity}" Value="1">
@@ -218,174 +218,42 @@
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </Grid.Style>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <Grid Grid.Column="0" Style="{StaticResource OrbitToolbarRowStyle}" VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <Grid Grid.Column="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" Style="{StaticResource OrbitToolbarGroupStyle}">
-                                <WrapPanel VerticalAlignment="Center">
-                                    <Button
-                                        Command="{Binding CreateGrid2x2Command}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Create 2x2 Grid (Ctrl+Shift+2)">
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,6,0"
-                                                Kind="GridLarge" />
-                                            <TextBlock FontWeight="SemiBold" Text="2x2" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button
-                                        Command="{Binding CreateGrid3x3Command}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Create 3x3 Grid (Ctrl+Shift+3)">
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,6,0"
-                                                Kind="Grid" />
-                                            <TextBlock FontWeight="SemiBold" Text="3x3" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button
-                                        Command="{Binding AutoFitGridCommand}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Auto-fit grid to current sessions">
-                                        <TextBlock FontWeight="SemiBold" Text="Auto Fit" />
-                                    </Button>
-                                </WrapPanel>
-                            </Border>
-
-                            <Border Grid.Column="1" Style="{StaticResource OrbitToolbarGroupStyle}">
-                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                    <StackPanel
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal">
-                                        <TextBlock
-                                            Margin="0,0,6,0"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
-                                            Text="Rows" />
-                                        <Controls:NumericUpDown
-                                            Width="70"
-                                            Maximum="6"
-                                            Minimum="1"
-                                            Style="{StaticResource SessionToolbarNumericStyle}"
-                                            Value="{Binding CustomRows, Mode=TwoWay}" />
-                                    </StackPanel>
-                                    <StackPanel
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal">
-                                        <TextBlock
-                                            Margin="0,0,6,0"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
-                                            Text="Cols" />
-                                        <Controls:NumericUpDown
-                                            Width="70"
-                                            Maximum="6"
-                                            Minimum="1"
-                                            Style="{StaticResource SessionToolbarNumericStyle}"
-                                            Value="{Binding CustomColumns, Mode=TwoWay}" />
-                                    </StackPanel>
-                                    <Button
-                                        Command="{Binding CreateCustomGridCommand}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Create a custom grid with the specified rows/columns">
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,6,0"
-                                                Kind="TableColumnWidth" />
-                                            <TextBlock FontWeight="SemiBold" Text="Apply" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="2" Style="{StaticResource OrbitToolbarGroupStyle}">
-                                <WrapPanel VerticalAlignment="Center">
-                                    <Button
-                                        Command="{Binding ResetLayoutCommand}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Reset to Single View (Ctrl+Shift+R)">
-                                        <StackPanel Orientation="Horizontal">
-                                            <iconPacks:PackIconMaterial
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,6,0"
-                                                Kind="WindowRestore" />
-                                            <TextBlock FontWeight="SemiBold" Text="Reset" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button
-                                        Command="{Binding BalanceRowsCommand}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Evenly resize all rows">
-                                        <TextBlock FontWeight="SemiBold" Text="Balance Rows" />
-                                    </Button>
-                                    <Button
-                                        Command="{Binding BalanceColumnsCommand}"
-                                        Style="{StaticResource SessionToolbarButtonStyle}"
-                                        ToolTip="Evenly resize all columns">
-                                        <TextBlock FontWeight="SemiBold" Text="Balance Cols" />
-                                    </Button>
-                                </WrapPanel>
-                            </Border>
-                        </Grid>
-                    </Grid>
-
-                    <StackPanel
-                        Grid.Column="1"
-                        VerticalAlignment="Center"
-                        Orientation="Horizontal">
-                        <TextBlock
-                            Margin="0,0,8,0"
-                            VerticalAlignment="Center"
-                            Style="{StaticResource Orbit.Workbench.FieldLabel}"
-                            Text="Header:" />
-                        <ToggleButton
-                            Margin="0,0,4,0"
-                            Padding="8,2"
-                            Content="Full"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
-                            Margin="0,0,4,0"
-                            Padding="8,2"
-                            Content="Compact"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
-                            Padding="8,2"
-                            Content="Minimal"
-                            IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
-                            Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                    </StackPanel>
-                </Grid>
-
+                    </StackPanel.Style>
+                    <WrapPanel>
+                        <Border Style="{StaticResource OrbitToolbarGroupStyle}" Margin="0,0,8,6">
+                            <WrapPanel>
+                                <Button Command="{Binding CreateGrid2x2Command}" Content="2x2" Style="{StaticResource SessionToolbarButtonStyle}" ToolTip="Create 2x2 Grid (Ctrl+Shift+2)" />
+                                <Button Command="{Binding CreateGrid3x3Command}" Content="3x3" Style="{StaticResource SessionToolbarButtonStyle}" ToolTip="Create 3x3 Grid (Ctrl+Shift+3)" />
+                                <Button Command="{Binding AutoFitGridCommand}" Content="Auto Fit" Style="{StaticResource SessionToolbarButtonStyle}" />
+                            </WrapPanel>
+                        </Border>
+                        <Border Style="{StaticResource OrbitToolbarGroupStyle}" Margin="0,0,8,6">
+                            <WrapPanel>
+                                <TextBlock VerticalAlignment="Center" Text="Rows" Margin="0,0,6,0" />
+                                <Controls:NumericUpDown Width="70" Minimum="1" Maximum="6" Value="{Binding CustomRows, Mode=TwoWay}" Style="{StaticResource SessionToolbarNumericStyle}" />
+                                <TextBlock VerticalAlignment="Center" Text="Cols" Margin="8,0,6,0" />
+                                <Controls:NumericUpDown Width="70" Minimum="1" Maximum="6" Value="{Binding CustomColumns, Mode=TwoWay}" Style="{StaticResource SessionToolbarNumericStyle}" />
+                                <Button Command="{Binding CreateCustomGridCommand}" Content="Apply" Style="{StaticResource SessionToolbarButtonStyle}" ToolTip="Create the specified grid" />
+                            </WrapPanel>
+                        </Border>
+                        <Border Style="{StaticResource OrbitToolbarGroupStyle}" Margin="0,0,8,6">
+                            <WrapPanel>
+                                <Button Command="{Binding ResetLayoutCommand}" Content="Reset" Style="{StaticResource SessionToolbarButtonStyle}" ToolTip="Reset to Single View (Ctrl+Shift+R)" />
+                                <Button Command="{Binding BalanceRowsCommand}" Content="Balance Rows" Style="{StaticResource SessionToolbarButtonStyle}" />
+                                <Button Command="{Binding BalanceColumnsCommand}" Content="Balance Cols" Style="{StaticResource SessionToolbarButtonStyle}" />
+                            </WrapPanel>
+                        </Border>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <TextBlock VerticalAlignment="Center" Text="Header:" Margin="0,0,8,0" />
+                        <RadioButton Content="Full" Padding="8,2" Margin="0,0,4,0" Style="{StaticResource MahApps.Styles.ToggleButton}"
+                                      IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}" />
+                        <RadioButton Content="Compact" Padding="8,2" Margin="0,0,4,0" Style="{StaticResource MahApps.Styles.ToggleButton}"
+                                      IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}" />
+                        <RadioButton Content="Minimal" Padding="8,2" Style="{StaticResource MahApps.Styles.ToggleButton}"
+                                      IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}" />
+                    </WrapPanel>
+                </StackPanel>
                 <!--  Compact/minimal toolbar (single row with dividers)  -->
                 <Grid Grid.Row="0" Grid.Column="1">
                     <Grid.Style>
@@ -535,19 +403,19 @@
                             VerticalAlignment="Center"
                             Style="{StaticResource Orbit.Workbench.FieldLabel}"
                             Text="Header:" />
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,4,0"
                             Padding="8,2"
                             Content="Full"
                             IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Full}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Margin="0,0,4,0"
                             Padding="8,2"
                             Content="Compact"
                             IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Compact}}"
                             Style="{StaticResource MahApps.Styles.ToggleButton}" />
-                        <ToggleButton
+                        <RadioButton
                             Padding="8,2"
                             Content="Minimal"
                             IsChecked="{Binding Source={x:Static local:Settings.Default}, Path=OrbitHeaderDensity, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static models:SessionHeaderDensity.Minimal}}"
